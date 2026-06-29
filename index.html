@@ -515,7 +515,14 @@
   .ent-crumbs { font-size: 12px; color: var(--p-text3); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
   .ent-crumbs .link { color: var(--p-text2); cursor: pointer; } .ent-crumbs .link:hover { color: var(--p-accent); }
   .ent-crumbs .sep { color: var(--p-border-strong); } .ent-crumbs .cur { color: var(--p-text1); font-weight: 600; }
-  .ent-topright { margin-left: auto; font-size: 12px; color: var(--p-text2); font-variant-numeric: tabular-nums; }
+  .ent-topright { margin-left: auto; font-size: 12px; color: var(--p-text2); display: flex; align-items: center; gap: 14px; }
+  .ent-eng { color: var(--p-text2); font-variant-numeric: tabular-nums; }
+  .ent-prof { display: flex; align-items: center; gap: 9px; background: none; border: 1px solid var(--p-border); border-radius: 20px; padding: 4px 13px 4px 4px; cursor: pointer; font-family: inherit; }
+  .ent-prof:hover { background: var(--p-surface2); border-color: var(--p-border-strong); }
+  .ent-prof-av { width: 28px; height: 28px; border-radius: 50%; background: var(--p-accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ent-prof-meta { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
+  .ent-prof-meta .nm { font-size: 12px; font-weight: 600; color: var(--p-text1); }
+  .ent-prof-meta .rl { font-size: 10px; color: var(--p-text3); }
 
   .ent-page { width: 100%; padding: 24px 28px; max-width: 1000px; }
   .ent-h { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
@@ -906,6 +913,25 @@
   .cl-form-row label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); margin-bottom: 5px; }
   .cl-form-row input { width: 100%; padding: 9px 11px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 13px; color: var(--p-text1); background: var(--p-surface); outline: none; box-sizing: border-box; }
   .cl-form-row input:focus { border-color: var(--p-accent); box-shadow: 0 0 0 2px var(--p-accent-bg); }
+
+  /* Екран „Профил" */
+  .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .pf-body { padding: 16px; }
+  .pf-row { margin-bottom: 13px; }
+  .pf-row:last-child { margin-bottom: 0; }
+  .pf-row label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); margin-bottom: 5px; }
+  .pf-row input { width: 100%; padding: 9px 11px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 13px; color: var(--p-text1); background: var(--p-surface); outline: none; box-sizing: border-box; }
+  .pf-row input:focus { border-color: var(--p-accent); box-shadow: 0 0 0 2px var(--p-accent-bg); }
+  .pf-prev { padding: 18px 20px; }
+  .pf-lh { border-bottom: 2px solid var(--p-accent); padding-bottom: 10px; margin-bottom: 12px; }
+  .pf-lh-name { font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 700; color: var(--p-text1); }
+  .pf-lh-tag { font-size: 9px; letter-spacing: 3px; color: var(--p-text3); margin-top: 3px; }
+  .pf-prev-row { display: flex; gap: 12px; font-size: 12.5px; padding: 4px 0; }
+  .pf-prev-row .k { width: 110px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--p-text3); padding-top: 2px; flex-shrink: 0; }
+  .pf-prev-row .v { color: var(--p-text1); font-weight: 600; }
+  .pf-saved { color: #1f7a44; font-size: 12.5px; font-weight: 600; margin-right: 12px; opacity: 0; transition: opacity .2s; }
+  .pf-saved.on { opacity: 1; }
+  @media (max-width: 780px) { .pf-grid { grid-template-columns: 1fr; } }
 
   /* Search */
   .search-box { position: relative; }
@@ -3600,6 +3626,21 @@ function persistClients() { try { localStorage.setItem('auditpro_clients', JSON.
 
 let currentClient = Object.keys(clients)[0];
 
+// ── Профил на одитора (глобален — еднакъв за всички клиенти и години) ──
+// Захранва PDF-а: поле „Изготвил", подписите, заглавието и дружеството.
+const PROFILE_DEFAULT = {
+  name: 'Марко Марков', role: 'Регистриран одитор', regNo: '',
+  email: 'marko.markov.wm@gmail.com', phone: '',
+  firm: 'АудитПро', firmEik: '', firmTagline: 'Одиторска система', reviewer: '',
+};
+let profile = (function () {
+  try { const s = JSON.parse(localStorage.getItem('auditpro_profile') || 'null'); if (s) return Object.assign({}, PROFILE_DEFAULT, s); } catch (e) {}
+  return Object.assign({}, PROFILE_DEFAULT);
+})();
+function persistProfile() { try { localStorage.setItem('auditpro_profile', JSON.stringify(profile)); } catch (e) {} }
+function profileInitials() { return clInitials(profile.name || 'Одитор'); }
+function profilePreparedBy() { return (profile.name || '') + (profile.role ? ' · ' + profile.role : ''); }
+
 function selectClient(name, industry, year, destination) {
   const block = document.getElementById('sidebar-client-block');
   block.classList.add('switching');
@@ -5403,7 +5444,12 @@ function entRenderCtx() {
     `<select onchange="entSetClient(this.value)">${names.map(n => `<option${n === cur ? ' selected' : ''}>${n}</option>`).join('')}</select>` +
     `<select onchange="entSetYear(this.value)" style="margin-top:6px">${yrs.map(y => `<option value="${y}"${y == yr ? ' selected' : ''}>Одит ${y}</option>`).join('')}</select>` +
     `<button class="ent-ctx-btn" onclick="entShowClients()">Управление на клиенти</button>`;
-  document.getElementById('ent-topright').textContent = `${cur} · Одит ${yr}`;
+  document.getElementById('ent-topright').innerHTML =
+    `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
+    `<button class="ent-prof" onclick="entShowProfile()" title="Управление на профила">` +
+      `<span class="ent-prof-av">${profileInitials()}</span>` +
+      `<span class="ent-prof-meta"><span class="nm">${escHtml(profile.name || 'Одитор')}</span><span class="rl">${escHtml(profile.role || '')}</span></span>` +
+    `</button>`;
 }
 function entSetClient(name) {
   const c = clients[name];
@@ -5768,7 +5814,9 @@ function pdWpMeta(code) {
   let stds = spec.mos;
   if (det.standards && det.standards.length) { const nums = det.standards.map(s => (s.code.match(/ISA\s*(\d+)/) || [])[1]).filter(Boolean); if (nums.length) stds = 'ISA ' + nums.join('/'); }
   const slug = (client.match(/[A-Za-zА-Яа-я0-9]+/g) || ['КЛИЕНТ']).join('').slice(0, 6).toUpperCase();
-  return { spec, det, client, year, today, stds, ref: `${code}-${slug}-${year}` };
+  return { spec, det, client, year, today, stds, ref: `${code}-${slug}-${year}`,
+    preparedBy: profilePreparedBy(), reviewer: profile.reviewer || '',
+    firm: profile.firm || 'АудитПро', firmTagline: profile.firmTagline || 'Одиторска система' };
 }
 function pdWpSections(code) {
   const mt = pdWpMeta(code), spec = mt.spec, det = mt.det;
@@ -5867,7 +5915,7 @@ function pdExportCss() {
     + '.r-y{color:#1f7a44;font-weight:700;}.r-n{color:#b42318;font-weight:700;}.r-na{color:var(--p-text3);font-weight:700;}.r-u{color:var(--p-text3);}'
     + '.wp-clr-note{font-size:12px;color:var(--p-text2);margin:5px 0 0;}.wp-clr-note b{color:var(--ink);}.wp-clr-att{font-size:11.5px;color:var(--p-text2);margin:5px 0 0;}.wp-clr-att b{color:var(--ink);}'
     + '.wp-clr-find{margin-top:12px;padding:10px 14px;border-radius:6px;border:1px solid var(--p-border);background:var(--p-surface2);break-inside:avoid;}.wp-clr-find.ok{background:#e6f4ec;border-color:#cfe6d8;}.wp-clr-find-h{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;}.wp-clr-find-i{font-size:12px;color:var(--p-text2);line-height:1.55;}'
-    + '.sign{display:flex;gap:44px;margin-top:28px;break-inside:avoid;}.sign-box{flex:1;}.sign-line{border-bottom:1px solid var(--p-text2);height:36px;}.sign-lbl{font-size:10px;color:var(--p-text3);margin-top:5px;letter-spacing:.3px;}'
+    + '.sign{display:flex;gap:44px;margin-top:28px;break-inside:avoid;}.sign-box{flex:1;}.sign-line{border-bottom:1px solid var(--p-text2);height:36px;}.sign-nm{font-size:11px;font-weight:700;color:var(--ink);margin-top:5px;}.sign-lbl{font-size:10px;color:var(--p-text3);margin-top:2px;letter-spacing:.3px;}'
     + '.ft{position:fixed;left:15mm;right:15mm;bottom:9mm;display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.4px;color:var(--p-text3);border-top:1px solid var(--p-border);padding-top:5px;}'
     + '.ft span:nth-child(2){color:var(--gold);font-weight:700;letter-spacing:1.5px;}'
     + '@page{size:A4;margin:15mm 15mm 18mm;}';
@@ -5875,11 +5923,12 @@ function pdExportCss() {
 function pdExportPdf(code) {
   const m = pdWpMeta(code);
   const title = `${code} ${m.spec.name} — ${m.client} ${m.year}`;
+  const lhName = m.firm === 'АудитПро' ? 'Аудит<span>Про</span>' : escHtml(m.firm);
   const body = `
-    <div class="wm">АудитПро</div>
+    <div class="wm">${escHtml(m.firm)}</div>
     <div class="doc">
       <header class="lh">
-        <div><div class="lh-name">Аудит<span>Про</span></div><div class="lh-tag">ОДИТОРСКА СИСТЕМА</div></div>
+        <div><div class="lh-name">${lhName}</div><div class="lh-tag">${escHtml((m.firmTagline || '').toUpperCase())}</div></div>
         <div class="lh-meta"><div class="lh-cls">ПОВЕРИТЕЛНО</div><div class="lh-ref">Реф. № ${m.ref}</div></div>
       </header>
       <div class="rule"></div>
@@ -5889,16 +5938,16 @@ function pdExportPdf(code) {
         <div class="mi"><span class="mk">Клиент</span><span class="mv">${m.client}</span></div>
         <div class="mi"><span class="mk">Отчетен период</span><span class="mv">${m.year}</span></div>
         <div class="mi"><span class="mk">Приложими стандарти</span><span class="mv">${m.stds}</span></div>
-        <div class="mi"><span class="mk">Изготвил</span><span class="mv">М. Марков · одитор</span></div>
+        <div class="mi"><span class="mk">Изготвил</span><span class="mv">${escHtml(m.preparedBy)}</span></div>
         <div class="mi"><span class="mk">Дата на изготвяне</span><span class="mv">${m.today}</span></div>
         <div class="mi"><span class="mk">Референция</span><span class="mv">${m.ref}</span></div>
       </div>
       <main class="doc-body">${pdWpSections(code)}</main>
       <div class="sign">
-        <div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">Изготвил — подпис / дата</div></div>
-        <div class="sign-box"><div class="sign-line"></div><div class="sign-lbl">Прегледал — подпис / дата</div></div>
+        <div class="sign-box"><div class="sign-line"></div><div class="sign-nm">${escHtml(m.preparedBy)}</div><div class="sign-lbl">Изготвил — подпис / дата</div></div>
+        <div class="sign-box"><div class="sign-line"></div><div class="sign-nm">${m.reviewer ? escHtml(m.reviewer) : '&nbsp;'}</div><div class="sign-lbl">Прегледал — подпис / дата</div></div>
       </div>
-      <footer class="ft"><span>АудитПро · Одиторска система</span><span>ПОВЕРИТЕЛНО</span><span>Реф. № ${m.ref}</span></footer>
+      <footer class="ft"><span>${escHtml(m.firm)}${m.firmTagline ? ' · ' + escHtml(m.firmTagline) : ''}</span><span>ПОВЕРИТЕЛНО</span><span>Реф. № ${m.ref}</span></footer>
     </div>`;
   const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8"><title>${title}</title><style>${pdExportCss()}</style></head><body>${body}</body></html>`;
   let w = null;
@@ -6053,6 +6102,60 @@ function entShowClients() {
       <tbody>${rows || '<tr><td colspan="5" style="color:var(--p-text3);padding:18px">Няма клиенти. Добавете първия.</td></tr>'}</tbody></table>
     </div></div>`;
 }
+
+// ── Екран „Профил" ───────────────────────────────────────────────────────
+function profilePreviewHtml() {
+  const lhName = profile.firm === 'АудитПро' ? 'Аудит<span style="color:var(--p-accent)">Про</span>' : escHtml(profile.firm || 'Дружество');
+  return `<div class="pf-lh"><div class="pf-lh-name">${lhName}</div><div class="pf-lh-tag">${escHtml((profile.firmTagline || '').toUpperCase())}</div></div>
+    <div class="pf-prev-row"><span class="k">Изготвил</span><span class="v">${escHtml(profilePreparedBy())}</span></div>
+    <div class="pf-prev-row"><span class="k">Прегледал</span><span class="v">${escHtml(profile.reviewer || '—')}</span></div>
+    ${profile.regNo ? `<div class="pf-prev-row"><span class="k">Диплома №</span><span class="v">${escHtml(profile.regNo)}</span></div>` : ''}
+    ${profile.firmEik ? `<div class="pf-prev-row"><span class="k">ЕИК (дружество)</span><span class="v">${escHtml(profile.firmEik)}</span></div>` : ''}`;
+}
+function entShowProfile() {
+  const m = entMainTop();
+  entSetActive(null);
+  entCrumbs([{ l: 'Профил' }]);
+  const f = (id, label, val, ph) => `<div class="pf-row"><label>${label}</label><input id="${id}" value="${escHtml(val || '')}" placeholder="${escHtml(ph || '')}"></div>`;
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Профил</h1><div class="sub">Данни на одитора и дружеството — попълват автоматично заглавието, полето „Изготвил" и подписите в работните документи</div></div>
+      <div style="display:flex;align-items:center"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="btn btn-primary" onclick="saveProfile()">Запази</button></div></div>
+    <div class="pf-grid">
+      <div class="sh-card"><div class="ent-card-h">Личен профил</div><div class="pf-body">
+        ${f('pf-name', 'Име и фамилия', profile.name, 'напр. Марко Марков')}
+        ${f('pf-role', 'Длъжност / роля', profile.role, 'напр. Регистриран одитор')}
+        ${f('pf-regNo', 'Диплома № (ИДЕС)', profile.regNo, 'напр. 0123')}
+        ${f('pf-email', 'Имейл', profile.email, 'name@firm.bg')}
+        ${f('pf-phone', 'Телефон', profile.phone, 'напр. +359 …')}
+      </div></div>
+      <div class="sh-card"><div class="ent-card-h">Одиторско дружество</div><div class="pf-body">
+        ${f('pf-firm', 'Наименование', profile.firm, 'напр. АудитПро ООД')}
+        ${f('pf-firmEik', 'ЕИК', profile.firmEik, 'напр. 201234567')}
+        ${f('pf-firmTagline', 'Подзаглавие', profile.firmTagline, 'напр. Одиторска система')}
+        ${f('pf-reviewer', 'Прегледал (по подразбиране)', profile.reviewer, 'напр. партньор / EQCR')}
+      </div></div>
+    </div>
+    <div class="sh-card"><div class="ent-card-h">Преглед в работен документ</div><div class="pf-prev" id="pf-prev">${profilePreviewHtml()}</div></div>
+  </div>`;
+}
+function saveProfile() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  profile.name = g('pf-name') || 'Одитор';
+  profile.role = g('pf-role');
+  profile.regNo = g('pf-regNo');
+  profile.email = g('pf-email');
+  profile.phone = g('pf-phone');
+  profile.firm = g('pf-firm') || 'АудитПро';
+  profile.firmEik = g('pf-firmEik');
+  profile.firmTagline = g('pf-firmTagline');
+  profile.reviewer = g('pf-reviewer');
+  persistProfile();
+  entRenderCtx();                                   // обнови чипа горе вдясно
+  const prev = document.getElementById('pf-prev'); if (prev) prev.innerHTML = profilePreviewHtml();
+  const sv = document.getElementById('pf-saved');   // кратко потвърждение
+  if (sv) { sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 1800); }
+}
+
 function openEngagement(name, year) {
   const c = clients[name]; if (!c) return;
   if (!c.years || c.years.indexOf(+year) === -1) { c.years = c.years || []; c.years.push(+year); persistClients(); }
