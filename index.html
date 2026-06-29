@@ -3716,6 +3716,7 @@
 <script src="questions.js"></script>
 <script src="pd-spec.js"></script>
 <script src="pd-details.js"></script>
+<script src="test-details.js"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5227,6 +5228,60 @@ function persistNotes() {
 
 function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+// ── Обогатяване на тестовете (test-details.js): цел, стандарти, качване ──
+function testDet(code) { return (window.testDetails && testDetails[code]) || {}; }
+function testPurpose(code) { const d = testDet(code), q = (window.testQuestions && testQuestions[code]) || {}; return d.purpose || q.does || ''; }
+function testStandards(code) {
+  const d = testDet(code);
+  if (d.standards && d.standards.length) return d.standards;
+  const q = (window.testQuestions && testQuestions[code]) || {};
+  return q.standard ? [{ code: q.standard, relation: '' }] : [];
+}
+function testQUploads(code) { const u = testDet(code).uploads; return Array.isArray(u) ? u.map(Number) : (u ? Object.keys(u).map(Number) : []); }
+function testQHasUpload(code, n) { return testQUploads(code).indexOf(+n) !== -1; }
+
+// Качени документи към въпрос — per-ангажимент: testUploads[code][n] = [файлове]
+window.testUploads = {};   // зарежда се per-ангажимент чрез reloadEngagement()
+function testUploadsPersist() { try { localStorage.setItem(engKey('auditpro_test_docs'), JSON.stringify(testUploads)); } catch (e) {} }
+function testFiles(code, n) { return ((testUploads[code] || {})[n]) || []; }
+function testTotalCount(code) { const mp = testUploads[code] || {}; return Object.keys(mp).reduce((a, k) => a + mp[k].length, 0); }
+function testAddFiles(code, n, fileList) {
+  if (!fileList || !fileList.length) return;
+  testUploads[code] = testUploads[code] || {};
+  testUploads[code][n] = (testUploads[code][n] || []).concat(Array.from(fileList).map(f => ({ name: f.name, size: f.size })));
+  testUploadsPersist(); testUploadRefresh(code, n);
+}
+function testRemoveFile(code, n, i) {
+  const mp = testUploads[code]; if (!mp || !mp[n]) return;
+  mp[n].splice(i, 1); if (!mp[n].length) delete mp[n]; if (!Object.keys(mp).length) delete testUploads[code];
+  testUploadsPersist(); testUploadRefresh(code, n);
+}
+function testUploadRefresh(code, n) { const el = document.getElementById('tup-' + code + '-' + n); if (el) el.innerHTML = testUploadWidget(code, n); }
+function testUploadWidget(code, n) {
+  const files = testFiles(code, n);
+  const filesHtml = files.length
+    ? `<div class="pd-slot-files" style="margin-top:8px">` + files.map((f, i) =>
+        `<div class="pd-file"><svg class="ico" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="testRemoveFile('${code}',${n},${i})">✕</button></div>`).join('') + `</div>`
+    : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="testAddFiles('${code}',${n},this.files)"></label>${filesHtml}`;
+}
+function testUploadField(code, n) {
+  if (!testQHasUpload(code, n)) return '';
+  return `<div style="margin-top:10px"><div class="q-note-label">Приложени документи</div><div id="tup-${code}-${n}">${testUploadWidget(code, n)}</div></div>`;
+}
+function testDetailCards(code) {
+  const det = testDet(code);
+  const hasStd = det.standards && det.standards.length;
+  if (!det.purpose && !hasStd) return '';
+  const purposeCard = det.purpose
+    ? `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Цел и съдържание</div><div class="pd-purpose">${det.purpose}</div></div>` : '';
+  const stdCard = hasStd
+    ? `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Приложими стандарти</div>
+        <table class="ent-tbl"><thead><tr><th style="width:210px">Стандарт</th><th>Описание</th></tr></thead>
+        <tbody>${det.standards.map(s => `<tr><td><span class="ent-idx">${s.code}</span></td><td style="color:var(--p-text2)">${s.relation || ''}</td></tr>`).join('')}</tbody></table></div>` : '';
+  return purposeCard + stdCard;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -5269,6 +5324,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       <div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
       <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>
       ${infoStrip}
+      ${testDetailCards(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
         <div style="padding:13px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
@@ -5280,7 +5336,8 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-bottom:12px">
         <button class="btn btn-secondary" onclick="${backAction}">← Назад</button>
-        <button class="btn btn-primary" onclick="saveTest('${code}')">Запази документа</button>
+        <button class="btn btn-secondary" onclick="saveTest('${code}')">Запази документа</button>
+        <button class="btn btn-primary" onclick="testShowPreview('${code}')">Преглед</button>
       </div>
     </div>`;
 
@@ -5302,6 +5359,7 @@ function renderAiQuestions(code, def) {
           </select>
         </div>
         ${noteField(code, q.n)}
+        ${testUploadField(code, q.n)}
       </div>
     </div>`).join('');
   return `
@@ -5335,6 +5393,7 @@ function renderDescriptiveQuestions(code, def) {
           </div>
           ${renderQuestion(code, q)}
           ${noteField(code, q.n)}
+          ${testUploadField(code, q.n)}
         </div>
       </div>`;
   }).join('');
@@ -6228,6 +6287,139 @@ function pdExportPdf(code) {
   setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
 }
 
+// ── Преглед и експорт в PDF на тестовете от етапите (като постоянното досие) ──
+function testWpMeta(code) {
+  const def = (window.testQuestions && testQuestions[code]) || {};
+  const det = testDet(code);
+  const client = iosCurrentClient || 'Клиент', year = iosCurrentYear || 2025;
+  const today = new Date().toLocaleDateString('bg-BG');
+  let stds = def.standard || '';
+  if (det.standards && det.standards.length) stds = det.standards.map(s => s.code).join('; ');
+  let phaseN = 0, sectionName = '';
+  for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionName = s.name; break; } }
+  const slug = (client.match(/[A-Za-zА-Яа-я0-9]+/g) || ['КЛИЕНТ']).join('').slice(0, 6).toUpperCase();
+  return { def, det, client, year, today, stds, phaseN, sectionName, test: def.test || code,
+    ref: `${code}-${slug}-${year}`, preparedBy: profilePreparedBy(), reviewer: engReviewer(),
+    firm: firm.name || 'АудитПро', firmTagline: firm.tagline || 'Одиторска система' };
+}
+function testStandardsRows(code) {
+  const list = testStandards(code);
+  if (!list.length) return '<tr><td>—</td><td>—</td></tr>';
+  return list.map(s => `<tr><td class="c" style="white-space:normal">${s.code}</td><td>${s.relation || '—'}</td></tr>`).join('');
+}
+function testWpSections(code) {
+  const mt = testWpMeta(code), def = mt.def;
+  const ans = (window.testAnswers && testAnswers[code]) || {};
+  const notes = (window.testNotes && testNotes[code]) || {};
+  const answered = (def.questions || []).filter(q => ans[q.n]).length;
+  const sub = 'style="margin-top:5px;font-size:11.5px;color:var(--p-text3);line-height:1.5"';
+  const qaRows = (def.questions || []).map(q => {
+    const a = ans[q.n] ? escHtml(ans[q.n]) : '—';
+    const note = notes[q.n] ? `<div ${sub}><b>Бележка:</b> ${escHtml(notes[q.n])}</div>` : '';
+    const files = testFiles(code, q.n);
+    const att = files.length ? `<div ${sub}><b>Документи:</b> ${files.map(f => escHtml(f.name)).join(' · ')}</div>` : '';
+    return `<tr><td><b>${q.n}.</b> ${escHtml(q.q)}${note}${att}</td><td class="c" style="white-space:normal;width:190px">${a}</td></tr>`;
+  }).join('');
+  const docBlocks = (def.questions || []).map(q => {
+    const files = testFiles(code, q.n);
+    if (!files.length) return '';
+    return `<div class="wp-doc"><div class="wp-doc-name">${escHtml(q.q)}</div><div class="wp-doc-files">${files.map(f => `<span>• ${escHtml(f.name)} <span style="color:var(--p-text3)">(${pdFmtSize(f.size)})</span></span>`).join('')}</div></div>`;
+  }).filter(Boolean).join('');
+  const showDocs = !!docBlocks || testQUploads(code).length > 0;
+  const conclQ = (def.questions || []).find(q => q.type === 'Заключение');
+  const conclChip = conclQ && ans[conclQ.n] ? escHtml(ans[conclQ.n]) : '';
+  const conclText = notes.concl ? escHtml(notes.concl) : '';
+  let n = 0;
+  const secP = ++n, secS = ++n, secQ = ++n, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const docsHtml = showDocs
+    ? `<div class="wp-sec"><h3><span class="n">${secD}.</span>Приложени документи и доказателства</h3>${docBlocks || '<div class="wp-miss">Няма приложени документи.</div>'}</div>` : '';
+  const conclHtml = `<div class="wp-sec"><h3><span class="n">${secC}.</span>Заключение</h3>`
+    + (conclChip ? `<div class="wp-text"><b>Заключение по теста:</b> ${conclChip}</div>` : '')
+    + (conclText ? `<div class="wp-text" style="margin-top:6px">${conclText}</div>` : '')
+    + (!conclChip && !conclText ? `<div class="wp-miss">Няма формулирано заключение.</div>` : '')
+    + `</div>`;
+  return `<div class="wp-sec"><h3><span class="n">${secP}.</span>Цел и съдържание</h3><div class="wp-text">${testPurpose(code) || '—'}</div></div>
+      <div class="wp-sec"><h3><span class="n">${secS}.</span>Приложими стандарти</h3>
+        <table class="wp-std"><tbody>${testStandardsRows(code)}</tbody></table></div>
+      <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
+        <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
+      ${docsHtml}
+      ${conclHtml}
+      <div class="wp-sec"><h3><span class="n">${secU}.</span>Обобщение</h3>
+        <div class="wp-sum"><span>Попълнени въпроси: <b>${answered} / ${(def.questions || []).length}</b></span><span>Приложени документи: <b>${testTotalCount(code)}</b></span></div></div>`;
+}
+function testWpHtml(code) {
+  const m = testWpMeta(code);
+  return `<div class="wp" id="wp">
+      <div class="wp-head">
+        <div class="wp-kicker">Одиторски работен документ · МОС/ISA</div>
+        <div class="wp-title">${code} · ${escHtml(m.test)}</div>
+        <div class="wp-meta">
+          <div><span class="k">Клиент:</span> <span class="v">${escHtml(m.client)}</span></div>
+          <div><span class="k">Отчетен период:</span> <span class="v">${m.year}</span></div>
+          <div><span class="k">Приложими стандарти:</span> <span class="v">${escHtml(m.stds)}</span></div>
+          <div><span class="k">Дата на изготвяне:</span> <span class="v">${m.today}</span></div>
+        </div>
+      </div>
+      ${testWpSections(code)}
+    </div>`;
+}
+function testShowPreview(code) {
+  const m = entMainTop();
+  const client = iosCurrentClient || 'Клиент';
+  let phaseN = 0, sectionCode = null, sectionName = '';
+  for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionCode = s.code; sectionName = s.name; break; } }
+  entCrumbs([{ l: client, go: 'entShowDashboard()' },
+    { l: 'Етап ' + phaseN, go: `entShowSection('${sectionCode}')` },
+    { l: `${sectionCode} · ${sectionName}`, go: `entShowSection('${sectionCode}')` },
+    { l: code, go: `entShowWd('${code}')` }, { l: 'Преглед' }]);
+  m.innerHTML = `<div class="ent-page">
+    ${testWpHtml(code)}
+    <div class="wp-actions" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 0 12px">
+      <button class="btn btn-secondary" onclick="entShowWd('${code}')">← Назад към теста</button>
+      <button class="btn btn-primary" onclick="testExportPdf('${code}')">Експорт PDF</button>
+    </div>
+  </div>`;
+}
+function testExportPdf(code) {
+  if (isTrial()) { trialBlockPdf(); return; }   // PDF е недостъпен в пробен период
+  const m = testWpMeta(code);
+  const title = `${code} ${m.test} — ${m.client} ${m.year}`;
+  const lhName = m.firm === 'АудитПро' ? 'Аудит<span>Про</span>' : escHtml(m.firm);
+  const body = `
+    <div class="wm">${escHtml(m.firm)}</div>
+    <div class="doc">
+      <header class="lh">
+        <div><div class="lh-name">${lhName}</div><div class="lh-tag">${escHtml((m.firmTagline || '').toUpperCase())}</div></div>
+        <div class="lh-meta"><div class="lh-cls">ПОВЕРИТЕЛНО</div><div class="lh-ref">Реф. № ${m.ref}</div></div>
+      </header>
+      <div class="rule"></div>
+      <div class="doc-kicker">Работен документ · Етап ${m.phaseN}${m.sectionName ? ' · ' + escHtml(m.sectionName) : ''}</div>
+      <h1 class="doc-title">${code} · ${escHtml(m.test)}</h1>
+      <div class="doc-meta">
+        <div class="mi"><span class="mk">Клиент</span><span class="mv">${escHtml(m.client)}</span></div>
+        <div class="mi"><span class="mk">Отчетен период</span><span class="mv">${m.year}</span></div>
+        <div class="mi"><span class="mk">Приложими стандарти</span><span class="mv">${escHtml(m.stds)}</span></div>
+        <div class="mi"><span class="mk">Изготвил</span><span class="mv">${escHtml(m.preparedBy)}</span></div>
+        <div class="mi"><span class="mk">Дата на изготвяне</span><span class="mv">${m.today}</span></div>
+        <div class="mi"><span class="mk">Референция</span><span class="mv">${m.ref}</span></div>
+      </div>
+      <main class="doc-body">${testWpSections(code)}</main>
+      <div class="sign">
+        <div class="sign-box"><div class="sign-line"></div><div class="sign-nm">${escHtml(m.preparedBy)}</div><div class="sign-lbl">Изготвил — подпис / дата</div></div>
+        <div class="sign-box"><div class="sign-line"></div><div class="sign-nm">${m.reviewer ? escHtml(m.reviewer) : '&nbsp;'}</div><div class="sign-lbl">Прегледал — подпис / дата</div></div>
+      </div>
+      <footer class="ft"><span>${escHtml(m.firm)}${m.firmTagline ? ' · ' + escHtml(m.firmTagline) : ''}</span><span>ПОВЕРИТЕЛНО</span><span>Реф. № ${m.ref}</span></footer>
+    </div>`;
+  const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8"><title>${title}</title><style>${pdExportCss()}</style></head><body>${body}</body></html>`;
+  let w = null;
+  try { w = window.open('', '_blank'); } catch (e) { w = null; }
+  if (!w) { window.print(); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+}
+
 // ── Чеклист за IT контроли (ПД-09): Да/Не/Н.П. + полета за попълване ──
 window.pdChecklist = {};    // зареждат се per-ангажимент чрез reloadEngagement()
 window.pdClAttach = {};
@@ -6316,7 +6508,7 @@ function pdShowChecklist(code, idx) {
 // ══════════════════════════════════════════════════════════════════════
 window.team = {};   // екип по ангажимент: { userId: engRole } — per-ангажимент
 const ENG_STORES = [
-  ['testAnswers', 'auditpro_answers'], ['testNotes', 'auditpro_notes'],
+  ['testAnswers', 'auditpro_answers'], ['testNotes', 'auditpro_notes'], ['testUploads', 'auditpro_test_docs'],
   ['pdUploads', 'auditpro_pd_docs'], ['pdCustom', 'auditpro_pd_custom'], ['pdHiddenUser', 'auditpro_pd_hidden'],
   ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
   ['team', 'auditpro_team'],
