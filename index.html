@@ -3723,10 +3723,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260629220503"></script>
-<script src="pd-spec.js?v=20260629220503"></script>
-<script src="pd-details.js?v=20260629220503"></script>
-<script src="test-details.js?v=20260629220503"></script>
+<script src="questions.js?v=20260629221859"></script>
+<script src="pd-spec.js?v=20260629221859"></script>
+<script src="pd-details.js?v=20260629221859"></script>
+<script src="test-details.js?v=20260629221859"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5267,6 +5267,12 @@ function testAnswerableKeys(def) {
   (def.questions || []).forEach(q => { keys.push(q.n); (q.subs || []).forEach(s => keys.push(s.n)); });
   return keys;
 }
+// Водещият въпрос-заключение: ако има няколко (напр. A-60: „Финално решение“ + „Финално заключение“),
+// меродавно е последното заключение. При едно заключение поведението е непроменено.
+function testConclQ(def) {
+  const list = (def.questions || []).filter(q => q.type === 'Заключение');
+  return list.length ? list[list.length - 1] : undefined;
+}
 
 // Качени документи към въпрос — per-ангажимент: testUploads[code][n] = [файлове]
 window.testUploads = {};   // зарежда се per-ангажимент чрез reloadEngagement()
@@ -5538,7 +5544,7 @@ function runAiTest(code) {
 
 function updateConclusion(code) {
   const def = testEffectiveDef(code);
-  const concl = def.questions.find(q => q.type === 'Заключение');
+  const concl = testConclQ(def);
   const box = document.getElementById(code + '-conclusion');
   if (!box) return;
   const val = concl ? (testAnswers[code] || {})[concl.n] : null;
@@ -6406,7 +6412,7 @@ function testWpSections(code) {
     return `<div class="wp-doc"><div class="wp-doc-name">${escHtml(q.q)}</div><div class="wp-doc-files">${files.map(f => `<span>• ${escHtml(f.name)} <span style="color:var(--p-text3)">(${pdFmtSize(f.size)})</span></span>`).join('')}</div></div>`;
   }).filter(Boolean).join('');
   const showDocs = !!docBlocks || testQUploads(code).length > 0;
-  const conclQ = (def.questions || []).find(q => q.type === 'Заключение');
+  const conclQ = testConclQ(def);
   const conclChip = conclQ && ans[conclQ.n] ? escHtml(ans[conclQ.n]) : '';
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   let n = 0;
