@@ -523,6 +523,9 @@
   .ent-prof-meta { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
   .ent-prof-meta .nm { font-size: 12px; font-weight: 600; color: var(--p-text1); }
   .ent-prof-meta .rl { font-size: 10px; color: var(--p-text3); }
+  .ent-firm { display: flex; align-items: center; gap: 7px; background: none; border: 1px solid var(--p-border); border-radius: 20px; padding: 6px 13px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--p-text1); }
+  .ent-firm:hover { background: var(--p-surface2); border-color: var(--p-border-strong); }
+  .ent-firm svg { color: var(--p-text3); flex-shrink: 0; }
 
   .ent-page { width: 100%; padding: 24px 28px; max-width: 1000px; }
   .ent-h { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
@@ -5572,6 +5575,10 @@ function entRenderCtx() {
   const me = currentUser();
   document.getElementById('ent-topright').innerHTML =
     `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
+    `<button class="ent-firm" onclick="entShowTeam()" title="Дружество и екип · потребители, права, плащане">` +
+      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M15 21V9h3a1 1 0 0 1 1 1v11M9 8h2M9 11h2M9 14h2"/></svg>` +
+      `<span class="fnm">Дружество</span>` +
+    `</button>` +
     `<button class="ent-prof" onclick="entShowProfile()" title="Моят профил">` +
       `<span class="ent-prof-av">${userInitials(me)}</span>` +
       `<span class="ent-prof-meta"><span class="nm">${escHtml(me.name || 'Потребител')}${isAdmin(me) ? ' <span class=\"ent-prof-adm\">Админ</span>' : ''}</span><span class="rl">${escHtml(me.title || '')}</span></span>` +
@@ -5607,9 +5614,8 @@ function entTogglePhase(btn) {
 }
 
 function entRenderTree() {
-  let h = `<button class="ent-item" data-k="clients" onclick="entShowClients()">Клиенти</button>`;
-  h += `<button class="ent-item" data-k="team" onclick="entShowTeam()">Дружество и екип</button>`;
-  h += `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
+  // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
+  let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -6207,7 +6213,7 @@ function setEngagement(name, year) {
 // ── Управление на клиенти (CRUD) ──────────────────────────────────────
 function entShowClients() {
   const m = entMainTop();
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="clients"]'));
+  entSetActive(null); // входът е в контекста (ent-ctx), не в дървото
   entCrumbs([{ l: 'Клиенти' }]);
   const canEdit = hasPerm('manage_clients');
   const names = Object.keys(clients);
@@ -6300,7 +6306,7 @@ function statusBadgeHtml(u) {
 }
 function entShowTeam() {
   const m = entMainTop();
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="team"]'));
+  entSetActive(null); // входът е в горната лента (ent-topright), не в дървото
   entCrumbs([{ l: 'Дружество и екип' }]);
   const canManage = hasPerm('manage_users');
   const used = seatsUsed(), seats = firm.seats || 0;
