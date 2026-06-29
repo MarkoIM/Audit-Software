@@ -5416,6 +5416,8 @@ function renderDescriptiveQuestions(code, def) {
   const rows = def.questions.map(q => {
     const concl = q.type === 'Заключение';
     const upload = testQAllowsUpload(code, q) ? testUploadBlock(code, q.n) : '';
+    const evHint = q.evidence
+      ? `<div class="q-sub-ev" style="margin-top:6px"><b>Примерни доказателства:</b> ${escHtml(Array.isArray(q.evidence) ? q.evidence.join('; ') : q.evidence)}</div>` : '';
     const subs = (q.subs && q.subs.length)
       ? `<div class="q-subs">${q.subs.map(s => renderSubQuestion(code, s)).join('')}</div>` : '';
     return `
@@ -5428,6 +5430,7 @@ function renderDescriptiveQuestions(code, def) {
           ${renderQuestion(code, q)}
           ${noteField(code, q.n)}
           ${upload}
+          ${evHint}
           ${subs}
         </div>
       </div>`;
@@ -5458,9 +5461,16 @@ function renderQuestion(code, q) {
 }
 
 // Подвъпрос (1.1, 2.3, …): компактен ред — текст + падащ списък, по избор свободен текст и подсказка за доказателство.
+// Подвъпрос без опции (напр. „Финално заключение…“) се изобразява само като поле за свободен текст (отговорът е текстът).
 function renderSubQuestion(code, s) {
   const cur  = (testAnswers[code] || {})[s.n] || '';
   const opts = s.options || [];
+  if (!opts.length) {
+    return `<div class="q-sub">
+      <div class="q-sub-q" style="margin-bottom:6px"><span class="q-sub-n">${s.n}</span> ${s.q}</div>
+      <textarea class="q-note q-sub-free" rows="2" placeholder="${escHtml(s.note || 'Свободен текст…')}" oninput="setAnswer('${code}','${s.n}',this.value)">${escHtml(cur)}</textarea>
+    </div>`;
+  }
   const sel  = `<select class="q-select q-sub-sel" onchange="setAnswer('${code}','${s.n}',this.value)">
       <option value="">— Изберете —</option>
       ${opts.map(o => `<option${o === cur ? ' selected' : ''}>${o}</option>`).join('')}
@@ -6378,6 +6388,12 @@ function testWpSections(code) {
     const files = testFiles(code, q.n);
     const att = files.length ? `<div ${sub}><b>Документи:</b> ${files.map(f => escHtml(f.name)).join(' · ')}</div>` : '';
     const subRows = (q.subs || []).map(s => {
+      if (!(s.options && s.options.length)) {   // свободнотекстов подвъпрос → цял ред
+        const txt = ans[s.n]
+          ? `<div style="margin-top:4px;font-size:12px;color:var(--p-text1);line-height:1.5">${escHtml(ans[s.n])}</div>`
+          : `<div style="margin-top:4px;font-size:11.5px;color:var(--p-text3)">—</div>`;
+        return `<tr><td colspan="2" style="padding-left:22px;color:var(--p-text2)"><b>${s.n}</b> ${escHtml(s.q)}${txt}</td></tr>`;
+      }
       const sa = ans[s.n] ? escHtml(ans[s.n]) : '—';
       const sn = notes[s.n] ? `<div ${sub}>${escHtml(notes[s.n])}</div>` : '';
       return `<tr><td style="padding-left:22px;color:var(--p-text2)"><b>${s.n}</b> ${escHtml(s.q)}${sn}</td><td class="c" style="white-space:normal;width:190px">${sa}</td></tr>`;
