@@ -1270,12 +1270,32 @@
   .auth-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .ent-logout { background: none; border: 1px solid var(--p-border-strong); color: var(--p-text2); border-radius: 7px; padding: 7px 13px; font-size: 13px; font-family: inherit; cursor: pointer; margin-right: 9px; }
   .ent-logout:hover { border-color: var(--red); color: var(--red); }
+  .auth-row2 { display: flex; gap: 10px; }
+  .auth-row2 .auth-field { flex: 1; }
+
+  /* ── Trial / заключен PDF (проформа) ── */
+  .trial-pill { display: inline-flex; align-items: center; gap: 6px; background: #fbeae0; color: #b4530f; border: 1px solid #f1c9ad; border-radius: 20px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; font-family: inherit; cursor: pointer; margin-right: 4px; }
+  .trial-pill:hover { filter: brightness(.97); }
+  .trial-pill svg { flex-shrink: 0; }
+  .trial-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; background: #fbeae0; border: 1px solid #f1c9ad; border-radius: 9px; font-size: 12px; color: #8a4313; }
+  .trial-banner b { color: #7a3a10; }
+  .trial-modal-ov { position: fixed; inset: 0; z-index: 3200; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(10,15,26,.55); }
+  .trial-modal-ov.open { display: flex; }
+  .trial-modal { width: 100%; max-width: 400px; background: var(--p-surface); border-radius: 14px; box-shadow: 0 28px 70px rgba(0,0,0,.45); padding: 26px 26px 20px; text-align: center; }
+  .trial-modal .trial-ic { width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 50%; background: var(--p-accent-bg); color: var(--p-accent); display: flex; align-items: center; justify-content: center; }
+  .trial-modal h3 { margin: 0 0 8px; font-size: 17px; color: var(--p-text1); }
+  .trial-modal p { margin: 0 0 18px; font-size: 12.5px; line-height: 1.55; color: var(--p-text2); }
+  .trial-acts { display: flex; gap: 9px; }
+  .trial-acts .btn { flex: 1; justify-content: center; }
+  .trial-note { margin-top: 12px; font-size: 11px; color: var(--p-text3); }
 </style>
 </head>
 <body>
 <!-- Проформа логин + 2FA (само интерфейс — без реална сигурност) -->
 <div id="auth-screen"></div>
 <div class="auth-toast" id="auth-toast"></div>
+<!-- Заключен PDF в пробен период (проформа) -->
+<div class="trial-modal-ov" id="trial-modal-ov"><div class="trial-modal" id="trial-modal"></div></div>
 <div id="app">
 
   <!-- ═══ SIDEBAR ═══ -->
@@ -3745,12 +3765,22 @@ const ENG_ROLES = [
 const DEFAULT_MEMBER_PERMS = { edit_wp: true, export: true };
 
 // Дружеството (tenant + mock абонамент).
-const FIRM_DEFAULT = { name: 'АудитПро', eik: '', tagline: 'Одиторска система', plan: 'Pro', seats: 5 };
+const FIRM_DEFAULT = { name: 'АудитПро', eik: '', ides: '', tagline: 'Одиторска система', plan: 'Pro', seats: 5, trial: true };
 let firm = (function () {
   try { const s = JSON.parse(localStorage.getItem('auditpro_firm') || 'null'); if (s) return Object.assign({}, FIRM_DEFAULT, s); } catch (e) {}
   return Object.assign({}, FIRM_DEFAULT);
 })();
 function persistFirm() { try { localStorage.setItem('auditpro_firm', JSON.stringify(firm)); } catch (e) {} }
+
+// ── Пробен период (проформа): PDF е заключен, докато абонаментът не се активира.
+//    Защита срещу злоупотреба = гейтваме ИЗХОДА (PDF), не времето. ИДЕС+ЕИК при
+//    регистрация + един пробен период на дружество (по ЕИК) пазят от фалшиви акаунти.
+function isTrial() { return !!(firm && firm.trial); }
+function trialActivate() { if (firm && firm.trial) { firm.trial = false; persistFirm(); } }
+function eikKey(eik) { return String(eik || '').replace(/\D/g, ''); }
+function usedTrials() { try { return JSON.parse(localStorage.getItem('auditpro_used_trials') || '[]') || []; } catch (e) { return []; } }
+function trialUsedFor(eik) { const k = eikKey(eik); return !!k && usedTrials().indexOf(k) !== -1; }
+function markTrialUsed(eik) { const k = eikKey(eik); if (!k) return; try { const a = usedTrials(); if (a.indexOf(k) === -1) { a.push(k); localStorage.setItem('auditpro_used_trials', JSON.stringify(a)); } } catch (e) {} }
 
 // Потребители (профили в дружеството).
 function seedUsers() {
@@ -5618,6 +5648,11 @@ function entRenderCtx() {
     `<button class="ent-ctx-btn" onclick="entShowClients()">Управление на клиенти</button>`;
   const me = currentUser();
   document.getElementById('ent-topright').innerHTML =
+    (isTrial()
+      ? `<button class="trial-pill" onclick="trialBlockPdf()" title="Пробен период — PDF е заключен. Активирай, за да отключиш досието.">`
+        + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+        + `Проба · PDF заключен</button>`
+      : '') +
     `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
     `<button class="ent-firm" onclick="entShowTeam()" title="Дружество и екип · потребители, права, плащане">` +
       `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M15 21V9h3a1 1 0 0 1 1 1v11M9 8h2M9 11h2M9 14h2"/></svg>` +
@@ -6101,6 +6136,7 @@ function pdExportCss() {
     + '@page{size:A4;margin:15mm 15mm 18mm;}';
 }
 function pdExportPdf(code) {
+  if (isTrial()) { trialBlockPdf(); return; }   // PDF е недостъпен в пробен период
   const m = pdWpMeta(code);
   const title = `${code} ${m.spec.name} — ${m.client} ${m.year}`;
   const lhName = m.firm === 'АудитПро' ? 'Аудит<span>Про</span>' : escHtml(m.firm);
@@ -6384,8 +6420,9 @@ function entShowTeam() {
         ${canManage ? `<button class="btn btn-secondary btn-sm" onclick="saveFirm()" style="margin-top:4px">Запази данните</button><span class="pf-saved" id="fm-saved" style="margin-left:10px">Запазено ✓</span>` : ''}
       </div></div>
       <div class="sh-card"><div class="ent-card-h">Абонамент</div><div class="pf-body">
-        <div class="seat-top"><span class="seat-plan">План ${escHtml(firm.plan || '—')}</span><span class="seat-num${overSeats ? ' over' : ''}">${used} / ${seats} места</span></div>
+        <div class="seat-top"><span class="seat-plan">${isTrial() ? 'Пробен период' : 'План ' + escHtml(firm.plan || '—')}</span><span class="seat-num${overSeats ? ' over' : ''}">${used} / ${seats} места</span></div>
         <div class="seat-bar"><div class="seat-fill${overSeats ? ' over' : ''}" style="width:${seats ? Math.min(100, Math.round(used / seats * 100)) : 0}%"></div></div>
+        ${isTrial() ? `<div class="trial-banner"><div><b>Пробен период</b> · PDF експортът е заключен</div>${canManage ? `<button class="btn btn-primary btn-sm" onclick="trialActivateBilling()">Активирай</button>` : ''}</div>` : ''}
         <div class="pf-hint">Плаща се на активен профил. Поканен или активен потребител заема място; деактивирането освобождава място.</div>
         ${canManage ? `<div class="pf-row" style="margin-top:12px"><label>Платени места (mock абонамент)</label><div style="display:flex;gap:8px"><input id="fm-seats" type="number" min="1" value="${seats}" style="max-width:90px"><button class="btn btn-secondary btn-sm" onclick="saveSeats()">Обнови</button></div></div>` : ''}
       </div></div>
@@ -6402,6 +6439,11 @@ function saveFirm() {
   firm.name = g('fm-name') || 'АудитПро'; firm.eik = g('fm-eik'); firm.tagline = g('fm-tagline');
   persistFirm(); entRenderCtx();
   const sv = document.getElementById('fm-saved'); if (sv) { sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 1800); }
+}
+function trialActivateBilling() {
+  if (!hasPerm('manage_users')) { alert('Нямаш право да управляваш абонамента.'); return; }
+  trialActivate(); entShowTeam(); entRenderCtx();
+  authToast('Абонаментът е активиран. Досието е отключено — PDF експортът е наличен.');
 }
 function saveSeats() {
   if (!hasPerm('manage_billing')) { alert('Нямаш право да управляваш абонамента.'); return; }
@@ -6693,6 +6735,7 @@ function renderAuth() {
     setTimeout(() => { const f = document.getElementById('tfa-0'); if (f) f.focus(); }, 30);
     return;
   }
+  if (authStep === 'register') { renderAuthRegister(el); return; }
   const chips = Object.keys(users).filter(id => users[id].status !== 'inactive')
     .map(id => `<span class="auth-chip" onclick="authQuick('${id}')">${escHtml(users[id].name)}${users[id].role === 'admin' ? ' · админ' : ''}</span>`).join('');
   el.innerHTML = `<div class="auth-card" id="auth-card">
@@ -6705,6 +6748,7 @@ function renderAuth() {
     <button class="auth-btn" onclick="authLogin()">Вход</button>
     <div class="auth-or">или</div>
     <button class="auth-btn sec" onclick="authSso()"><svg viewBox="0 0 23 23" width="15" height="15"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>Вход с Microsoft</button>
+    <div class="auth-foot">Нямаш акаунт? <span class="auth-link" onclick="authShowRegister()">Създай дружество</span></div>
     <div class="auth-demo"><b>Демо вход</b> — избери профил (паролата е без значение):<div class="auth-chips">${chips}</div></div>
   </div>`;
 }
@@ -6757,7 +6801,67 @@ function authVerify() {
 }
 function authResend() { authToast('Изпратихме нов код (демо: ' + AUTH_DEMO_CODE + ').'); }
 function authForgot() { authToast('Демо: възстановяване на парола не е активно в прототипа.'); }
-function authBack() { authStep = 'login'; renderAuth(); }
+function authBack() { authStep = 'login'; authError(''); renderAuth(); }
+
+// ── Регистрация на дружество (проформа): ИДЕС + ЕИК, един пробен период на ЕИК ──
+function authShowRegister() { authStep = 'register'; authError(''); renderAuth(); }
+function renderAuthRegister(el) {
+  el.innerHTML = `<div class="auth-card" id="auth-card">
+    <div class="auth-logo">Аудит<span>Про</span></div>
+    <div class="auth-sub">Създай дружество · 14 дни безплатно</div>
+    <div id="auth-err-slot"></div>
+    <div class="auth-field"><label>Твоето име</label><input id="reg-name" placeholder="Име Фамилия"></div>
+    <div class="auth-field"><label>Служебен имейл</label><input id="reg-email" type="email" placeholder="ime@drujestvo.bg"></div>
+    <div class="auth-field"><label>Парола</label><input id="reg-pass" type="password" placeholder="••••••••"></div>
+    <div class="auth-field"><label>Одиторско дружество</label><input id="reg-firm" placeholder="Дружество ООД"></div>
+    <div class="auth-row2">
+      <div class="auth-field"><label>ЕИК</label><input id="reg-eik" inputmode="numeric" placeholder="9 или 13 цифри"></div>
+      <div class="auth-field"><label>Рег. № в ИДЕС</label><input id="reg-ides" placeholder="напр. 0123"></div>
+    </div>
+    <button class="auth-btn" onclick="authRegister()">Създай дружество</button>
+    <div class="auth-foot">Вече имаш акаунт? <span class="auth-link" onclick="authBack()">Влез</span></div>
+    <div class="auth-demo">Проверката на ЕИК (Търговски регистър) и рег. № в ИДЕС е <b>проформа</b> в демото. Допуска се <b>един пробен период на дружество</b> (по ЕИК).</div>
+  </div>`;
+  setTimeout(() => { const f = document.getElementById('reg-name'); if (f) f.focus(); }, 30);
+}
+function authRegister() {
+  const g = id => (((document.getElementById(id) || {}).value) || '').trim();
+  const name = g('reg-name'), email = g('reg-email'), pass = g('reg-pass');
+  const fname = g('reg-firm'), eik = g('reg-eik'), ides = g('reg-ides');
+  if (!name || !email || !pass) { authError('Попълни име, служебен имейл и парола.'); authShake(); return; }
+  if (!fname) { authError('Въведи името на одиторското дружество.'); authShake(); return; }
+  const ek = eikKey(eik);
+  if (ek.length !== 9 && ek.length !== 13) { authError('ЕИК трябва да е 9 или 13 цифри.'); authShake(); return; }
+  if (!ides) { authError('Въведи регистрационния номер в ИДЕС.'); authShake(); return; }
+  if (trialUsedFor(ek)) { authError('Това дружество (ЕИК ' + ek + ') вече е ползвало пробен период. Влез в съществуващия акаунт или активирай абонамент.'); authShake(); return; }
+  // Проформа „проверка" → ново дружество в пробен период, екипът = само регистрантът (админ).
+  firm = Object.assign({}, FIRM_DEFAULT, { name: fname, eik: ek, ides: ides, plan: 'Pro', seats: 3, trial: true });
+  persistFirm();
+  users = { u1: { id: 'u1', name: name, email: email, role: 'admin', title: 'Регистриран одитор', regNo: ides, phone: '', status: 'active', initials: clInitials(name), perms: {} } };
+  persistUsers();
+  markTrialUsed(ek);
+  try { localStorage.removeItem('auditpro_trusted_device'); } catch (e) {}
+  authToast('Дружеството е създадено. 14 дни безплатно — PDF се отключва при активиране.');
+  authComplete('u1');
+}
+
+// ── Модал „PDF е заключен в пробен период" ──
+function trialBlockPdf() {
+  const ov = document.getElementById('trial-modal-ov'), md = document.getElementById('trial-modal');
+  if (!ov || !md) { authToast('PDF експортът е заключен в пробната версия.'); return; }
+  md.innerHTML = `
+    <div class="trial-ic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <h3>PDF експортът е заключен</h3>
+    <p>В пробната версия изграждаш цялото досие, но изтеглянето и печатът на официални PDF-и са недостъпни.<br>Активирай абонамента, за да отключиш досието си.</p>
+    <div class="trial-acts">
+      <button class="btn btn-secondary" onclick="trialModalClose()">Не сега</button>
+      <button class="btn btn-primary" onclick="trialActivateFromModal()">Активирай абонамента</button>
+    </div>
+    <div class="trial-note">Демо: активирането е проформа — без реално плащане.</div>`;
+  ov.classList.add('open');
+}
+function trialModalClose() { const ov = document.getElementById('trial-modal-ov'); if (ov) ov.classList.remove('open'); }
+function trialActivateFromModal() { trialActivate(); trialModalClose(); entRenderCtx(); authToast('Абонаментът е активиран. Досието е отключено.'); }
 
 function authComplete(uid) {
   if (!users[uid]) uid = Object.keys(users)[0];
@@ -6785,7 +6889,7 @@ function entInit() {
   if (act && clients[act.client]) { iosCurrentClient = act.client; iosCurrentYear = +act.year; }
   if (!iosCurrentClient || !clients[iosCurrentClient]) iosCurrentClient = Object.keys(clients)[0];
   const cc = clients[iosCurrentClient];
-  if (!iosCurrentYear || !(cc.years || []).length || cc.years.indexOf(iosCurrentYear) === -1) {
+  if (cc && (!iosCurrentYear || !(cc.years || []).length || cc.years.indexOf(iosCurrentYear) === -1)) {
     iosCurrentYear = (cc.years && cc.years.length) ? cc.years.slice().sort((a, b) => b - a)[0] : 2025;
   }
   engMigrateLegacy();
