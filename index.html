@@ -887,6 +887,26 @@
   .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
   .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid var(--gray-200); padding-top: 16px; }
 
+  /* Управление на клиенти */
+  .ent-ctx-btn { width: 100%; margin-top: 8px; background: #20304f; color: #dbe2ef; border: 1px solid #2a3a5e; border-radius: 4px; padding: 6px; font-size: 11px; font-family: inherit; cursor: pointer; }
+  .ent-ctx-btn:hover { background: #28395c; }
+  .cm-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cm-tbl th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--p-text3); padding: 9px 10px; border-bottom: 2px solid var(--p-border-strong); }
+  .cm-tbl td { padding: 11px 10px; border-bottom: 1px solid var(--p-border); vertical-align: middle; color: var(--p-text2); }
+  .cm-tbl tr:hover td { background: var(--p-surface2); }
+  .cm-tbl b { color: var(--p-text1); }
+  .cm-av { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; background: var(--p-accent); color: #fff; font-size: 11px; font-weight: 700; margin-right: 9px; vertical-align: middle; }
+  .cm-year { display: inline-block; font-size: 11.5px; font-weight: 600; color: var(--p-accent); background: var(--p-accent-bg); border: 1px solid var(--p-border); border-radius: 4px; padding: 3px 8px; margin: 2px 4px 2px 0; cursor: pointer; }
+  .cm-year:hover { background: var(--p-accent); color: #fff; }
+  .cm-year .x { margin-left: 7px; opacity: .65; }
+  .cm-year .x:hover { opacity: 1; }
+  .cm-act { white-space: nowrap; }
+  .cm-act .btn { margin-left: 6px; }
+  .cl-form-row { margin-bottom: 14px; }
+  .cl-form-row label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); margin-bottom: 5px; }
+  .cl-form-row input { width: 100%; padding: 9px 11px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 13px; color: var(--p-text1); background: var(--p-surface); outline: none; box-sizing: border-box; }
+  .cl-form-row input:focus { border-color: var(--p-accent); box-shadow: 0 0 0 2px var(--p-accent-bg); }
+
   /* Search */
   .search-box { position: relative; }
   .search-box input { padding-left: 32px; }
@@ -3558,16 +3578,27 @@
 <script src="pd-spec.js"></script>
 <script src="pd-details.js"></script>
 <script>
-const clients = {
-  'Мирел ЕООД':      { industry: 'Търговия',      year: '2025', initials: 'МЕ' },
-  'Техноком АД':     { industry: 'Производство',  year: '2025', initials: 'ТА' },
-  'Агропром ООД':    { industry: 'Земеделие',     year: '2025', initials: 'АО' },
-  'Строй Груп ЕООД': { industry: 'Строителство',  year: '2025', initials: 'СГ' },
-  'Балкан Инвест АД':{ industry: 'Услуги',        year: '2025', initials: 'БИ' },
-  'Пресиком ООД':    { industry: 'Производство',  year: '2025', initials: 'ПО' },
+function clInitials(name) {
+  const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
+  return (((w[0] || '')[0] || '') + ((w[1] || '')[0] || '') || String(name).slice(0, 2)).toUpperCase();
+}
+const CLIENT_SEED = {
+  'Мирел ЕООД':       { industry: 'Търговия',     eik: '201234567', contact: 'Иван Петров · ip@mirel.bg',        years: [2025, 2024, 2023] },
+  'Техноком АД':      { industry: 'Производство', eik: '175098321', contact: 'Мария Георгиева · mg@technocom.bg', years: [2025, 2024] },
+  'Агропром ООД':     { industry: 'Земеделие',    eik: '131556677', contact: 'Георги Колев · gk@agroprom.bg',     years: [2025, 2023] },
+  'Строй Груп ЕООД':  { industry: 'Строителство', eik: '203778812', contact: 'Стоян Илиев · si@stroygroup.bg',    years: [2025, 2024] },
+  'Балкан Инвест АД': { industry: 'Услуги',       eik: '121009988', contact: 'Елена Тодорова · et@balkaninvest.bg', years: [2025] },
+  'Пресиком ООД':     { industry: 'Производство', eik: '148223344', contact: 'Петър Драгнев · pd@presikom.bg',     years: [2025, 2024] },
 };
+let clients = (function () {
+  try { const s = JSON.parse(localStorage.getItem('auditpro_clients') || 'null'); if (s && Object.keys(s).length) return s; } catch (e) {}
+  const store = {}; let i = 0;
+  for (const name in CLIENT_SEED) { i++; const d = CLIENT_SEED[name]; store[name] = { id: 'c' + i, name: name, initials: clInitials(name), industry: d.industry, eik: d.eik, contact: d.contact, years: d.years.slice() }; }
+  return store;
+})();
+function persistClients() { try { localStorage.setItem('auditpro_clients', JSON.stringify(clients)); } catch (e) {} }
 
-let currentClient = 'Мирел ЕООД';
+let currentClient = Object.keys(clients)[0];
 
 function selectClient(name, industry, year, destination) {
   const block = document.getElementById('sidebar-client-block');
@@ -4936,25 +4967,19 @@ function iosAcceptAll() {
 // ══════════════════════════════════════════════════════════════════════
 // ДАТА-УПРАВЛЯВАНИ ВЪПРОСИ (от questions.js) — рендер на работни документи
 // ══════════════════════════════════════════════════════════════════════
-window.testAnswers = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_answers') || '{}'); }
-  catch (e) { return {}; }
-})();
+window.testAnswers = {};   // зарежда се per-ангажимент чрез reloadEngagement()
 
 function qEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
 
 function persistAnswers() {
-  try { localStorage.setItem('auditpro_answers', JSON.stringify(testAnswers)); } catch (e) {}
+  try { localStorage.setItem(engKey('auditpro_answers'), JSON.stringify(testAnswers)); } catch (e) {}
 }
 
 // Бележки на одитора — по един запис на въпрос (testNotes[code][n]) + общо заключение (testNotes[code].concl)
-window.testNotes = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_notes') || '{}'); }
-  catch (e) { return {}; }
-})();
+window.testNotes = {};     // зарежда се per-ангажимент
 
 function persistNotes() {
-  try { localStorage.setItem('auditpro_notes', JSON.stringify(testNotes)); } catch (e) {}
+  try { localStorage.setItem(engKey('auditpro_notes'), JSON.stringify(testNotes)); } catch (e) {}
 }
 
 function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -5371,15 +5396,22 @@ function entMainTop() { const m = document.getElementById('ios-main'); m.style.a
 function entRenderCtx() {
   const names = Object.keys(clients);
   const cur = iosCurrentClient || names[0];
-  const yr = iosCurrentYear || 2025;
+  const yrs = (clients[cur] && clients[cur].years && clients[cur].years.length) ? clients[cur].years.slice().sort((a, b) => b - a) : [iosCurrentYear || 2025];
+  const yr = iosCurrentYear || yrs[0];
   document.getElementById('ent-ctx').innerHTML =
     `<b>${cur}</b>` +
     `<select onchange="entSetClient(this.value)">${names.map(n => `<option${n === cur ? ' selected' : ''}>${n}</option>`).join('')}</select>` +
-    `<select onchange="entSetYear(this.value)" style="margin-top:6px">${[2025, 2024, 2023].map(y => `<option${y == yr ? ' selected' : ''}>${y}</option>`).join('')}</select>`;
+    `<select onchange="entSetYear(this.value)" style="margin-top:6px">${yrs.map(y => `<option value="${y}"${y == yr ? ' selected' : ''}>Одит ${y}</option>`).join('')}</select>` +
+    `<button class="ent-ctx-btn" onclick="entShowClients()">Управление на клиенти</button>`;
   document.getElementById('ent-topright').textContent = `${cur} · Одит ${yr}`;
 }
-function entSetClient(name) { iosCurrentClient = name; entRenderCtx(); entShowDashboard(); }
-function entSetYear(y) { iosCurrentYear = +y; entRenderCtx(); entShowDashboard(); }
+function entSetClient(name) {
+  const c = clients[name];
+  const yrs = (c && c.years && c.years.length) ? c.years.slice().sort((a, b) => b - a) : [iosCurrentYear || 2025];
+  const yr = (c && c.years && c.years.indexOf(iosCurrentYear) !== -1) ? iosCurrentYear : yrs[0];
+  setEngagement(name, yr);
+}
+function entSetYear(y) { setEngagement(iosCurrentClient, +y); }
 
 // Accordion: най-много една група (фаза) + една секция в нея остават отворени
 function entOpenPhase(phaseEl) {
@@ -5403,7 +5435,8 @@ function entTogglePhase(btn) {
 }
 
 function entRenderTree() {
-  let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
+  let h = `<button class="ent-item" data-k="clients" onclick="entShowClients()">Клиенти</button>`;
+  h += `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -5511,19 +5544,10 @@ function entShowWd(code) {
 // pdUploads[code] = { '<idx>': [файлове] }           — примерните документи по индекс
 // pdCustom[code]  = [ { name, files:[файлове] } ]     — добавени от одитора документи
 // ══════════════════════════════════════════════════════════════════════
-window.pdUploads = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_pd_docs') || '{}'); }
-  catch (e) { return {}; }
-})();
-window.pdCustom = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_pd_custom') || '{}'); }
-  catch (e) { return {}; }
-})();
-window.pdHiddenUser = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_pd_hidden') || '{}'); }
-  catch (e) { return {}; }
-})();
-function pdPersist() { try { localStorage.setItem('auditpro_pd_docs', JSON.stringify(pdUploads)); localStorage.setItem('auditpro_pd_custom', JSON.stringify(pdCustom)); localStorage.setItem('auditpro_pd_hidden', JSON.stringify(pdHiddenUser)); } catch (e) {} }
+window.pdUploads = {};      // зареждат се per-ангажимент чрез reloadEngagement()
+window.pdCustom = {};
+window.pdHiddenUser = {};
+function pdPersist() { try { localStorage.setItem(engKey('auditpro_pd_docs'), JSON.stringify(pdUploads)); localStorage.setItem(engKey('auditpro_pd_custom'), JSON.stringify(pdCustom)); localStorage.setItem(engKey('auditpro_pd_hidden'), JSON.stringify(pdHiddenUser)); } catch (e) {} }
 function pdFmtSize(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
 function pdSlotFiles(code, key) { return ((pdUploads[code] || {})[key]) || []; }
 function pdCustomDocs(code) { return pdCustom[code] || []; }
@@ -5886,15 +5910,9 @@ function pdExportPdf(code) {
 }
 
 // ── Чеклист за IT контроли (ПД-09): Да/Не/Н.П. + полета за попълване ──
-window.pdChecklist = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_pd_checklist_v2') || '{}'); }
-  catch (e) { return {}; }
-})();
-window.pdClAttach = (function () {
-  try { return JSON.parse(localStorage.getItem('auditpro_pd_cl_attach') || '{}'); }
-  catch (e) { return {}; }
-})();
-function pdClPersist() { try { localStorage.setItem('auditpro_pd_checklist_v2', JSON.stringify(pdChecklist)); localStorage.setItem('auditpro_pd_cl_attach', JSON.stringify(pdClAttach)); } catch (e) {} }
+window.pdChecklist = {};    // зареждат се per-ангажимент чрез reloadEngagement()
+window.pdClAttach = {};
+function pdClPersist() { try { localStorage.setItem(engKey('auditpro_pd_checklist_v2'), JSON.stringify(pdChecklist)); localStorage.setItem(engKey('auditpro_pd_cl_attach'), JSON.stringify(pdClAttach)); } catch (e) {} }
 function pdClSectionFiles(code, idx, si) { return (((pdClAttach[code] || {})[idx] || {})[si]) || []; }
 function pdClAttachFiles(code, idx, si, fileList) {
   if (!fileList || !fileList.length) return;
@@ -5973,12 +5991,190 @@ function pdShowChecklist(code, idx) {
   </div>`;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// АНГАЖИМЕНТИ — изолация на одитните данни по клиент + година
+// Всеки (клиент, година) пази собствени документи/отговори/чеклисти.
+// ══════════════════════════════════════════════════════════════════════
+const ENG_STORES = [
+  ['testAnswers', 'auditpro_answers'], ['testNotes', 'auditpro_notes'],
+  ['pdUploads', 'auditpro_pd_docs'], ['pdCustom', 'auditpro_pd_custom'], ['pdHiddenUser', 'auditpro_pd_hidden'],
+  ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
+];
+function engSuffix() { const c = clients[iosCurrentClient]; return (c ? c.id : 'def') + '_' + (iosCurrentYear || 'na'); }
+function engKey(base) { return base + '__' + engSuffix(); }
+function reloadEngagement() {
+  ENG_STORES.forEach(([g, base]) => {
+    try { window[g] = JSON.parse(localStorage.getItem(engKey(base)) || '{}'); }
+    catch (e) { window[g] = {}; }
+  });
+}
+function clearEngagementData(id, year) {
+  ENG_STORES.forEach(([g, base]) => { try { localStorage.removeItem(base + '__' + id + '_' + year); } catch (e) {} });
+}
+function persistActive() { try { localStorage.setItem('auditpro_active', JSON.stringify({ client: iosCurrentClient, year: iosCurrentYear })); } catch (e) {} }
+function setEngagement(name, year) {
+  if (!clients[name]) name = Object.keys(clients)[0];
+  iosCurrentClient = name;
+  iosCurrentYear = +year || (clients[name].years && clients[name].years[0]) || 2025;
+  persistActive();
+  reloadEngagement();        // зарежда данните на новия ангажимент в глобалните обекти
+  entRenderCtx();
+  entRenderTree();           // статусите в дървото зависят от данните
+  entShowDashboard();
+}
+
+// ── Управление на клиенти (CRUD) ──────────────────────────────────────
+function entShowClients() {
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="clients"]'));
+  entCrumbs([{ l: 'Клиенти' }]);
+  const names = Object.keys(clients);
+  const rows = names.map(name => {
+    const c = clients[name];
+    const yrs = (c.years || []).slice().sort((a, b) => b - a);
+    const chips = yrs.length
+      ? yrs.map(y => `<span class="cm-year" onclick="openEngagement('${qEsc(name)}',${y})" title="Отвори одит ${y}">${y}<span class="x" onclick="event.stopPropagation();removeClientYear('${qEsc(name)}',${y})" title="Премахни година">✕</span></span>`).join('')
+      : `<span style="color:var(--p-text3);font-size:12px">няма</span>`;
+    return `<tr>
+      <td><span class="cm-av">${c.initials}</span><b>${name}</b></td>
+      <td>${c.industry || '—'}</td>
+      <td>${c.eik || '—'}</td>
+      <td>${chips} <button class="btn btn-secondary btn-sm" onclick="addClientYear('${qEsc(name)}')">+ година</button></td>
+      <td class="cm-act">
+        <button class="btn btn-secondary btn-sm" onclick="openClientModal('${qEsc(name)}')">Редактирай</button>
+        <button class="btn btn-secondary btn-sm" onclick="deleteClient('${qEsc(name)}')">Изтрий</button>
+      </td></tr>`;
+  }).join('');
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Клиенти</h1><div class="sub">Управление на клиенти и одитни години · ${names.length} клиента</div></div>
+      <button class="btn btn-primary" onclick="openClientModal()">+ Добави клиент</button></div>
+    <div class="sh-card"><div class="ent-card-h">Списък с клиенти</div>
+      <table class="cm-tbl"><thead><tr><th>Клиент</th><th>Отрасъл</th><th>ЕИК</th><th>Одитни години</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="color:var(--p-text3);padding:18px">Няма клиенти. Добавете първия.</td></tr>'}</tbody></table>
+    </div></div>`;
+}
+function openEngagement(name, year) {
+  const c = clients[name]; if (!c) return;
+  if (!c.years || c.years.indexOf(+year) === -1) { c.years = c.years || []; c.years.push(+year); persistClients(); }
+  setEngagement(name, +year);
+}
+function addClientYear(name) {
+  const c = clients[name]; if (!c) return;
+  const base = (c.years && c.years.length) ? Math.max.apply(null, c.years) + 1 : new Date().getFullYear();
+  const v = (window.prompt('Одитна година за „' + name + '":', String(base))) || '';
+  const y = parseInt(v.trim(), 10);
+  if (!y || y < 1990 || y > 2100) { if (v.trim()) alert('Невалидна година.'); return; }
+  c.years = c.years || [];
+  if (c.years.indexOf(y) === -1) c.years.push(y);
+  persistClients();
+  setEngagement(name, y);     // отваря новия ангажимент
+  entShowClients();
+}
+function removeClientYear(name, year) {
+  const c = clients[name]; if (!c) return;
+  if (!confirm('Премахване на одит ' + year + ' за „' + name + '"? Данните за тази година ще бъдат изтрити.')) return;
+  c.years = (c.years || []).filter(y => y !== +year);
+  clearEngagementData(c.id, +year);
+  persistClients();
+  if (iosCurrentClient === name && iosCurrentYear === +year) setEngagement(name, (c.years[0] || 0));
+  entShowClients();
+}
+function deleteClient(name) {
+  const c = clients[name]; if (!c) return;
+  if (!confirm('Изтриване на клиент „' + name + '" и всичките му одитни данни? Действието е необратимо.')) return;
+  (c.years || []).forEach(y => clearEngagementData(c.id, y));
+  delete clients[name];
+  persistClients();
+  if (iosCurrentClient === name) { const first = Object.keys(clients)[0]; if (first) setEngagement(first, 0); }
+  entShowClients();
+}
+
+// ── Модал за добавяне/редактиране на клиент ───────────────────────────
+let clEditName = null;
+function ensureClientModal() {
+  if (document.getElementById('cl-modal-ov')) return;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay'; ov.id = 'cl-modal-ov';
+  ov.innerHTML = `<div class="modal"><div class="modal-title" id="cl-modal-title">Нов клиент</div>
+    <div class="cl-form">
+      <div class="cl-form-row"><label>Наименование *</label><input id="cl-f-name" placeholder="напр. Алфа ЕООД"></div>
+      <div class="cl-form-row"><label>ЕИК / Булстат</label><input id="cl-f-eik" placeholder="напр. 201234567"></div>
+      <div class="cl-form-row"><label>Отрасъл</label><input id="cl-f-industry" placeholder="напр. Търговия"></div>
+      <div class="cl-form-row"><label>Контакт</label><input id="cl-f-contact" placeholder="лице · имейл / телефон"></div>
+      <div class="cl-form-row" id="cl-f-year-row"><label>Първа одитна година</label><input id="cl-f-year" placeholder="напр. 2025"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeClientModal()">Отказ</button><button class="btn btn-primary" onclick="saveClientModal()">Запази</button></div>
+  </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) closeClientModal(); });
+  document.body.appendChild(ov);
+}
+function openClientModal(editName) {
+  ensureClientModal();
+  clEditName = editName || null;
+  const c = editName ? clients[editName] : null;
+  document.getElementById('cl-modal-title').textContent = c ? ('Редактиране · ' + editName) : 'Нов клиент';
+  document.getElementById('cl-f-name').value = c ? c.name : '';
+  document.getElementById('cl-f-eik').value = c ? (c.eik || '') : '';
+  document.getElementById('cl-f-industry').value = c ? (c.industry || '') : '';
+  document.getElementById('cl-f-contact').value = c ? (c.contact || '') : '';
+  document.getElementById('cl-f-year-row').style.display = c ? 'none' : 'block';
+  document.getElementById('cl-f-year').value = new Date().getFullYear();
+  document.getElementById('cl-modal-ov').classList.add('open');
+  setTimeout(() => document.getElementById('cl-f-name').focus(), 50);
+}
+function closeClientModal() { const o = document.getElementById('cl-modal-ov'); if (o) o.classList.remove('open'); clEditName = null; }
+function nextClientId() { let mx = 0; for (const n in clients) { const m = /^c(\d+)$/.exec(clients[n].id || ''); if (m) mx = Math.max(mx, +m[1]); } return 'c' + (mx + 1); }
+function saveClientModal() {
+  const name = document.getElementById('cl-f-name').value.trim();
+  const eik = document.getElementById('cl-f-eik').value.trim();
+  const industry = document.getElementById('cl-f-industry').value.trim();
+  const contact = document.getElementById('cl-f-contact').value.trim();
+  if (!name) { alert('Въведете наименование на клиента.'); return; }
+  if (clEditName) {
+    const c = clients[clEditName];
+    if (name !== clEditName) {                          // преименуване — запазва id и данните
+      if (clients[name]) { alert('Вече съществува клиент с това име.'); return; }
+      delete clients[clEditName]; c.name = name; clients[name] = c;
+      if (iosCurrentClient === clEditName) iosCurrentClient = name;
+    }
+    c.eik = eik; c.industry = industry; c.contact = contact; c.initials = clInitials(name);
+  } else {
+    if (clients[name]) { alert('Вече съществува клиент с това име.'); return; }
+    const y = parseInt(document.getElementById('cl-f-year').value, 10);
+    const years = (y && y >= 1990 && y <= 2100) ? [y] : [new Date().getFullYear()];
+    clients[name] = { id: nextClientId(), name: name, initials: clInitials(name), eik: eik, industry: industry, contact: contact, years: years };
+  }
+  persistClients();
+  closeClientModal();
+  entRenderCtx();
+  entShowClients();
+}
+
 function entInit() {
-  if (!iosCurrentClient) iosCurrentClient = Object.keys(clients)[0];
-  if (!iosCurrentYear) iosCurrentYear = 2025;
+  let act = null; try { act = JSON.parse(localStorage.getItem('auditpro_active') || 'null'); } catch (e) {}
+  if (act && clients[act.client]) { iosCurrentClient = act.client; iosCurrentYear = +act.year; }
+  if (!iosCurrentClient || !clients[iosCurrentClient]) iosCurrentClient = Object.keys(clients)[0];
+  const cc = clients[iosCurrentClient];
+  if (!iosCurrentYear || !(cc.years || []).length || cc.years.indexOf(iosCurrentYear) === -1) {
+    iosCurrentYear = (cc.years && cc.years.length) ? cc.years.slice().sort((a, b) => b - a)[0] : 2025;
+  }
+  engMigrateLegacy();
+  persistActive();
+  reloadEngagement();
   entRenderCtx();
   entRenderTree();
   entShowDashboard();
+}
+// Еднократна миграция: пренася старите (общи) данни към текущия ангажимент.
+function engMigrateLegacy() {
+  if (localStorage.getItem('auditpro_eng_migrated')) return;
+  ENG_STORES.forEach(([g, base]) => {
+    try {
+      const old = localStorage.getItem(base);
+      if (old && !localStorage.getItem(engKey(base))) localStorage.setItem(engKey(base), old);
+    } catch (e) {}
+  });
+  try { localStorage.setItem('auditpro_eng_migrated', '1'); } catch (e) {}
 }
 entInit();
 </script>
