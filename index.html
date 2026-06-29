@@ -834,6 +834,16 @@
     resize: vertical; outline: none;
   }
   .q-note:focus { border-color: var(--p-accent); box-shadow: 0 0 0 2px var(--p-accent-bg); }
+  /* Подвъпроси (1.1, 2.3, …) — индентиран блок под главния въпрос */
+  .q-subs { margin-top: 12px; padding-left: 12px; border-left: 2px solid var(--p-border); display: flex; flex-direction: column; gap: 11px; }
+  .q-sub-grid { display: grid; grid-template-columns: 1fr 210px; gap: 10px; align-items: center; }
+  .q-sub-q { font-size: 12.5px; color: var(--p-text2); line-height: 1.5; }
+  .q-sub-n { font-weight: 700; color: var(--p-accent); margin-right: 2px; }
+  .q-sub-sel { padding: 6px 9px; font-size: 12.5px; }
+  .q-sub-free { margin-top: 7px; font-size: 12px; }
+  .q-sub-ev { font-size: 11px; color: var(--p-text3); margin-top: 5px; line-height: 1.45; }
+  .q-sub-ev b { color: var(--p-text2); font-weight: 600; }
+  @media (max-width: 640px) { .q-sub-grid { grid-template-columns: 1fr; } }
 
   /* Stage cards */
   .stage-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
@@ -4073,7 +4083,7 @@ const auditPhases = [
     sections: [
       { code:'A', name:'Приемане и продължаване на ангажимента', mos:'ISA 210; 220; IESBA Code', status:'done', wds:[
         { code:'A-10', name:'Оценка на независимост и етика', mos:'ISA 220, IESBA Code', ai:['review','qa'], status:'done' },
-        { code:'A-20', name:'Почтеност на клиента и конфликт на интереси', mos:'ISQM 1, ISA 220', ai:['extract','anomaly','qa'], status:'done' },
+        { code:'A-20', name:'Оценка на почтеността на клиента, репутационен риск и конфликт на интереси', mos:'ISQM 1, ISA 220', ai:['extract','anomaly','qa'], status:'done' },
         { code:'A-30', name:'Предпоставки за одита и приложима рамка', mos:'ISA 210', ai:['qa'], status:'done' },
         { code:'A-40', name:'Писмо за поемане на ангажимент', mos:'ISA 210', ai:['draft'], status:'done' },
         { code:'A-50', name:'Комуникация с предходен одитор', mos:'ISA 300, 510', ai:['draft'], status:'done' },
@@ -5239,6 +5249,24 @@ function testStandards(code) {
 }
 function testQUploads(code) { const u = testDet(code).uploads; return Array.isArray(u) ? u.map(Number) : (u ? Object.keys(u).map(Number) : []); }
 function testQHasUpload(code, n) { return testQUploads(code).indexOf(+n) !== -1; }
+// Ефективна дефиниция на теста: questions.js + override от testDetails (title, questions/subs).
+function testEffectiveDef(code) {
+  const base = (window.testQuestions && testQuestions[code]) || {};
+  const det = testDet(code);
+  if (!det.title && !det.questions) return base;
+  const def = Object.assign({}, base);
+  if (det.title) def.test = det.title;
+  if (det.questions) def.questions = det.questions;
+  return def;
+}
+// Дали главен въпрос позволява качване на доказателство (флаг upload или конфигурация uploads).
+function testQAllowsUpload(code, q) { return !!(q && q.upload) || testQHasUpload(code, q && q.n); }
+// Всички попълваеми ключове (главни въпроси + подвъпроси) за прогрес/броене.
+function testAnswerableKeys(def) {
+  const keys = [];
+  (def.questions || []).forEach(q => { keys.push(q.n); (q.subs || []).forEach(s => keys.push(s.n)); });
+  return keys;
+}
 
 // Качени документи към въпрос — per-ангажимент: testUploads[code][n] = [файлове]
 window.testUploads = {};   // зарежда се per-ангажимент чрез reloadEngagement()
@@ -5265,9 +5293,12 @@ function testUploadWidget(code, n) {
     : '';
   return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="testAddFiles('${code}',${n},this.files)"></label>${filesHtml}`;
 }
+function testUploadBlock(code, n) {
+  return `<div style="margin-top:10px"><div class="q-note-label">Приложени документи (доказателство)</div><div id="tup-${code}-${n}">${testUploadWidget(code, n)}</div></div>`;
+}
 function testUploadField(code, n) {
   if (!testQHasUpload(code, n)) return '';
-  return `<div style="margin-top:10px"><div class="q-note-label">Приложени документи</div><div id="tup-${code}-${n}">${testUploadWidget(code, n)}</div></div>`;
+  return testUploadBlock(code, n);
 }
 function testDetailCards(code) {
   const det = testDet(code);
@@ -5302,7 +5333,7 @@ function setConcl(code, value) {
 }
 
 function renderQuestionScreen(code, year, clientName, breadcrumbItems, backAction) {
-  const def  = testQuestions[code];
+  const def  = testEffectiveDef(code);
   const main = document.getElementById('ios-main');
   testAnswers[code] = testAnswers[code] || {};
   const isAi = def.mode === 'ai';
@@ -5384,6 +5415,9 @@ function renderAiQuestions(code, def) {
 function renderDescriptiveQuestions(code, def) {
   const rows = def.questions.map(q => {
     const concl = q.type === 'Заключение';
+    const upload = testQAllowsUpload(code, q) ? testUploadBlock(code, q.n) : '';
+    const subs = (q.subs && q.subs.length)
+      ? `<div class="q-subs">${q.subs.map(s => renderSubQuestion(code, s)).join('')}</div>` : '';
     return `
       <div class="q-row${concl ? ' q-concl' : ''}">
         <div class="q-num">${q.n}</div>
@@ -5393,7 +5427,8 @@ function renderDescriptiveQuestions(code, def) {
           </div>
           ${renderQuestion(code, q)}
           ${noteField(code, q.n)}
-          ${testUploadField(code, q.n)}
+          ${upload}
+          ${subs}
         </div>
       </div>`;
   }).join('');
@@ -5422,6 +5457,24 @@ function renderQuestion(code, q) {
   </div>`;
 }
 
+// Подвъпрос (1.1, 2.3, …): компактен ред — текст + падащ списък, по избор свободен текст и подсказка за доказателство.
+function renderSubQuestion(code, s) {
+  const cur  = (testAnswers[code] || {})[s.n] || '';
+  const opts = s.options || [];
+  const sel  = `<select class="q-select q-sub-sel" onchange="setAnswer('${code}','${s.n}',this.value)">
+      <option value="">— Изберете —</option>
+      ${opts.map(o => `<option${o === cur ? ' selected' : ''}>${o}</option>`).join('')}
+    </select>`;
+  const ph   = s.ifYes ? ('Ако „Да“ — ' + s.ifYes) : (s.note || '');
+  const free = ph
+    ? `<textarea class="q-note q-sub-free" rows="1" placeholder="${escHtml(ph)}" oninput="setNote('${code}','${s.n}',this.value)">${escHtml((testNotes[code] || {})[s.n] || '')}</textarea>` : '';
+  const ev   = s.evidence ? `<div class="q-sub-ev"><b>Доказателство:</b> ${escHtml(s.evidence)}</div>` : '';
+  return `<div class="q-sub">
+    <div class="q-sub-grid"><div class="q-sub-q"><span class="q-sub-n">${s.n}</span> ${s.q}</div>${sel}</div>
+    ${free}${ev}
+  </div>`;
+}
+
 function setAnswer(code, n, value, btnEl) {
   testAnswers[code] = testAnswers[code] || {};
   if (value === '' || value == null) delete testAnswers[code][n];
@@ -5431,7 +5484,7 @@ function setAnswer(code, n, value, btnEl) {
     if (value !== '') btnEl.classList.add('selected');
   }
   persistAnswers();
-  const def = testQuestions[code];
+  const def = testEffectiveDef(code);
   if (def.mode === 'ai') updatePrompt(code); else updateConclusion(code);
   qProgress(code);
 }
@@ -5474,7 +5527,7 @@ function runAiTest(code) {
 }
 
 function updateConclusion(code) {
-  const def = testQuestions[code];
+  const def = testEffectiveDef(code);
   const concl = def.questions.find(q => q.type === 'Заключение');
   const box = document.getElementById(code + '-conclusion');
   if (!box) return;
@@ -5484,17 +5537,19 @@ function updateConclusion(code) {
 }
 
 function qProgress(code) {
-  const def = testQuestions[code], ans = testAnswers[code] || {};
-  const done = def.questions.filter(q => ans[q.n]).length;
+  const def = testEffectiveDef(code), ans = testAnswers[code] || {};
+  const keys = testAnswerableKeys(def);
+  const done = keys.filter(k => ans[k]).length;
   const el = document.getElementById(code + '-progress');
-  if (el) el.textContent = `${done}/${def.questions.length} попълнени`;
+  if (el) el.textContent = `${done}/${keys.length} попълнени`;
 }
 
 function saveTest(code) {
   persistAnswers();
-  const def = testQuestions[code];
-  const done = def.questions.filter(q => (testAnswers[code] || {})[q.n]).length;
-  alert(`Документ ${code} запазен. Попълнени ${done}/${def.questions.length} въпроса.`);
+  const def = testEffectiveDef(code);
+  const keys = testAnswerableKeys(def);
+  const done = keys.filter(k => (testAnswers[code] || {})[k]).length;
+  alert(`Документ ${code} запазен. Попълнени ${done}/${keys.length} въпроса.`);
 }
 
 function iosExpandTree() {
@@ -6289,12 +6344,15 @@ function pdExportPdf(code) {
 
 // ── Преглед и експорт в PDF на тестовете от етапите (като постоянното досие) ──
 function testWpMeta(code) {
-  const def = (window.testQuestions && testQuestions[code]) || {};
+  const def = testEffectiveDef(code);
   const det = testDet(code);
   const client = iosCurrentClient || 'Клиент', year = iosCurrentYear || 2025;
   const today = new Date().toLocaleDateString('bg-BG');
   let stds = def.standard || '';
-  if (det.standards && det.standards.length) stds = det.standards.map(s => s.code).join('; ');
+  if (det.standards && det.standards.length) {
+    const codes = det.standards.map(s => s.code);
+    stds = codes.length <= 8 ? codes.join('; ') : (codes.slice(0, 4).join('; ') + ' и др. (общо ' + codes.length + ')');
+  }
   let phaseN = 0, sectionName = '';
   for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionName = s.name; break; } }
   const slug = (client.match(/[A-Za-zА-Яа-я0-9]+/g) || ['КЛИЕНТ']).join('').slice(0, 6).toUpperCase();
@@ -6311,14 +6369,20 @@ function testWpSections(code) {
   const mt = testWpMeta(code), def = mt.def;
   const ans = (window.testAnswers && testAnswers[code]) || {};
   const notes = (window.testNotes && testNotes[code]) || {};
-  const answered = (def.questions || []).filter(q => ans[q.n]).length;
+  const keys = testAnswerableKeys(def);
+  const answered = keys.filter(k => ans[k]).length;
   const sub = 'style="margin-top:5px;font-size:11.5px;color:var(--p-text3);line-height:1.5"';
   const qaRows = (def.questions || []).map(q => {
     const a = ans[q.n] ? escHtml(ans[q.n]) : '—';
     const note = notes[q.n] ? `<div ${sub}><b>Бележка:</b> ${escHtml(notes[q.n])}</div>` : '';
     const files = testFiles(code, q.n);
     const att = files.length ? `<div ${sub}><b>Документи:</b> ${files.map(f => escHtml(f.name)).join(' · ')}</div>` : '';
-    return `<tr><td><b>${q.n}.</b> ${escHtml(q.q)}${note}${att}</td><td class="c" style="white-space:normal;width:190px">${a}</td></tr>`;
+    const subRows = (q.subs || []).map(s => {
+      const sa = ans[s.n] ? escHtml(ans[s.n]) : '—';
+      const sn = notes[s.n] ? `<div ${sub}>${escHtml(notes[s.n])}</div>` : '';
+      return `<tr><td style="padding-left:22px;color:var(--p-text2)"><b>${s.n}</b> ${escHtml(s.q)}${sn}</td><td class="c" style="white-space:normal;width:190px">${sa}</td></tr>`;
+    }).join('');
+    return `<tr><td><b>${q.n}.</b> ${escHtml(q.q)}${note}${att}</td><td class="c" style="white-space:normal;width:190px">${a}</td></tr>${subRows}`;
   }).join('');
   const docBlocks = (def.questions || []).map(q => {
     const files = testFiles(code, q.n);
@@ -6346,7 +6410,7 @@ function testWpSections(code) {
       ${docsHtml}
       ${conclHtml}
       <div class="wp-sec"><h3><span class="n">${secU}.</span>Обобщение</h3>
-        <div class="wp-sum"><span>Попълнени въпроси: <b>${answered} / ${(def.questions || []).length}</b></span><span>Приложени документи: <b>${testTotalCount(code)}</b></span></div></div>`;
+        <div class="wp-sum"><span>Попълнени въпроси: <b>${answered} / ${keys.length}</b></span><span>Приложени документи: <b>${testTotalCount(code)}</b></span></div></div>`;
 }
 function testWpHtml(code) {
   const m = testWpMeta(code);
