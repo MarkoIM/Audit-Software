@@ -5913,15 +5913,68 @@ function pdIsHidden(code, name) {
   const d = (window.pdDetails && pdDetails[code]);
   return !!(d && d.hideDocs && d.hideDocs.indexOf(name) !== -1);
 }
+// Изискваните документи: ако pd-details дефинира свои (override), ползваме тях; иначе тези от pd-spec.
+function pdDocs(code) {
+  const det = (window.pdDetails && pdDetails[code]) || {};
+  if (det.docs && det.docs.length) return det.docs;
+  return (pdSpec[code] && pdSpec[code].docs) || [];
+}
+// Резолва плейсхолдъри за годината в имена на документи: {Y}=одитна година, {Y-1}, {Y-2}.
+function pdDocLabel(name) {
+  const y = iosCurrentYear || 2025;
+  return String(name).replace(/\{Y-2\}/g, y - 2).replace(/\{Y-1\}/g, y - 1).replace(/\{Y\}/g, y);
+}
 function renderPdSlots(code) {
-  const spec = pdSpec[code];
+  const docs = pdDocs(code);
   // Премахнатите примерни документи се пропускат, но индексите на останалите се запазват
-  let h = spec.docs.map((d, i) => pdDocRemoved(code, i, d.name) ? '' : pdSlot(code, String(i), d.name, false)).join('');
+  let h = docs.map((d, i) => pdDocRemoved(code, i, d.name) ? '' : pdSlot(code, String(i), pdDocLabel(d.name), false)).join('');
   h += pdCustomDocs(code).map((c, ci) => pdCustomSlot(code, ci, c)).join('');
   const removed = (pdHiddenUser[code] || []).length;
   const restore = removed ? `<button class="btn btn-secondary btn-sm" onclick="pdRestoreDocs('${code}')">Възстанови премахнатите (${removed})</button>` : '';
   h += `<div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="pdAddCustomDoc('${code}')">+ Добави документ</button>${restore}</div>`;
   return h;
+}
+// AI панел за ПД екран (показва се, когато pd-details дефинира aiPrompt за документа).
+function pdAiPanel(code) {
+  const det = (window.pdDetails && pdDetails[code]) || {};
+  if (!det.aiPrompt) return '';
+  const intro = det.aiIntro || 'AI прилага инструкцията върху приложените документи и изготвя структуриран одиторски анализ.';
+  return `<div class="sh-card">
+    <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between">
+      <span>AI анализ</span><span class="ai-badge">AI</span>
+    </div>
+    <div style="padding:14px 16px">
+      <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:12px">${escHtml(intro)}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-bottom:6px">Инструкция към AI</div>
+      <div style="max-height:240px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.65;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+        <button class="btn btn-primary" onclick="pdRunAi('${code}')">Изпълни с AI</button>
+        <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените финансови отчети.</span>
+      </div>
+      <div id="${code}-pd-airesult" style="display:none;margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+function pdRunAi(code) {
+  const res = document.getElementById(code + '-pd-airesult');
+  if (!res) return;
+  res.style.display = 'block';
+  const n = pdTotalCount(code);
+  if (!n) {
+    res.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:var(--p-amber-bg);color:var(--p-amber);font-size:13px;font-weight:600">Качете поне един финансов отчет, преди да изпълните AI анализа.</div>`;
+    return;
+  }
+  const det = (window.pdDetails && pdDetails[code]) || {};
+  const outline = (det.aiOutput || []).map(s => `<li>${escHtml(s)}</li>`).join('');
+  res.innerHTML = `
+    <div style="border:1px solid var(--p-border);border-radius:8px;overflow:hidden">
+      <div style="padding:10px 14px;background:var(--p-green-bg);color:var(--p-green);font-weight:700;font-size:13px">✓ AI изпълни анализа (демонстрация)</div>
+      <div style="padding:12px 14px;font-size:13px;color:var(--p-text2);line-height:1.6">
+        <div style="font-weight:600;color:var(--p-text1);margin-bottom:6px">AI обработи ${n} приложен${n === 1 ? '' : 'и'} документ${n === 1 ? '' : 'а'} и подготви структуриран преглед:</div>
+        <ol style="margin:6px 0 4px 18px;padding:0;font-size:12.5px;line-height:1.75">${outline}</ol>
+        <div style="margin-top:8px;color:var(--p-text3);font-size:12px">В реална среда тук AI връща попълнените таблици, открити тенденции, индикации за риск и препоръчани процедури върху приложените отчети.</div>
+      </div>
+    </div>`;
 }
 function renderPdDetail(code, name, year, clientName, breadcrumbItems, backAction) {
   const m = document.getElementById('ios-main');
@@ -5952,6 +6005,7 @@ function renderPdDetail(code, name, year, clientName, breadcrumbItems, backActio
       </div>
       <div style="padding:14px 16px" id="pd-slots">${renderPdSlots(code)}</div>
     </div>
+    ${pdAiPanel(code)}
     <div style="display:flex;gap:10px;justify-content:flex-end;padding-bottom:12px">
       <button class="btn btn-secondary" onclick="${backAction}">← Назад</button>
       <button class="btn btn-secondary" onclick="alert('Документите са запазени в досието.')">Запази</button>
@@ -6039,12 +6093,12 @@ function pdWpSections(code) {
   const fileLine = f => `<span>• ${f.name} <span style="color:var(--p-text3)">(${pdFmtSize(f.size)})</span></span>`;
   let filledCats = 0, n = 0;
   const wpDoc = (title, files) => `<div class="wp-doc"><div class="wp-doc-name">${++n}. ${title}</div><div class="wp-doc-files">${files.map(fileLine).join('')}</div></div>`;
-  let docRows = spec.docs.map((d, i) => {
+  let docRows = pdDocs(code).map((d, i) => {
     if (pdDocRemoved(code, i, d.name)) return '';
     const files = pdSlotFiles(code, String(i));
     if (!files.length) return '';
     filledCats++;
-    return wpDoc(d.name, files);
+    return wpDoc(pdDocLabel(d.name), files);
   }).join('');
   docRows += pdCustomDocs(code).filter(c => c.files.length).map(c => wpDoc(escHtml(c.name), c.files)).join('');
   const otherHtml = docRows ? '' : `<div class="wp-miss">Няма приложени документи.</div>`;
@@ -6056,7 +6110,7 @@ function pdWpSections(code) {
         ${docRows}${otherHtml}</div>
       ${cl.html}
       <div class="wp-sec"><h3><span class="n">${cl.next}.</span>Обобщение</h3>
-        <div class="wp-sum"><span>Приложени категории: <b>${filledCats} / ${spec.docs.filter((d, i) => !pdDocRemoved(code, i, d.name)).length}</b></span><span>Общо приложени документи: <b>${pdTotalCount(code)}</b></span></div></div>`;
+        <div class="wp-sum"><span>Приложени категории: <b>${filledCats} / ${pdDocs(code).filter((d, i) => !pdDocRemoved(code, i, d.name)).length}</b></span><span>Общо приложени документи: <b>${pdTotalCount(code)}</b></span></div></div>`;
 }
 function pdWpHtml(code) {
   const m = pdWpMeta(code);
