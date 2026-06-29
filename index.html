@@ -1229,9 +1229,53 @@
   .ndc-item:last-child { border-bottom: none; padding-bottom: 0; }
   .ndc-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
   .feed-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px; }
+
+  /* ── Логин + 2FA (проформа, само интерфейс) ── */
+  #auth-screen { position: fixed; inset: 0; z-index: 3000; display: none; align-items: center; justify-content: center; padding: 24px;
+    background: radial-gradient(1100px 600px at 50% -15%, #2a3c63, #11182b 62%), var(--navy); }
+  #auth-screen.show { display: flex; }
+  .auth-card { width: 100%; max-width: 400px; background: var(--p-surface); border-radius: 14px; box-shadow: 0 28px 70px rgba(0,0,0,.45); padding: 30px 28px; }
+  .auth-logo { text-align: center; font-size: 23px; font-weight: 800; letter-spacing: -.5px; color: var(--p-text1); }
+  .auth-logo span { color: var(--p-accent); }
+  .auth-sub { text-align: center; font-size: 12.5px; color: var(--p-text2); margin: 4px 0 22px; }
+  .auth-field { margin-bottom: 13px; }
+  .auth-field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--p-text2); margin-bottom: 5px; }
+  .auth-field input { width: 100%; padding: 10px 12px; font-size: 13.5px; font-family: inherit; border: 1px solid var(--p-border-strong); border-radius: 8px; background: var(--p-surface); color: var(--p-text1); outline: none; }
+  .auth-field input:focus { border-color: var(--p-accent); box-shadow: 0 0 0 3px var(--p-accent-bg); }
+  .auth-btn { width: 100%; padding: 11px; font-size: 14px; font-weight: 600; font-family: inherit; border: none; border-radius: 8px; background: var(--p-accent); color: #fff; cursor: pointer; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .auth-btn:hover { filter: brightness(1.08); }
+  .auth-btn.sec { background: var(--p-surface); color: var(--p-text1); border: 1px solid var(--p-border-strong); }
+  .auth-btn.sec:hover { filter: none; background: var(--p-surface2); }
+  .auth-or { text-align: center; font-size: 11px; color: var(--p-text3); margin: 15px 0; position: relative; }
+  .auth-or::before, .auth-or::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--p-border); }
+  .auth-or::before { left: 0; } .auth-or::after { right: 0; }
+  .auth-err { background: var(--red-light); color: var(--red); font-size: 12px; padding: 8px 11px; border-radius: 7px; margin-bottom: 13px; border: 1px solid #f3c6c6; }
+  .auth-foot { text-align: center; font-size: 12px; margin-top: 16px; color: var(--p-text3); }
+  .auth-link { color: var(--p-accent); cursor: pointer; font-weight: 500; }
+  .auth-link:hover { text-decoration: underline; }
+  .auth-demo { margin-top: 16px; padding: 11px 12px; border: 1px dashed var(--p-border-strong); border-radius: 8px; font-size: 11.5px; color: var(--p-text2); background: var(--p-surface2); }
+  .auth-demo b { color: var(--p-text1); }
+  .auth-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .auth-chip { font-size: 11px; padding: 4px 9px; border-radius: 20px; border: 1px solid var(--p-border-strong); background: var(--p-surface); color: var(--p-text1); cursor: pointer; font-family: inherit; }
+  .auth-chip:hover { border-color: var(--p-accent); color: var(--p-accent); }
+  .auth-fwd { font-size: 12.5px; color: var(--p-text2); text-align: center; margin-bottom: 16px; line-height: 1.5; }
+  .auth-fwd b { color: var(--p-text1); }
+  .tfa-row { display: flex; gap: 9px; justify-content: center; margin: 8px 0 6px; }
+  .tfa-row input { width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: 700; border: 1px solid var(--p-border-strong); border-radius: 9px; background: var(--p-surface); color: var(--p-text1); outline: none; font-family: inherit; }
+  .tfa-row input:focus { border-color: var(--p-accent); box-shadow: 0 0 0 3px var(--p-accent-bg); }
+  .auth-remember { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--p-text2); margin: 6px 0 2px; cursor: pointer; }
+  .auth-card.shake { animation: authShake .4s; }
+  @keyframes authShake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-7px); } 40%,80% { transform: translateX(7px); } }
+  .auth-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 3100; background: #1a2230; color: #fff; font-size: 12.5px; padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.3); opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; }
+  .auth-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .ent-logout { background: none; border: 1px solid var(--p-border-strong); color: var(--p-text2); border-radius: 7px; padding: 7px 13px; font-size: 13px; font-family: inherit; cursor: pointer; margin-right: 9px; }
+  .ent-logout:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
+<!-- Проформа логин + 2FA (само интерфейс — без реална сигурност) -->
+<div id="auth-screen"></div>
+<div class="auth-toast" id="auth-toast"></div>
 <div id="app">
 
   <!-- ═══ SIDEBAR ═══ -->
@@ -6263,7 +6307,7 @@ function entShowProfile() {
     .map(id => `<option value="${id}"${id === sessionUid ? ' selected' : ''}>${escHtml(users[id].name)} — ${users[id].role === 'admin' ? 'админ' : 'член'}</option>`).join('');
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>Моят профил</h1><div class="sub">Личните ти данни попълват полето „Изготвил" и подписа в работните документи</div></div>
-      <div style="display:flex;align-items:center"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="btn btn-primary" onclick="saveProfile()">Запази</button></div></div>
+      <div style="display:flex;align-items:center"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="ent-logout" onclick="logout()">Изход</button><button class="btn btn-primary" onclick="saveProfile()">Запази</button></div></div>
     <div class="pf-grid">
       <div class="sh-card"><div class="ent-card-h">Лични данни</div><div class="pf-body">
         ${f('pf-name', 'Име и фамилия', me.name, 'напр. Марко Марков')}
@@ -6603,6 +6647,139 @@ function saveClientModal() {
   entShowClients();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// ПРОФОРМА ЛОГИН + 2FA — само за интерфейса, НЕ е реална автентикация.
+// Методология: 1) имейл+парола (парола = декоративна) → 2) 6-цифрен код
+// (демо: 123456) → 3) влизане. „Запомни устройство" пропуска 2FA следващия
+// път. Изход връща на логин екрана. Реалната сигурност идва с backend-а.
+// ══════════════════════════════════════════════════════════════════════
+const AUTH_DEMO_CODE = '123456';
+let authStep = 'login';        // 'login' | '2fa'
+let authPendingUid = null;     // потребител, изчакващ потвърждение с код
+
+function isAuthed() { try { return !!localStorage.getItem('auditpro_authed'); } catch (e) { return false; } }
+function deviceTrusted() { try { return !!localStorage.getItem('auditpro_trusted_device'); } catch (e) { return false; } }
+function maskEmail(e) { e = e || ''; const p = e.split('@'); if (p.length < 2) return e || 'имейла ти'; return p[0].slice(0, 2) + '•••@' + p[1]; }
+function userByEmail(em) { em = (em || '').trim().toLowerCase(); return Object.keys(users).find(id => (users[id].email || '').toLowerCase() === em && users[id].status !== 'inactive'); }
+
+function authToast(msg) {
+  const t = document.getElementById('auth-toast'); if (!t) return;
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(authToast._t); authToast._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function authError(msg) { const s = document.getElementById('auth-err-slot'); if (s) s.innerHTML = msg ? `<div class="auth-err">${escHtml(msg)}</div>` : ''; }
+function authShake() { const c = document.getElementById('auth-card'); if (c) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); } }
+
+function showAuth() { authStep = 'login'; renderAuth(); document.getElementById('auth-screen').classList.add('show'); }
+function hideAuth() { document.getElementById('auth-screen').classList.remove('show'); }
+
+function renderAuth() {
+  const el = document.getElementById('auth-screen'); if (!el) return;
+  if (authStep === '2fa') {
+    const u = users[authPendingUid] || {};
+    let boxes = '';
+    for (let i = 0; i < 6; i++) boxes += `<input id="tfa-${i}" inputmode="numeric" maxlength="1" autocomplete="one-time-code" oninput="authDigit(this,${i})" onkeydown="authKey(event,${i})" onpaste="authPaste(event)">`;
+    el.innerHTML = `<div class="auth-card" id="auth-card">
+      <div class="auth-logo">Аудит<span>Про</span></div>
+      <div class="auth-sub">Двуфакторна автентикация</div>
+      <div class="auth-fwd">Изпратихме 6-цифрен код на <b>${escHtml(maskEmail(u.email))}</b>.<br>Въведи го, за да завършиш входа.</div>
+      <div id="auth-err-slot"></div>
+      <div class="tfa-row">${boxes}</div>
+      <label class="auth-remember"><input type="checkbox" id="auth-remember"> Запомни това устройство за 30 дни</label>
+      <button class="auth-btn" onclick="authVerify()">Потвърди</button>
+      <div class="auth-foot"><span class="auth-link" onclick="authResend()">Изпрати кода отново</span> · <span class="auth-link" onclick="authBack()">Назад</span></div>
+      <div class="auth-demo"><b>Демо код:</b> ${AUTH_DEMO_CODE}</div>
+    </div>`;
+    setTimeout(() => { const f = document.getElementById('tfa-0'); if (f) f.focus(); }, 30);
+    return;
+  }
+  const chips = Object.keys(users).filter(id => users[id].status !== 'inactive')
+    .map(id => `<span class="auth-chip" onclick="authQuick('${id}')">${escHtml(users[id].name)}${users[id].role === 'admin' ? ' · админ' : ''}</span>`).join('');
+  el.innerHTML = `<div class="auth-card" id="auth-card">
+    <div class="auth-logo">Аудит<span>Про</span></div>
+    <div class="auth-sub">Влез в одиторското си досие</div>
+    <div id="auth-err-slot"></div>
+    <div class="auth-field"><label>Служебен имейл</label><input id="auth-email" type="email" autocomplete="username" placeholder="ime@drujestvo.bg" onkeydown="if(event.key==='Enter'){var p=document.getElementById('auth-pass');if(p)p.focus();}"></div>
+    <div class="auth-field"><label>Парола</label><input id="auth-pass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()"></div>
+    <div style="text-align:right;margin:-3px 0 11px"><span class="auth-link" onclick="authForgot()">Забравена парола?</span></div>
+    <button class="auth-btn" onclick="authLogin()">Вход</button>
+    <div class="auth-or">или</div>
+    <button class="auth-btn sec" onclick="authSso()"><svg viewBox="0 0 23 23" width="15" height="15"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>Вход с Microsoft</button>
+    <div class="auth-demo"><b>Демо вход</b> — избери профил (паролата е без значение):<div class="auth-chips">${chips}</div></div>
+  </div>`;
+}
+
+function authLogin() {
+  const em = ((document.getElementById('auth-email') || {}).value) || '';
+  const pass = ((document.getElementById('auth-pass') || {}).value) || '';
+  if (!em.trim()) { authError('Въведи служебния си имейл.'); return; }
+  if (!pass) { authError('Въведи парола. (В демото всяка парола е валидна.)'); return; }
+  const uid = userByEmail(em);
+  if (!uid) { authError('Няма такъв потребител в дружеството. Пробвай демо профил по-долу.'); authShake(); return; }
+  authProceed(uid);
+}
+function authQuick(uid) { if (users[uid]) authProceed(uid); }
+function authSso() {
+  // Проформа SSO: реално Microsoft връща самоличността; тук взимаме въведения имейл или админа.
+  const em = ((document.getElementById('auth-email') || {}).value) || '';
+  const uid = userByEmail(em) || Object.keys(users).find(id => users[id].role === 'admin' && users[id].status !== 'inactive') || Object.keys(users)[0];
+  authProceed(uid);
+}
+function authProceed(uid) {
+  authPendingUid = uid; authError('');
+  if (deviceTrusted()) { authComplete(uid); return; }   // доверено устройство → пропуска 2FA
+  authStep = '2fa'; renderAuth();
+}
+
+function authCode() { let s = ''; for (let i = 0; i < 6; i++) { const el = document.getElementById('tfa-' + i); if (el) s += (el.value || ''); } return s; }
+function authDigit(el, i) {
+  el.value = (el.value || '').replace(/\D/g, '').slice(0, 1);
+  authError('');
+  if (el.value && i < 5) { const n = document.getElementById('tfa-' + (i + 1)); if (n) n.focus(); }
+  if (i === 5 && authCode().length === 6) authVerify();
+}
+function authKey(e, i) {
+  if (e.key === 'Backspace' && !e.target.value && i > 0) { const p = document.getElementById('tfa-' + (i - 1)); if (p) p.focus(); }
+  if (e.key === 'Enter') authVerify();
+}
+function authPaste(e) {
+  const data = (((e.clipboardData || window.clipboardData) || { getData: function () { return ''; } }).getData('text')) || '';
+  const t = data.replace(/\D/g, '').slice(0, 6);
+  if (!t) return; e.preventDefault();
+  for (let i = 0; i < 6; i++) { const el = document.getElementById('tfa-' + i); if (el) el.value = t[i] || ''; }
+  const f = document.getElementById('tfa-' + Math.min(t.length, 5)); if (f) f.focus();
+  if (t.length === 6) authVerify();
+}
+function authVerify() {
+  if (authCode() !== AUTH_DEMO_CODE) { authError('Грешен код. Демо кодът е ' + AUTH_DEMO_CODE + '.'); authShake(); return; }
+  if ((document.getElementById('auth-remember') || {}).checked) { try { localStorage.setItem('auditpro_trusted_device', '1'); } catch (e) {} }
+  authComplete(authPendingUid);
+}
+function authResend() { authToast('Изпратихме нов код (демо: ' + AUTH_DEMO_CODE + ').'); }
+function authForgot() { authToast('Демо: възстановяване на парола не е активно в прототипа.'); }
+function authBack() { authStep = 'login'; renderAuth(); }
+
+function authComplete(uid) {
+  if (!users[uid]) uid = Object.keys(users)[0];
+  if (users[uid].status === 'invited') { users[uid].status = 'active'; persistUsers(); }  // първи вход = приета покана
+  sessionUid = uid; persistSession();
+  try { localStorage.setItem('auditpro_authed', uid); } catch (e) {}
+  authPendingUid = null;
+  hideAuth();
+  entInit();
+}
+function logout() {
+  try { localStorage.removeItem('auditpro_authed'); } catch (e) {}
+  authPendingUid = null;
+  showAuth();
+}
+function authBoot() {
+  if (isAuthed()) {
+    try { const a = localStorage.getItem('auditpro_authed'); if (a && users[a]) { sessionUid = a; persistSession(); } } catch (e) {}
+    hideAuth(); entInit();
+  } else { showAuth(); }
+}
+
 function entInit() {
   let act = null; try { act = JSON.parse(localStorage.getItem('auditpro_active') || 'null'); } catch (e) {}
   if (act && clients[act.client]) { iosCurrentClient = act.client; iosCurrentYear = +act.year; }
@@ -6629,7 +6806,7 @@ function engMigrateLegacy() {
   });
   try { localStorage.setItem('auditpro_eng_migrated', '1'); } catch (e) {}
 }
-entInit();
+authBoot();   // минава през проформа логин + 2FA, после стартира приложението
 </script>
 </body>
 </html>
