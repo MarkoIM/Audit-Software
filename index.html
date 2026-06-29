@@ -931,7 +931,53 @@
   .pf-prev-row .v { color: var(--p-text1); font-weight: 600; }
   .pf-saved { color: #1f7a44; font-size: 12.5px; font-weight: 600; margin-right: 12px; opacity: 0; transition: opacity .2s; }
   .pf-saved.on { opacity: 1; }
+  .pf-ro { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--p-text1); font-weight: 600; min-height: 20px; }
+  .pf-link { color: var(--p-accent); font-weight: 600; font-size: 12px; cursor: pointer; }
+  .pf-link:hover { text-decoration: underline; }
+  .pf-switch { width: 100%; padding: 9px 11px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 13px; color: var(--p-text1); background: var(--p-surface); }
+  .pf-hint { font-size: 11.5px; color: var(--p-text3); margin-top: 6px; line-height: 1.45; }
+  .pf-you { font-size: 10px; font-weight: 700; color: var(--p-accent); background: var(--p-accent-bg); padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
   @media (max-width: 780px) { .pf-grid { grid-template-columns: 1fr; } }
+
+  /* Бейджове за роля/статус */
+  .badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .2px; }
+  .badge-admin { background: #ece2cf; color: #7a5c1e; }
+  .badge-member { background: var(--p-surface2); color: var(--p-text2); border: 1px solid var(--p-border); }
+  .badge-on { background: #dff3e6; color: #1f7a44; }
+  .badge-inv { background: #fdeecf; color: #8a6300; }
+  .badge-off { background: #f1d9d9; color: #9a3030; }
+  .ent-prof-adm { font-size: 9px; font-weight: 700; color: #7a5c1e; background: #ece2cf; padding: 0 5px; border-radius: 7px; vertical-align: middle; }
+
+  /* Екран „Дружество и екип" */
+  .tm-tbl .tm-mail { font-size: 11.5px; color: var(--p-text3); margin-top: 2px; }
+  .tm-tbl td { vertical-align: top; }
+  .tm-grants { font-size: 12px; color: var(--p-text2); max-width: 240px; }
+  .seat-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .seat-plan { font-size: 13px; font-weight: 700; color: var(--p-text1); }
+  .seat-num { font-size: 13px; font-weight: 700; color: var(--p-text2); font-variant-numeric: tabular-nums; }
+  .seat-num.over { color: #9a3030; }
+  .seat-bar { height: 8px; border-radius: 5px; background: var(--p-surface2); overflow: hidden; border: 1px solid var(--p-border); }
+  .seat-fill { height: 100%; background: var(--p-accent); transition: width .25s; }
+  .seat-fill.over { background: #c0392b; }
+  .seat-warn { margin-top: 12px; font-size: 12.5px; color: #9a3030; background: #f7e4e4; border: 1px solid #e6c4c4; padding: 8px 12px; border-radius: 6px; }
+
+  /* Матрица на правата в модала */
+  .us-perms { margin-top: 6px; border-top: 1px solid var(--p-border); padding-top: 12px; }
+  .us-perms-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); margin-bottom: 8px; }
+  .us-perm { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--p-text1); padding: 5px 0; cursor: pointer; }
+  .us-perm input { width: 15px; height: 15px; accent-color: var(--p-accent); }
+
+  /* Екип по ангажимента */
+  .et-summary { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .et-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--p-text1); background: var(--p-surface2); border: 1px solid var(--p-border); border-radius: 18px; padding: 3px 12px 3px 3px; }
+  .et-chip .cm-av { width: 24px; height: 24px; font-size: 10px; }
+  .et-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-bottom: 1px solid var(--p-border); }
+  .et-row:last-child { border-bottom: none; }
+  .et-row .cm-av { flex-shrink: 0; }
+  .et-meta { display: flex; flex-direction: column; flex: 1; line-height: 1.3; }
+  .et-meta b { font-size: 13px; color: var(--p-text1); }
+  .et-meta span { font-size: 11.5px; color: var(--p-text3); }
+  .et-row select { padding: 7px 10px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 12.5px; background: var(--p-surface); color: var(--p-text1); min-width: 170px; }
 
   /* Search */
   .search-box { position: relative; }
@@ -3626,20 +3672,99 @@ function persistClients() { try { localStorage.setItem('auditpro_clients', JSON.
 
 let currentClient = Object.keys(clients)[0];
 
-// ── Профил на одитора (глобален — еднакъв за всички клиенти и години) ──
-// Захранва PDF-а: поле „Изготвил", подписите, заглавието и дружеството.
-const PROFILE_DEFAULT = {
-  name: 'Марко Марков', role: 'Регистриран одитор', regNo: '',
-  email: 'marko.markov.wm@gmail.com', phone: '',
-  firm: 'АудитПро', firmEik: '', firmTagline: 'Одиторска система', reviewer: '',
-};
-let profile = (function () {
-  try { const s = JSON.parse(localStorage.getItem('auditpro_profile') || 'null'); if (s) return Object.assign({}, PROFILE_DEFAULT, s); } catch (e) {}
-  return Object.assign({}, PROFILE_DEFAULT);
+// ── Дружество, потребители и роли (mock; backend-ready) ──────────────────
+// Едно дружество (tenant) с няколко профила. Плащане на място (seat) + админ,
+// който раздава права. Без реална сигурност — UX прототип; при backend → сървър + RLS.
+
+// Права (capabilities), които администраторът раздава на членовете.
+const PERMS = [
+  { k: 'manage_users',   l: 'Потребители и права' },
+  { k: 'manage_billing', l: 'Абонамент и плащане' },
+  { k: 'manage_clients', l: 'Клиенти' },
+  { k: 'assign_team',    l: 'Екипи по ангажимент' },
+  { k: 'edit_wp',        l: 'Редакция на работни документи' },
+  { k: 'approve',        l: 'Одобрение и подпис' },
+  { k: 'export',         l: 'Експорт на документи' },
+];
+// Роля по конкретен ангажимент (за подписите и видимостта).
+const ENG_ROLES = [
+  { k: '',        l: '—' },
+  { k: 'partner', l: 'Партньор' },
+  { k: 'manager', l: 'Мениджър' },
+  { k: 'auditor', l: 'Одитор' },
+  { k: 'eqcr',    l: 'EQCR · преглед на качеството' },
+  { k: 'viewer',  l: 'Само четене' },
+];
+const DEFAULT_MEMBER_PERMS = { edit_wp: true, export: true };
+
+// Дружеството (tenant + mock абонамент).
+const FIRM_DEFAULT = { name: 'АудитПро', eik: '', tagline: 'Одиторска система', plan: 'Pro', seats: 5 };
+let firm = (function () {
+  try { const s = JSON.parse(localStorage.getItem('auditpro_firm') || 'null'); if (s) return Object.assign({}, FIRM_DEFAULT, s); } catch (e) {}
+  return Object.assign({}, FIRM_DEFAULT);
 })();
-function persistProfile() { try { localStorage.setItem('auditpro_profile', JSON.stringify(profile)); } catch (e) {} }
-function profileInitials() { return clInitials(profile.name || 'Одитор'); }
-function profilePreparedBy() { return (profile.name || '') + (profile.role ? ' · ' + profile.role : ''); }
+function persistFirm() { try { localStorage.setItem('auditpro_firm', JSON.stringify(firm)); } catch (e) {} }
+
+// Потребители (профили в дружеството).
+function seedUsers() {
+  return {
+    u1: { id: 'u1', name: 'Марко Марков',  email: 'marko.markov.wm@gmail.com', role: 'admin',  title: 'Регистриран одитор', regNo: '', phone: '', status: 'active',  perms: {} },
+    u2: { id: 'u2', name: 'Елена Петрова', email: 'elena@auditpro.bg',         role: 'member', title: 'Мениджър одит',      regNo: '', phone: '', status: 'active',  perms: { manage_clients: true, assign_team: true, edit_wp: true, approve: true, export: true } },
+    u3: { id: 'u3', name: 'Георги Илиев',  email: 'georgi@auditpro.bg',        role: 'member', title: 'Старши одитор',      regNo: '', phone: '', status: 'active',  perms: { edit_wp: true, export: true } },
+    u4: { id: 'u4', name: 'Нов Колега',    email: 'pending@auditpro.bg',       role: 'member', title: 'Асистент',           regNo: '', phone: '', status: 'invited', perms: { edit_wp: true } },
+  };
+}
+let users = (function () {
+  try { const s = JSON.parse(localStorage.getItem('auditpro_users') || 'null'); if (s && Object.keys(s).length) return s; } catch (e) {}
+  return seedUsers();
+})();
+for (const id in users) { if (!users[id].initials) users[id].initials = clInitials(users[id].name); }
+function persistUsers() { try { localStorage.setItem('auditpro_users', JSON.stringify(users)); } catch (e) {} }
+
+// Mock сесия: кой е „вписан".
+let sessionUid = (function () {
+  try { const s = localStorage.getItem('auditpro_session'); if (s && users[s]) return s; } catch (e) {}
+  return Object.keys(users).find(id => users[id].role === 'admin') || Object.keys(users)[0];
+})();
+function persistSession() { try { localStorage.setItem('auditpro_session', sessionUid); } catch (e) {} }
+
+// Еднократна миграция от стария единичен профил → админ потребител + дружество.
+(function migrateProfile() {
+  try {
+    if (localStorage.getItem('auditpro_profile_migrated')) return;
+    const s = JSON.parse(localStorage.getItem('auditpro_profile') || 'null');
+    if (s) {
+      const a = users[Object.keys(users).find(id => users[id].role === 'admin')] || users.u1;
+      if (a) { if (s.name) a.name = s.name; if (s.role) a.title = s.role; if (s.regNo) a.regNo = s.regNo; if (s.email) a.email = s.email; if (s.phone) a.phone = s.phone; a.initials = clInitials(a.name); }
+      if (s.firm) firm.name = s.firm; if (s.firmEik) firm.eik = s.firmEik; if (s.firmTagline) firm.tagline = s.firmTagline;
+      persistUsers(); persistFirm();
+    }
+    localStorage.setItem('auditpro_profile_migrated', '1');
+  } catch (e) {}
+})();
+
+// Помощни функции за роли/права.
+function currentUser() { return users[sessionUid] || users[Object.keys(users)[0]]; }
+function isAdmin(u) { u = u || currentUser(); return !!u && u.role === 'admin'; }
+function hasPerm(cap, u) { u = u || currentUser(); return isAdmin(u) || !!(u && u.perms && u.perms[cap]); }
+function userInitials(u) { return (u && (u.initials || clInitials(u.name))) || '—'; }
+function userSignName(u) { u = u || currentUser(); return (u.name || '') + (u.title ? ' · ' + u.title : ''); }
+function seatsUsed() { return Object.values(users).filter(u => u.status !== 'inactive').length; }
+function adminCount() { return Object.values(users).filter(u => u.role === 'admin' && u.status !== 'inactive').length; }
+function nextUserId() { let n = 0; for (const id in users) { const m = /^u(\d+)$/.exec(id); if (m) n = Math.max(n, +m[1]); } return 'u' + (n + 1); }
+function setCurrentUser(uid) { if (users[uid]) { sessionUid = uid; persistSession(); entRenderCtx(); entRenderTree(); entShowDashboard(); } }
+// „Прегледал" в документа = партньор/ревюър по ангажимента (различен от изготвилия).
+function engReviewer() {
+  const t = window.team || {};
+  for (const role of ['partner', 'eqcr', 'manager']) {
+    const uid = Object.keys(t).find(id => t[id] === role && id !== sessionUid && users[id]);
+    if (uid) return userSignName(users[uid]);
+  }
+  return '';
+}
+// Съвместимост с чипа и PDF-а (Изготвил = вписаният потребител).
+function profileInitials() { return userInitials(currentUser()); }
+function profilePreparedBy() { return userSignName(currentUser()); }
 
 function selectClient(name, industry, year, destination) {
   const block = document.getElementById('sidebar-client-block');
@@ -5444,11 +5569,12 @@ function entRenderCtx() {
     `<select onchange="entSetClient(this.value)">${names.map(n => `<option${n === cur ? ' selected' : ''}>${n}</option>`).join('')}</select>` +
     `<select onchange="entSetYear(this.value)" style="margin-top:6px">${yrs.map(y => `<option value="${y}"${y == yr ? ' selected' : ''}>Одит ${y}</option>`).join('')}</select>` +
     `<button class="ent-ctx-btn" onclick="entShowClients()">Управление на клиенти</button>`;
+  const me = currentUser();
   document.getElementById('ent-topright').innerHTML =
     `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
-    `<button class="ent-prof" onclick="entShowProfile()" title="Управление на профила">` +
-      `<span class="ent-prof-av">${profileInitials()}</span>` +
-      `<span class="ent-prof-meta"><span class="nm">${escHtml(profile.name || 'Одитор')}</span><span class="rl">${escHtml(profile.role || '')}</span></span>` +
+    `<button class="ent-prof" onclick="entShowProfile()" title="Моят профил">` +
+      `<span class="ent-prof-av">${userInitials(me)}</span>` +
+      `<span class="ent-prof-meta"><span class="nm">${escHtml(me.name || 'Потребител')}${isAdmin(me) ? ' <span class=\"ent-prof-adm\">Админ</span>' : ''}</span><span class="rl">${escHtml(me.title || '')}</span></span>` +
     `</button>`;
 }
 function entSetClient(name) {
@@ -5482,6 +5608,7 @@ function entTogglePhase(btn) {
 
 function entRenderTree() {
   let h = `<button class="ent-item" data-k="clients" onclick="entShowClients()">Клиенти</button>`;
+  h += `<button class="ent-item" data-k="team" onclick="entShowTeam()">Дружество и екип</button>`;
   h += `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
@@ -5540,6 +5667,9 @@ function entShowDashboard() {
     </div>
     <div class="sh-card"><div class="ent-card-h">Прогрес по етапи</div>
       <table class="ent-tbl"><thead><tr><th>Етап</th><th class="r">Раздели</th><th class="r">Завършени РД</th><th>Прогрес</th><th>Статус</th></tr></thead><tbody>${phaseRows}</tbody></table>
+    </div>
+    <div class="sh-card"><div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center">Екип по ангажимента${hasPerm('assign_team') ? '<button class="btn btn-secondary btn-sm" onclick="openEngTeamModal()">Управление на екипа</button>' : ''}</div>
+      <div class="et-summary">${engTeamSummary()}</div>
     </div></div>`;
 }
 
@@ -5815,8 +5945,8 @@ function pdWpMeta(code) {
   if (det.standards && det.standards.length) { const nums = det.standards.map(s => (s.code.match(/ISA\s*(\d+)/) || [])[1]).filter(Boolean); if (nums.length) stds = 'ISA ' + nums.join('/'); }
   const slug = (client.match(/[A-Za-zА-Яа-я0-9]+/g) || ['КЛИЕНТ']).join('').slice(0, 6).toUpperCase();
   return { spec, det, client, year, today, stds, ref: `${code}-${slug}-${year}`,
-    preparedBy: profilePreparedBy(), reviewer: profile.reviewer || '',
-    firm: profile.firm || 'АудитПро', firmTagline: profile.firmTagline || 'Одиторска система' };
+    preparedBy: profilePreparedBy(), reviewer: engReviewer(),
+    firm: firm.name || 'АудитПро', firmTagline: firm.tagline || 'Одиторска система' };
 }
 function pdWpSections(code) {
   const mt = pdWpMeta(code), spec = mt.spec, det = mt.det;
@@ -6044,10 +6174,12 @@ function pdShowChecklist(code, idx) {
 // АНГАЖИМЕНТИ — изолация на одитните данни по клиент + година
 // Всеки (клиент, година) пази собствени документи/отговори/чеклисти.
 // ══════════════════════════════════════════════════════════════════════
+window.team = {};   // екип по ангажимент: { userId: engRole } — per-ангажимент
 const ENG_STORES = [
   ['testAnswers', 'auditpro_answers'], ['testNotes', 'auditpro_notes'],
   ['pdUploads', 'auditpro_pd_docs'], ['pdCustom', 'auditpro_pd_custom'], ['pdHiddenUser', 'auditpro_pd_hidden'],
   ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
+  ['team', 'auditpro_team'],
 ];
 function engSuffix() { const c = clients[iosCurrentClient]; return (c ? c.id : 'def') + '_' + (iosCurrentYear || 'na'); }
 function engKey(base) { return base + '__' + engSuffix(); }
@@ -6077,62 +6209,67 @@ function entShowClients() {
   const m = entMainTop();
   entSetActive(document.querySelector('#ent-tree .ent-item[data-k="clients"]'));
   entCrumbs([{ l: 'Клиенти' }]);
+  const canEdit = hasPerm('manage_clients');
   const names = Object.keys(clients);
   const rows = names.map(name => {
     const c = clients[name];
     const yrs = (c.years || []).slice().sort((a, b) => b - a);
     const chips = yrs.length
-      ? yrs.map(y => `<span class="cm-year" onclick="openEngagement('${qEsc(name)}',${y})" title="Отвори одит ${y}">${y}<span class="x" onclick="event.stopPropagation();removeClientYear('${qEsc(name)}',${y})" title="Премахни година">✕</span></span>`).join('')
+      ? yrs.map(y => `<span class="cm-year" onclick="openEngagement('${qEsc(name)}',${y})" title="Отвори одит ${y}">${y}${canEdit ? `<span class="x" onclick="event.stopPropagation();removeClientYear('${qEsc(name)}',${y})" title="Премахни година">✕</span>` : ''}</span>`).join('')
       : `<span style="color:var(--p-text3);font-size:12px">няма</span>`;
     return `<tr>
       <td><span class="cm-av">${c.initials}</span><b>${name}</b></td>
       <td>${c.industry || '—'}</td>
       <td>${c.eik || '—'}</td>
-      <td>${chips} <button class="btn btn-secondary btn-sm" onclick="addClientYear('${qEsc(name)}')">+ година</button></td>
-      <td class="cm-act">
+      <td>${chips}${canEdit ? ` <button class="btn btn-secondary btn-sm" onclick="addClientYear('${qEsc(name)}')">+ година</button>` : ''}</td>
+      <td class="cm-act">${canEdit ? `
         <button class="btn btn-secondary btn-sm" onclick="openClientModal('${qEsc(name)}')">Редактирай</button>
-        <button class="btn btn-secondary btn-sm" onclick="deleteClient('${qEsc(name)}')">Изтрий</button>
+        <button class="btn btn-secondary btn-sm" onclick="deleteClient('${qEsc(name)}')">Изтрий</button>` : '<span style="color:var(--p-text3);font-size:12px">само преглед</span>'}
       </td></tr>`;
   }).join('');
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>Клиенти</h1><div class="sub">Управление на клиенти и одитни години · ${names.length} клиента</div></div>
-      <button class="btn btn-primary" onclick="openClientModal()">+ Добави клиент</button></div>
+      ${canEdit ? '<button class="btn btn-primary" onclick="openClientModal()">+ Добави клиент</button>' : ''}</div>
     <div class="sh-card"><div class="ent-card-h">Списък с клиенти</div>
       <table class="cm-tbl"><thead><tr><th>Клиент</th><th>Отрасъл</th><th>ЕИК</th><th>Одитни години</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="5" style="color:var(--p-text3);padding:18px">Няма клиенти. Добавете първия.</td></tr>'}</tbody></table>
     </div></div>`;
 }
 
-// ── Екран „Профил" ───────────────────────────────────────────────────────
+// ── Екран „Моят профил" ──────────────────────────────────────────────────
 function profilePreviewHtml() {
-  const lhName = profile.firm === 'АудитПро' ? 'Аудит<span style="color:var(--p-accent)">Про</span>' : escHtml(profile.firm || 'Дружество');
-  return `<div class="pf-lh"><div class="pf-lh-name">${lhName}</div><div class="pf-lh-tag">${escHtml((profile.firmTagline || '').toUpperCase())}</div></div>
-    <div class="pf-prev-row"><span class="k">Изготвил</span><span class="v">${escHtml(profilePreparedBy())}</span></div>
-    <div class="pf-prev-row"><span class="k">Прегледал</span><span class="v">${escHtml(profile.reviewer || '—')}</span></div>
-    ${profile.regNo ? `<div class="pf-prev-row"><span class="k">Диплома №</span><span class="v">${escHtml(profile.regNo)}</span></div>` : ''}
-    ${profile.firmEik ? `<div class="pf-prev-row"><span class="k">ЕИК (дружество)</span><span class="v">${escHtml(profile.firmEik)}</span></div>` : ''}`;
+  const me = currentUser();
+  const lhName = firm.name === 'АудитПро' ? 'Аудит<span style="color:var(--p-accent)">Про</span>' : escHtml(firm.name || 'Дружество');
+  const rev = engReviewer();
+  return `<div class="pf-lh"><div class="pf-lh-name">${lhName}</div><div class="pf-lh-tag">${escHtml((firm.tagline || '').toUpperCase())}</div></div>
+    <div class="pf-prev-row"><span class="k">Изготвил</span><span class="v">${escHtml(userSignName(me))}</span></div>
+    <div class="pf-prev-row"><span class="k">Прегледал</span><span class="v">${escHtml(rev || '— (по екипа на ангажимента)')}</span></div>
+    ${me.regNo ? `<div class="pf-prev-row"><span class="k">Диплома №</span><span class="v">${escHtml(me.regNo)}</span></div>` : ''}`;
 }
 function entShowProfile() {
   const m = entMainTop();
   entSetActive(null);
-  entCrumbs([{ l: 'Профил' }]);
+  entCrumbs([{ l: 'Моят профил' }]);
+  const me = currentUser();
   const f = (id, label, val, ph) => `<div class="pf-row"><label>${label}</label><input id="${id}" value="${escHtml(val || '')}" placeholder="${escHtml(ph || '')}"></div>`;
+  const roleBadge = isAdmin(me) ? '<span class="badge badge-admin">Администратор</span>' : '<span class="badge badge-member">Член на екипа</span>';
+  const switcher = Object.keys(users).filter(id => users[id].status !== 'inactive')
+    .map(id => `<option value="${id}"${id === sessionUid ? ' selected' : ''}>${escHtml(users[id].name)} — ${users[id].role === 'admin' ? 'админ' : 'член'}</option>`).join('');
   m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Профил</h1><div class="sub">Данни на одитора и дружеството — попълват автоматично заглавието, полето „Изготвил" и подписите в работните документи</div></div>
+    <div class="ent-h"><div><h1>Моят профил</h1><div class="sub">Личните ти данни попълват полето „Изготвил" и подписа в работните документи</div></div>
       <div style="display:flex;align-items:center"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="btn btn-primary" onclick="saveProfile()">Запази</button></div></div>
     <div class="pf-grid">
-      <div class="sh-card"><div class="ent-card-h">Личен профил</div><div class="pf-body">
-        ${f('pf-name', 'Име и фамилия', profile.name, 'напр. Марко Марков')}
-        ${f('pf-role', 'Длъжност / роля', profile.role, 'напр. Регистриран одитор')}
-        ${f('pf-regNo', 'Диплома № (ИДЕС)', profile.regNo, 'напр. 0123')}
-        ${f('pf-email', 'Имейл', profile.email, 'name@firm.bg')}
-        ${f('pf-phone', 'Телефон', profile.phone, 'напр. +359 …')}
+      <div class="sh-card"><div class="ent-card-h">Лични данни</div><div class="pf-body">
+        ${f('pf-name', 'Име и фамилия', me.name, 'напр. Марко Марков')}
+        ${f('pf-title', 'Длъжност / роля', me.title, 'напр. Регистриран одитор')}
+        ${f('pf-regNo', 'Диплома № (ИДЕС)', me.regNo, 'напр. 0123')}
+        ${f('pf-email', 'Имейл (вход)', me.email, 'name@firm.bg')}
+        ${f('pf-phone', 'Телефон', me.phone, 'напр. +359 …')}
       </div></div>
-      <div class="sh-card"><div class="ent-card-h">Одиторско дружество</div><div class="pf-body">
-        ${f('pf-firm', 'Наименование', profile.firm, 'напр. АудитПро ООД')}
-        ${f('pf-firmEik', 'ЕИК', profile.firmEik, 'напр. 201234567')}
-        ${f('pf-firmTagline', 'Подзаглавие', profile.firmTagline, 'напр. Одиторска система')}
-        ${f('pf-reviewer', 'Прегледал (по подразбиране)', profile.reviewer, 'напр. партньор / EQCR')}
+      <div class="sh-card"><div class="ent-card-h">Контекст</div><div class="pf-body">
+        <div class="pf-row"><label>Дружество</label><div class="pf-ro">${escHtml(firm.name)}<span class="pf-link" onclick="entShowTeam()">управление →</span></div></div>
+        <div class="pf-row"><label>Роля в дружеството</label><div class="pf-ro">${roleBadge}</div></div>
+        <div class="pf-row"><label>Демо: влез като друг потребител</label><select class="pf-switch" onchange="setCurrentUser(this.value)">${switcher}</select><div class="pf-hint">Прототипен инструмент — в реалната система влизаш със своя имейл и парола.</div></div>
       </div></div>
     </div>
     <div class="sh-card"><div class="ent-card-h">Преглед в работен документ</div><div class="pf-prev" id="pf-prev">${profilePreviewHtml()}</div></div>
@@ -6140,20 +6277,223 @@ function entShowProfile() {
 }
 function saveProfile() {
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  profile.name = g('pf-name') || 'Одитор';
-  profile.role = g('pf-role');
-  profile.regNo = g('pf-regNo');
-  profile.email = g('pf-email');
-  profile.phone = g('pf-phone');
-  profile.firm = g('pf-firm') || 'АудитПро';
-  profile.firmEik = g('pf-firmEik');
-  profile.firmTagline = g('pf-firmTagline');
-  profile.reviewer = g('pf-reviewer');
-  persistProfile();
+  const me = currentUser();
+  me.name = g('pf-name') || me.name || 'Потребител';
+  me.title = g('pf-title');
+  me.regNo = g('pf-regNo');
+  me.email = g('pf-email');
+  me.phone = g('pf-phone');
+  me.initials = clInitials(me.name);
+  persistUsers();
   entRenderCtx();                                   // обнови чипа горе вдясно
   const prev = document.getElementById('pf-prev'); if (prev) prev.innerHTML = profilePreviewHtml();
   const sv = document.getElementById('pf-saved');   // кратко потвърждение
   if (sv) { sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 1800); }
+}
+
+// ── Екран „Дружество и екип" ─────────────────────────────────────────────
+function roleBadgeHtml(u) { return u.role === 'admin' ? '<span class="badge badge-admin">Админ</span>' : '<span class="badge badge-member">Член</span>'; }
+function statusBadgeHtml(u) {
+  if (u.status === 'invited') return '<span class="badge badge-inv">Поканен</span>';
+  if (u.status === 'inactive') return '<span class="badge badge-off">Неактивен</span>';
+  return '<span class="badge badge-on">Активен</span>';
+}
+function entShowTeam() {
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="team"]'));
+  entCrumbs([{ l: 'Дружество и екип' }]);
+  const canManage = hasPerm('manage_users');
+  const used = seatsUsed(), seats = firm.seats || 0;
+  const ids = Object.keys(users);
+  const rows = ids.map(id => {
+    const u = users[id];
+    const grants = isAdmin(u) ? 'Пълни права' : (PERMS.filter(p => u.perms && u.perms[p.k]).map(p => p.l).join(', ') || 'Само преглед');
+    const acts = canManage ? `
+      <button class="btn btn-secondary btn-sm" onclick="openUserModal('${id}')">Редактирай</button>
+      ${u.status === 'inactive'
+        ? `<button class="btn btn-secondary btn-sm" onclick="toggleUserActive('${id}')">Активирай</button>`
+        : `<button class="btn btn-secondary btn-sm" onclick="toggleUserActive('${id}')">Деактивирай</button>`}
+      <button class="btn btn-secondary btn-sm" onclick="removeUser('${id}')">Премахни</button>` : '<span style="color:var(--p-text3);font-size:12px">—</span>';
+    return `<tr${u.status === 'inactive' ? ' style="opacity:.55"' : ''}>
+      <td><span class="cm-av">${userInitials(u)}</span><b>${escHtml(u.name)}</b>${id === sessionUid ? ' <span class="pf-you">ти</span>' : ''}<div class="tm-mail">${escHtml(u.email || '')}</div></td>
+      <td>${escHtml(u.title || '—')}</td>
+      <td>${roleBadgeHtml(u)}</td>
+      <td>${statusBadgeHtml(u)}</td>
+      <td class="tm-grants">${escHtml(grants)}</td>
+      <td class="cm-act">${acts}</td></tr>`;
+  }).join('');
+  const overSeats = used > seats;
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Дружество и екип</h1><div class="sub">Потребители, роли и права · плащане на активен профил</div></div>
+      ${canManage ? `<button class="btn btn-primary" onclick="openUserModal()">+ Покани потребител</button>` : ''}</div>
+    <div class="pf-grid">
+      <div class="sh-card"><div class="ent-card-h">Дружество</div><div class="pf-body">
+        <div class="pf-row"><label>Наименование</label><input id="fm-name" value="${escHtml(firm.name || '')}" ${canManage ? '' : 'disabled'}></div>
+        <div class="pf-row"><label>ЕИК</label><input id="fm-eik" value="${escHtml(firm.eik || '')}" ${canManage ? '' : 'disabled'}></div>
+        <div class="pf-row"><label>Подзаглавие (в документите)</label><input id="fm-tagline" value="${escHtml(firm.tagline || '')}" ${canManage ? '' : 'disabled'}></div>
+        ${canManage ? `<button class="btn btn-secondary btn-sm" onclick="saveFirm()" style="margin-top:4px">Запази данните</button><span class="pf-saved" id="fm-saved" style="margin-left:10px">Запазено ✓</span>` : ''}
+      </div></div>
+      <div class="sh-card"><div class="ent-card-h">Абонамент</div><div class="pf-body">
+        <div class="seat-top"><span class="seat-plan">План ${escHtml(firm.plan || '—')}</span><span class="seat-num${overSeats ? ' over' : ''}">${used} / ${seats} места</span></div>
+        <div class="seat-bar"><div class="seat-fill${overSeats ? ' over' : ''}" style="width:${seats ? Math.min(100, Math.round(used / seats * 100)) : 0}%"></div></div>
+        <div class="pf-hint">Плаща се на активен профил. Поканен или активен потребител заема място; деактивирането освобождава място.</div>
+        ${canManage ? `<div class="pf-row" style="margin-top:12px"><label>Платени места (mock абонамент)</label><div style="display:flex;gap:8px"><input id="fm-seats" type="number" min="1" value="${seats}" style="max-width:90px"><button class="btn btn-secondary btn-sm" onclick="saveSeats()">Обнови</button></div></div>` : ''}
+      </div></div>
+    </div>
+    <div class="sh-card"><div class="ent-card-h">Екип · ${ids.length} потребители</div>
+      <table class="cm-tbl tm-tbl"><thead><tr><th>Потребител</th><th>Длъжност</th><th>Роля</th><th>Статус</th><th>Права</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      ${overSeats ? '<div class="seat-warn">⚠ Надвишени места — увеличете абонамента или деактивирайте потребител.</div>' : ''}
+    </div></div>`;
+}
+function saveFirm() {
+  if (!hasPerm('manage_users')) return;
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  firm.name = g('fm-name') || 'АудитПро'; firm.eik = g('fm-eik'); firm.tagline = g('fm-tagline');
+  persistFirm(); entRenderCtx();
+  const sv = document.getElementById('fm-saved'); if (sv) { sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 1800); }
+}
+function saveSeats() {
+  if (!hasPerm('manage_billing')) { alert('Нямаш право да управляваш абонамента.'); return; }
+  const el = document.getElementById('fm-seats'); const v = el ? parseInt(el.value, 10) : 0;
+  if (!v || v < 1) { alert('Невалиден брой места.'); return; }
+  firm.seats = v; persistFirm(); entShowTeam();
+}
+function toggleUserActive(id) {
+  if (!hasPerm('manage_users')) return;
+  const u = users[id]; if (!u) return;
+  if (u.status === 'inactive') {
+    if (seatsUsed() >= (firm.seats || 0)) { alert('Няма свободни места. Увеличете абонамента, за да активирате потребителя.'); return; }
+    u.status = 'active';
+  } else {
+    if (u.role === 'admin' && adminCount() <= 1) { alert('Трябва да остане поне един активен администратор.'); return; }
+    if (id === sessionUid) { alert('Не можеш да деактивираш собствения си профил.'); return; }
+    u.status = 'inactive';
+  }
+  persistUsers(); entShowTeam();
+}
+function removeUser(id) {
+  if (!hasPerm('manage_users')) return;
+  const u = users[id]; if (!u) return;
+  if (id === sessionUid) { alert('Не можеш да премахнеш собствения си профил.'); return; }
+  if (u.role === 'admin' && adminCount() <= 1) { alert('Трябва да остане поне един администратор.'); return; }
+  if (!confirm('Да премахна ли „' + u.name + '" от дружеството?')) return;
+  delete users[id];   // екипните назначения са per-ангажимент и се игнорират за липсващ потребител
+  persistUsers(); entShowTeam();
+}
+
+// ── Модал за потребител (покана / редакция) с матрица на правата ─────────
+let userEditId = null;
+function ensureUserModal() {
+  if (document.getElementById('user-modal-ov')) return;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay'; ov.id = 'user-modal-ov';
+  ov.innerHTML = `<div class="modal" style="max-width:560px">
+    <div class="modal-title" id="user-modal-title">Покани потребител</div>
+    <div class="cl-form-row"><label>Име и фамилия *</label><input id="us-f-name" type="text" placeholder="напр. Иван Петров"></div>
+    <div class="cl-form-row"><label>Имейл (вход) *</label><input id="us-f-email" type="text" placeholder="name@firm.bg"></div>
+    <div class="cl-form-row"><label>Длъжност</label><input id="us-f-title" type="text" placeholder="напр. Старши одитор"></div>
+    <div class="cl-form-row"><label>Роля в дружеството</label><select id="us-f-role" onchange="userModalRoleChange()"><option value="member">Член</option><option value="admin">Администратор (пълни права)</option></select></div>
+    <div class="us-perms" id="us-perms"><div class="us-perms-h">Права</div><div id="us-perms-list"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeUserModal()">Отказ</button>
+      <button class="btn btn-primary" onclick="saveUserModal()">Запази</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeUserModal(); });
+}
+function userPermsListHtml(u) {
+  const adminOn = (document.getElementById('us-f-role') || {}).value === 'admin' || (u && u.role === 'admin' && !document.getElementById('us-f-role'));
+  return PERMS.map(p => {
+    const on = u && u.perms && u.perms[p.k];
+    return `<label class="us-perm"><input type="checkbox" data-perm="${p.k}"${on ? ' checked' : ''}${adminOn ? ' disabled' : ''}> ${p.l}</label>`;
+  }).join('');
+}
+function userModalRoleChange() {
+  const list = document.getElementById('us-perms-list'); if (!list) return;
+  const u = userEditId ? users[userEditId] : { perms: Object.assign({}, DEFAULT_MEMBER_PERMS) };
+  list.innerHTML = userPermsListHtml(u);
+  const wrap = document.getElementById('us-perms');
+  if (wrap) wrap.style.opacity = (document.getElementById('us-f-role').value === 'admin') ? '.5' : '1';
+}
+function openUserModal(id) {
+  if (!hasPerm('manage_users')) { alert('Само администратор може да управлява потребители.'); return; }
+  ensureUserModal();
+  userEditId = id || null;
+  const u = id ? users[id] : null;
+  document.getElementById('user-modal-title').textContent = id ? 'Редакция на потребител' : 'Покани потребител';
+  document.getElementById('us-f-name').value = u ? (u.name || '') : '';
+  document.getElementById('us-f-email').value = u ? (u.email || '') : '';
+  document.getElementById('us-f-title').value = u ? (u.title || '') : '';
+  document.getElementById('us-f-role').value = u ? (u.role || 'member') : 'member';
+  document.getElementById('us-perms-list').innerHTML = userPermsListHtml(u || { perms: Object.assign({}, DEFAULT_MEMBER_PERMS) });
+  document.getElementById('us-perms').style.opacity = (document.getElementById('us-f-role').value === 'admin') ? '.5' : '1';
+  document.getElementById('user-modal-ov').classList.add('open');
+  setTimeout(() => { const n = document.getElementById('us-f-name'); if (n) n.focus(); }, 30);
+}
+function closeUserModal() { const ov = document.getElementById('user-modal-ov'); if (ov) ov.classList.remove('open'); userEditId = null; }
+function saveUserModal() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const name = g('us-f-name'), email = g('us-f-email');
+  if (!name) { alert('Въведи име.'); return; }
+  if (!email) { alert('Въведи имейл.'); return; }
+  const role = document.getElementById('us-f-role').value === 'admin' ? 'admin' : 'member';
+  const perms = {};
+  document.querySelectorAll('#us-perms-list input[data-perm]').forEach(ch => { if (ch.checked) perms[ch.getAttribute('data-perm')] = true; });
+  if (userEditId) {
+    const u = users[userEditId];
+    if (u.role === 'admin' && role !== 'admin' && adminCount() <= 1) { alert('Трябва да остане поне един администратор.'); return; }
+    u.name = name; u.email = email; u.title = g('us-f-title'); u.role = role; u.perms = perms; u.initials = clInitials(name);
+  } else {
+    if (seatsUsed() >= (firm.seats || 0)) { alert('Няма свободни места. Увеличете абонамента, за да поканите нов потребител.'); return; }
+    const nid = nextUserId();
+    users[nid] = { id: nid, name, email, title: g('us-f-title'), role, regNo: '', phone: '', status: 'invited', perms, initials: clInitials(name) };
+  }
+  persistUsers(); closeUserModal(); entRenderCtx(); entShowTeam();
+}
+
+// ── Екип по конкретния ангажимент (захранва „Прегледал" в документите) ───
+function persistTeam() { try { localStorage.setItem(engKey('auditpro_team'), JSON.stringify(window.team)); } catch (e) {} }
+function ensureEngTeamModal() {
+  if (document.getElementById('engteam-modal-ov')) return;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay'; ov.id = 'engteam-modal-ov';
+  ov.innerHTML = `<div class="modal" style="max-width:560px">
+    <div class="modal-title">Екип по ангажимента</div>
+    <div class="pf-hint" style="margin-bottom:10px">Назначи роли за този клиент и година. „Партньор/EQCR" попълва подписа „Прегледал" в документите.</div>
+    <div id="engteam-list"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEngTeamModal()">Затвори</button>
+      <button class="btn btn-primary" onclick="saveEngTeamModal()">Запази</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeEngTeamModal(); });
+}
+function openEngTeamModal() {
+  if (!hasPerm('assign_team')) { alert('Нямаш право да назначаваш екип.'); return; }
+  ensureEngTeamModal();
+  const t = window.team || {};
+  const rows = Object.keys(users).filter(id => users[id].status === 'active').map(id => {
+    const u = users[id];
+    const opts = ENG_ROLES.map(r => `<option value="${r.k}"${(t[id] || '') === r.k ? ' selected' : ''}>${r.l}</option>`).join('');
+    return `<div class="et-row"><span class="cm-av">${userInitials(u)}</span><div class="et-meta"><b>${escHtml(u.name)}</b><span>${escHtml(u.title || '')}</span></div><select data-uid="${id}">${opts}</select></div>`;
+  }).join('');
+  document.getElementById('engteam-list').innerHTML = rows || '<div class="pf-hint">Няма активни потребители.</div>';
+  document.getElementById('engteam-modal-ov').classList.add('open');
+}
+function closeEngTeamModal() { const ov = document.getElementById('engteam-modal-ov'); if (ov) ov.classList.remove('open'); }
+function saveEngTeamModal() {
+  const t = {};
+  document.querySelectorAll('#engteam-list select[data-uid]').forEach(sel => { if (sel.value) t[sel.getAttribute('data-uid')] = sel.value; });
+  window.team = t; persistTeam(); closeEngTeamModal();
+  if (document.querySelector('#ent-tree .ent-item[data-k="dash"].active')) entShowDashboard();
+}
+function engTeamSummary() {
+  const t = window.team || {};
+  const ids = Object.keys(t).filter(id => users[id]);
+  if (!ids.length) return '<span style="color:var(--p-text3)">Няма назначен екип</span>';
+  const lbl = k => (ENG_ROLES.find(r => r.k === k) || {}).l || k;
+  return ids.map(id => `<span class="et-chip"><span class="cm-av">${userInitials(users[id])}</span>${escHtml(users[id].name)} · ${escHtml(lbl(t[id]))}</span>`).join('');
 }
 
 function openEngagement(name, year) {
@@ -6162,6 +6502,7 @@ function openEngagement(name, year) {
   setEngagement(name, +year);
 }
 function addClientYear(name) {
+  if (!hasPerm('manage_clients')) return;
   const c = clients[name]; if (!c) return;
   const base = (c.years && c.years.length) ? Math.max.apply(null, c.years) + 1 : new Date().getFullYear();
   const v = (window.prompt('Одитна година за „' + name + '":', String(base))) || '';
@@ -6174,6 +6515,7 @@ function addClientYear(name) {
   entShowClients();
 }
 function removeClientYear(name, year) {
+  if (!hasPerm('manage_clients')) return;
   const c = clients[name]; if (!c) return;
   if (!confirm('Премахване на одит ' + year + ' за „' + name + '"? Данните за тази година ще бъдат изтрити.')) return;
   c.years = (c.years || []).filter(y => y !== +year);
@@ -6183,6 +6525,7 @@ function removeClientYear(name, year) {
   entShowClients();
 }
 function deleteClient(name) {
+  if (!hasPerm('manage_clients')) return;
   const c = clients[name]; if (!c) return;
   if (!confirm('Изтриване на клиент „' + name + '" и всичките му одитни данни? Действието е необратимо.')) return;
   (c.years || []).forEach(y => clearEngagementData(c.id, y));
@@ -6212,6 +6555,7 @@ function ensureClientModal() {
   document.body.appendChild(ov);
 }
 function openClientModal(editName) {
+  if (!hasPerm('manage_clients')) { alert('Нямаш право да управляваш клиенти.'); return; }
   ensureClientModal();
   clEditName = editName || null;
   const c = editName ? clients[editName] : null;
