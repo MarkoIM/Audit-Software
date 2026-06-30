@@ -566,7 +566,7 @@
   .b40-card-h { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--p-text1); }
   .b40-card-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--p-accent-bg); color: var(--p-accent); font-weight: 700; font-size: 11px; flex: none; }
   .b40-card-desc { font-size: 11.5px; color: var(--p-text3); line-height: 1.45; margin: 6px 0 11px; }
-  .b40-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px 12px; }
+  .b40-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px 12px; align-items: end; }
   .b40-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .b40-f.span { grid-column: 1 / -1; }
   .b40-fl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); }
@@ -3771,10 +3771,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630164312"></script>
-<script src="pd-spec.js?v=20260630164312"></script>
-<script src="pd-details.js?v=20260630164312"></script>
-<script src="test-details.js?v=20260630164312"></script>
+<script src="questions.js?v=20260630170538"></script>
+<script src="pd-spec.js?v=20260630170538"></script>
+<script src="pd-details.js?v=20260630170538"></script>
+<script src="test-details.js?v=20260630170538"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5784,7 +5784,7 @@ function c10DiscussionHtml(code) {
         <div class="b40-f"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c10Set('${code}','c10r${r}-infl',this.value)"></div>
         <div class="b40-f"><span class="b40-fl">Отговорен член</span><select onchange="c10Set('${code}','c10r${r}-resp',this.value)">${teamSelectOpts(ans['c10r' + r + '-resp'] || '')}</select></div>
       </div>
-      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><input value="${v(r, 'note')}" onchange="c10Set('${code}','c10r${r}-note',this.value)"></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c10Set('${code}','c10r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
       <div class="b40-calc"><span id="c10c-r${r}-flag">${c10FlagHtml(f)}</span></div>
     </div>`;
   }).join('');
