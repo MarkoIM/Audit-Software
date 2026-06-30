@@ -3753,10 +3753,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630133447"></script>
-<script src="pd-spec.js?v=20260630133447"></script>
-<script src="pd-details.js?v=20260630133447"></script>
-<script src="test-details.js?v=20260630133447"></script>
+<script src="questions.js?v=20260630134406"></script>
+<script src="pd-spec.js?v=20260630134406"></script>
+<script src="pd-details.js?v=20260630134406"></script>
+<script src="test-details.js?v=20260630134406"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5430,6 +5430,13 @@ function b40TeamNames() {
   const t = window.team || {}, us = (typeof users !== 'undefined' && users) ? users : {};
   return Object.keys(t).filter(id => us[id]).map(id => us[id].name);
 }
+// Членове на екипа по ангажимента (име + роля) за падащото меню „Отговорен".
+function b40TeamMembers() {
+  const t = window.team || {}, us = (typeof users !== 'undefined' && users) ? users : {};
+  const roles = (typeof ENG_ROLES !== 'undefined' && ENG_ROLES) ? ENG_ROLES : [];
+  const lbl = k => (roles.find(r => r.k === k) || {}).l || k;
+  return Object.keys(t).filter(id => us[id]).map(id => ({ name: us[id].name, role: lbl(t[id]) }));
+}
 function b40RowCalc(ans, r) {
   const hp = b40Num(ans['b40r' + r + '-hp']), hm = b40Num(ans['b40r' + r + '-hm']),
         hs = b40Num(ans['b40r' + r + '-hs']), ha = b40Num(ans['b40r' + r + '-ha']);
@@ -5453,12 +5460,12 @@ function b40FlagHtml(c) {
   if (c.noBudget) f.push('<span class="b40-flag warn">Не е въведен бюджет</span>');
   return f.join('<br>') || '<span class="b40-flag ok">—</span>';
 }
-function b40Datalist() {
-  return `<datalist id="b40-team">${b40TeamNames().map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>`;
-}
 function testBudgetPanel(code) {
   const det = testDet(code);
   if (!det.budget) return '';
+  const teamHint = b40TeamMembers().length === 0
+    ? `<div style="font-size:11.5px;color:var(--p-amber);background:var(--p-amber-bg);border-radius:8px;padding:9px 12px;margin-bottom:10px">Няма назначен екип по ангажимента — назначете екип, за да изберете „Отговорен" от падащото меню.</div>`
+    : '';
   return `<div class="sh-card" style="margin-bottom:16px">
       <div class="ent-card-h">Обобщение на бюджета</div>
       ${b40SummaryHtml(code)}
@@ -5466,7 +5473,7 @@ function testBudgetPanel(code) {
     <div class="sh-card" style="margin-bottom:16px">
       <div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center"><span>Бюджет на часовете по етапи</span><span style="font-size:11px;color:var(--p-text3);font-weight:600">Авто: общо планирани · отклонение · %</span></div>
       <div style="padding:12px 14px">
-        ${b40Datalist()}
+        ${teamHint}
         ${b40CardsHtml(code)}
         <div style="font-size:11px;color:var(--p-text3);margin-top:10px">„Σ планирани", „Отклонение" и „% отклонение" се изчисляват автоматично за всеки етап. Флаговете маркират просрочени етапи, значителни отклонения (>20%), невалиден график и невъведен бюджет.</div>
       </div>
@@ -5493,17 +5500,21 @@ function b40SummaryHtml(code) {
 function b40CardsHtml(code) {
   const det = testDet(code), ans = testAnswers[code] || {};
   const v = (r, k) => escHtml(ans['b40r' + r + '-' + k] || '');
+  const team = b40TeamMembers();
   const cards = (det.budget.stages || []).map(st => {
     const r = st.n, c = b40RowCalc(ans, r);
     const statuses = st.statuses || ['Не започнат', 'В процес', 'Завършен'];
     const stOpts = '<option value=""></option>' + statuses.map(s => `<option${ans['b40r' + r + '-status'] === s ? ' selected' : ''}>${s}</option>`).join('');
+    const resp = ans['b40r' + r + '-resp'] || '';
+    let respOpts = '<option value="">— Изберете —</option>' + team.map(m => `<option value="${escHtml(m.name)}"${resp === m.name ? ' selected' : ''}>${escHtml(m.name + (m.role ? ' · ' + m.role : ''))}</option>`).join('');
+    if (resp && !team.some(m => m.name === resp)) respOpts += `<option value="${escHtml(resp)}" selected>${escHtml(resp)} (извън екипа)</option>`;
     const hour = (k, label) => `<label class="b40-h"><span>${label}</span><input type="number" min="0" step="0.5" value="${v(r, k)}" oninput="b40Set('${code}','b40r${r}-${k}',this.value)"></label>`;
     const cls = 'b40-card' + (c.badDate || c.overdue || c.significant ? ' flagged err' : (c.noBudget ? ' flagged' : ''));
     return `<div class="${cls}" id="b40c-r${r}-card">
       <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(st.stage)}</b></div>
       <div class="b40-card-desc">${escHtml(st.desc)}</div>
       <div class="b40-fields">
-        <div class="b40-f"><span class="b40-fl">Отговорен</span><input list="b40-team" value="${v(r, 'resp')}" onchange="b40Set('${code}','b40r${r}-resp',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Отговорен</span><select onchange="b40Set('${code}','b40r${r}-resp',this.value)">${respOpts}</select></div>
         <div class="b40-f"><span class="b40-fl">Статус</span><select onchange="b40Set('${code}','b40r${r}-status',this.value)">${stOpts}</select></div>
         <div class="b40-f"><span class="b40-fl">Планирана начална</span><input type="date" value="${v(r, 'start')}" onchange="b40Set('${code}','b40r${r}-start',this.value)"></div>
         <div class="b40-f"><span class="b40-fl">Планирана крайна</span><input type="date" value="${v(r, 'end')}" onchange="b40Set('${code}','b40r${r}-end',this.value)"></div>
