@@ -557,7 +557,7 @@
   .ent-prog > i { display: block; height: 100%; background: var(--p-accent); }
 
   /* Постоянно досие — описани документи (слотове), подредени в досие */
-  .pd-purpose { padding: 14px 16px; font-size: 13px; color: var(--p-text2); line-height: 1.6; }
+  .pd-purpose { padding: 14px 16px; font-size: 13px; color: var(--p-text2); line-height: 1.6; white-space: pre-line; }
   .pd-slot { border: 1px solid var(--p-border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: var(--p-surface); }
   .pd-slot:last-child { margin-bottom: 0; }
   .pd-slot.filled { border-color: var(--p-border-strong); }
@@ -3723,10 +3723,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260629221859"></script>
-<script src="pd-spec.js?v=20260629221859"></script>
-<script src="pd-details.js?v=20260629221859"></script>
-<script src="test-details.js?v=20260629221859"></script>
+<script src="questions.js?v=20260630111514"></script>
+<script src="pd-spec.js?v=20260630111514"></script>
+<script src="pd-details.js?v=20260630111514"></script>
+<script src="test-details.js?v=20260630111514"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5319,6 +5319,59 @@ function testDetailCards(code) {
   return purposeCard + stdCard;
 }
 
+// AI асистент за описателен тест: показва се, когато testDetails дефинира aiPrompt.
+// Дава до 4 входни документа (псевдо-ключове 101..104) + готова инструкция + демо генериране.
+const AI_DOC_BASE = 101;
+function testAiPanel(code) {
+  const det = testDet(code);
+  if (!det.aiPrompt) return '';
+  const docs = det.aiDocs || [];
+  const slots = docs.map((d, i) => {
+    const key = AI_DOC_BASE + i;
+    return `<div style="margin-top:10px">
+      <div class="q-note-label">${i + 1}. ${escHtml(d)}</div>
+      <div id="tup-${code}-${key}">${testUploadWidget(code, key)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="sh-card" style="margin-bottom:16px">
+    <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>AI асистент — чернова на стратегията</span><span class="ai-badge">AI</span></div>
+    <div style="padding:14px 16px">
+      <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">${escHtml(det.aiIntro || 'Приложете наличните документи и стартирайте AI, за да се генерира чернова на цялостната одиторска стратегия. Черновата се преглежда и одобрява от отговорния одитор/партньор.')}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-top:12px;margin-bottom:2px">Входни документи (до ${docs.length})</div>
+      ${slots}
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+        <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
+      </details>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+        <button class="btn btn-primary" onclick="testRunAiPanel('${code}')">Генерирай чернова с AI</button>
+        <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените документи.</span>
+      </div>
+      <div id="${code}-ai-result" style="display:none;margin-top:14px"></div>
+    </div>
+  </div>`;
+}
+function testRunAiPanel(code) {
+  const det = testDet(code);
+  const docs = det.aiDocs || [];
+  let attached = 0;
+  for (let i = 0; i < docs.length; i++) attached += testFiles(code, AI_DOC_BASE + i).length;
+  const res = document.getElementById(code + '-ai-result');
+  if (!res) return;
+  res.style.display = 'block';
+  if (!attached) {
+    res.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:var(--p-amber-bg);color:var(--p-amber);font-size:13px;font-weight:600">Приложете поне един входен документ, преди да стартирате AI.</div>`;
+    return;
+  }
+  res.innerHTML = `<div style="border:1px solid var(--p-border);border-radius:8px;overflow:hidden">
+      <div style="padding:10px 14px;background:var(--p-green-bg);color:var(--p-green);font-weight:700;font-size:13px">✓ AI генерира чернова на стратегията (демонстрация)</div>
+      <div style="padding:12px 14px;font-size:13px;color:var(--p-text2);line-height:1.6">
+        <div>Анализирани входни документи: <b>${attached}</b>.</div>
+        <div style="margin-top:6px">В реална среда AI връща структуриран проект (обхват, същественост, рискови области, подход, ресурси, график и заключение) съгласно инструкцията, който се преглежда и одобрява от отговорния одитор/партньор.</div>
+      </div>
+    </div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -5362,6 +5415,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>
       ${infoStrip}
       ${testDetailCards(code)}
+      ${testAiPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
         <div style="padding:13px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
@@ -6415,8 +6469,17 @@ function testWpSections(code) {
   const conclQ = testConclQ(def);
   const conclChip = conclQ && ans[conclQ.n] ? escHtml(ans[conclQ.n]) : '';
   const conclText = notes.concl ? escHtml(notes.concl) : '';
+  const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secQ = ++n, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
+    const files = testFiles(code, AI_DOC_BASE + i);
+    const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
+    return `<div class="wp-doc"><div class="wp-doc-name">${i + 1}. ${escHtml(d)}</div><div class="wp-doc-files"><span>${fn}</span></div></div>`;
+  }).join('') : '';
+  const aiHtml = aiOn
+    ? `<div class="wp-sec"><h3><span class="n">${secAI}.</span>AI асистент — входни документи и инструкция</h3>${aiDocRows}<div class="wp-text" style="margin-top:8px"><b>Инструкция към AI:</b></div><div style="white-space:pre-wrap;font-family:monospace;font-size:10.5px;line-height:1.55;color:var(--p-text2);background:var(--p-surface2);border-radius:6px;padding:10px 12px;margin-top:4px">${escHtml(aiDet.aiPrompt)}</div></div>`
+    : '';
   const docsHtml = showDocs
     ? `<div class="wp-sec"><h3><span class="n">${secD}.</span>Приложени документи и доказателства</h3>${docBlocks || '<div class="wp-miss">Няма приложени документи.</div>'}</div>` : '';
   const conclHtml = `<div class="wp-sec"><h3><span class="n">${secC}.</span>Заключение</h3>`
@@ -6429,6 +6492,7 @@ function testWpSections(code) {
         <table class="wp-std"><tbody>${testStandardsRows(code)}</tbody></table></div>
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
+      ${aiHtml}
       ${docsHtml}
       ${conclHtml}
       <div class="wp-sec"><h3><span class="n">${secU}.</span>Обобщение</h3>
