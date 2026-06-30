@@ -3768,10 +3768,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630140211"></script>
-<script src="pd-spec.js?v=20260630140211"></script>
-<script src="pd-details.js?v=20260630140211"></script>
-<script src="test-details.js?v=20260630140211"></script>
+<script src="questions.js?v=20260630162530"></script>
+<script src="pd-spec.js?v=20260630162530"></script>
+<script src="pd-details.js?v=20260630162530"></script>
+<script src="test-details.js?v=20260630162530"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5750,6 +5750,110 @@ function b50WpHtml(code, secN) {
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
 }
 
+// ── C-10 „Разбиране на предприятието, бизнес модела и средата" — таблица за разбиране (карти) ──
+function c10RowFlags(ans, r) {
+  const risk = ans['c10r' + r + '-risk'] || '', level = ans['c10r' + r + '-level'] || '', infl = (ans['c10r' + r + '-infl'] || '').trim();
+  return { risk, level, infl, riskNoLevel: risk === 'Да' && !level, highRiskNoResp: level === 'Висок' && !infl };
+}
+function c10FlagHtml(f) {
+  const a = [];
+  if (f.highRiskNoResp) a.push('<span class="b40-flag bad">Висок риск без одиторски отговор</span>');
+  if (f.riskNoLevel) a.push('<span class="b40-flag bad">Риск без ниво на риск</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c10DiscussionHtml(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['c10r' + r + '-' + k] || '');
+  const optsHtml = (cur, opts) => '<option value=""></option>' + opts.map(o => `<option${cur === o ? ' selected' : ''}>${o}</option>`).join('');
+  const cards = (det.understanding.rows || []).map(t => {
+    const r = t.n, f = c10RowFlags(ans, r);
+    const riskOpts = t.risk || ['Да', 'Не'], levelOpts = t.level || ['Нисък', 'Среден', 'Висок'];
+    const cls = 'b40-card' + (f.riskNoLevel || f.highRiskNoResp ? ' flagged err' : '');
+    return `<div class="${cls}" id="c10c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.area)}</b></div>
+      <div class="b50-q">${escHtml(t.q)}</div>
+      <div class="b40-card-desc"><b>Документирай:</b> ${escHtml(t.doc)}</div>
+      <div class="b40-f span"><span class="b40-fl">Документирана информация</span><textarea rows="2" oninput="c10Set('${code}','c10r${r}-ans',this.value)">${v(r, 'ans')}</textarea></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Източник на информация</span><input value="${v(r, 'src')}" placeholder="${escHtml(t.src || '')}" onchange="c10Set('${code}','c10r${r}-src',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Идентифициран риск?</span><select onchange="c10Set('${code}','c10r${r}-risk',this.value)">${optsHtml(ans['c10r' + r + '-risk'], riskOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c10Set('${code}','c10r${r}-level',this.value)">${optsHtml(ans['c10r' + r + '-level'], levelOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c10Set('${code}','c10r${r}-infl',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Отговорен член</span><select onchange="c10Set('${code}','c10r${r}-resp',this.value)">${teamSelectOpts(ans['c10r' + r + '-resp'] || '')}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><input value="${v(r, 'note')}" onchange="c10Set('${code}','c10r${r}-note',this.value)"></div>
+      <div class="b40-calc"><span id="c10c-r${r}-flag">${c10FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c10RiskSummaryInner(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = (det.understanding.rows || []).filter(t => ans['c10r' + t.n + '-risk'] === 'Да');
+  if (!rows.length) return '<div style="padding:14px 16px;font-size:12.5px;color:var(--p-text3)">Няма маркирани рискове — маркирайте „Идентифициран риск = Да" в таблицата по-горе и редовете ще се появят тук автоматично.</div>';
+  const body = rows.map(t => { const r = t.n; return `<tr><td class="role">${r}</td><td>${escHtml(t.area)}</td><td>${escHtml(ans['c10r' + r + '-level'] || '—')}</td><td>${escHtml(ans['c10r' + r + '-infl'] || '—')}</td><td>${escHtml(ans['c10r' + r + '-resp'] || '—')}</td></tr>`; }).join('');
+  return `<div style="padding:12px 14px;overflow-x:auto"><table class="b50-att"><thead><tr><th>№</th><th>Област</th><th>Ниво</th><th>Одиторски отговор</th><th>Отговорен</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function c10ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code), rows = det.understanding.rows || [];
+  const ne = (r) => (ans['c10r' + r + '-ans'] || '').trim().length > 0;
+  const out = [];
+  out.push(ne(5) ? { cls: 'ok', text: 'Бизнес моделът (ред 5) е описан.' } : { cls: 'warn', text: 'Бизнес моделът (ред 5) не е описан.' });
+  out.push(ne(6) ? { cls: 'ok', text: 'Източниците на приходи (ред 6) са описани.' } : { cls: 'warn', text: 'Източниците на приходи (ред 6) не са описани.' });
+  out.push(ne(19) ? { cls: 'ok', text: 'Свързаните лица (ред 19) са разгледани.' } : { cls: 'warn', text: 'Свързаните лица (ред 19) не са разгледани.' });
+  out.push(ne(20) ? { cls: 'ok', text: 'Действащото предприятие (ред 20) е оценено.' } : { cls: 'warn', text: 'Действащото предприятие (ред 20) не е оценено.' });
+  const noLevel = rows.filter(t => c10RowFlags(ans, t.n).riskNoLevel).length;
+  out.push(noLevel ? { cls: 'bad', text: 'Има идентифициран риск без ниво на риск (' + noLevel + ').' } : { cls: 'ok', text: 'Всеки идентифициран риск има ниво на риск.' });
+  const noResp = rows.filter(t => c10RowFlags(ans, t.n).highRiskNoResp).length;
+  out.push(noResp ? { cls: 'bad', text: 'Има висок риск без одиторски отговор (' + noResp + ').' } : { cls: 'ok', text: 'Всеки висок риск има одиторски отговор.' });
+  const noSrc = rows.filter(t => ne(t.n) && !(ans['c10r' + t.n + '-src'] || '').trim()).length;
+  out.push(noSrc ? { cls: 'warn', text: 'Има попълнена област без посочен източник (' + noSrc + ').' } : { cls: 'ok', text: 'Посочени са източници за попълнените области.' });
+  const ch22 = ans['c10r22-risk'] === 'Да' && !(ans['c10r22-note'] || '').trim();
+  out.push(ch22 ? { cls: 'bad', text: 'Значима промяна (ред 22) без бележка.' } : { cls: 'ok', text: 'Значимите промени са с описание (ред 22).' });
+  const allDone = rows.length > 0 && rows.every(t => ne(t.n));
+  out.push(allDone ? { cls: 'ok', text: 'Всички области са документирани — готов за приключване.' } : { cls: 'warn', text: 'Има недокументирани области — тестът е „В процес".' });
+  return out;
+}
+function c10ChecksInner(code) {
+  return c10ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testUnderstandingPanel(code) {
+  const det = testDet(code);
+  if (!det.understanding) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Разбиране на предприятието и средата</div><div style="padding:12px 14px">${c10DiscussionHtml(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на идентифицираните рискове</div><div id="c10-risksum">${c10RiskSummaryInner(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c10-checks" class="b50-checks">${c10ChecksInner(code)}</div></div>`;
+}
+function c10Set(code, key, value) { setAnswer(code, key, value); c10Recalc(code); }
+function c10Recalc(code) {
+  const det = testDet(code); if (!det.understanding) return;
+  const ans = testAnswers[code] || {};
+  (det.understanding.rows || []).forEach(t => {
+    const r = t.n, f = c10RowFlags(ans, r);
+    const fe = document.getElementById('c10c-r' + r + '-flag'); if (fe) fe.innerHTML = c10FlagHtml(f);
+    const card = document.getElementById('c10c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.riskNoLevel || f.highRiskNoResp ? ' flagged err' : '');
+  });
+  const rs = document.getElementById('c10-risksum'); if (rs) rs.innerHTML = c10RiskSummaryInner(code);
+  const ce = document.getElementById('c10-checks'); if (ce) ce.innerHTML = c10ChecksInner(code);
+}
+function c10WpHtml(code, secN) {
+  const det = testDet(code); if (!det.understanding) return '';
+  const ans = testAnswers[code] || {};
+  const dRows = (det.understanding.rows || []).map(t => {
+    const r = t.n, g = (k) => escHtml(ans['c10r' + r + '-' + k] || '—');
+    return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${g('ans')}</td><td>${g('src')}</td><td>${g('risk')}</td><td>${g('level')}</td><td>${g('infl')}</td><td>${g('resp')}</td></tr>`;
+  }).join('');
+  const risks = (det.understanding.rows || []).filter(t => ans['c10r' + t.n + '-risk'] === 'Да');
+  const rRows = risks.length ? risks.map(t => { const r = t.n; return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${escHtml(ans['c10r' + r + '-level'] || '—')}</td><td>${escHtml(ans['c10r' + r + '-infl'] || '—')}</td><td>${escHtml(ans['c10r' + r + '-resp'] || '—')}</td></tr>`; }).join('') : '<tr><td colspan="5">Няма маркирани рискове.</td></tr>';
+  const checks = c10ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Разбиране на предприятието и средата</h3>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Документирана информация</th><th>Източник</th><th>Риск</th><th>Ниво</th><th>Влияние</th><th>Отговорен</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение на идентифицираните рискове</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Ниво</th><th>Одиторски отговор</th><th>Отговорен</th></tr></thead><tbody>${rRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -5794,6 +5898,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${infoStrip}
       ${testDetailCards(code)}
       ${testDiscussionPanel(code)}
+      ${testUnderstandingPanel(code)}
       ${testBudgetPanel(code)}
       ${testAiPanel(code)}
       ${card}
@@ -5816,6 +5921,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (isAi) updatePrompt(code); else updateConclusion(code);
   if (testDet(code).budget) b40Recalc(code);
   if (testDet(code).discussion) b50Recalc(code);
+  if (testDet(code).understanding) c10Recalc(code);
   qProgress(code);
 }
 
@@ -6854,9 +6960,10 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
+  const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
   const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
     const files = testFiles(code, AI_DOC_BASE + i);
     const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
@@ -6877,6 +6984,7 @@ function testWpSections(code) {
         <table class="wp-std"><tbody>${testStandardsRows(code)}</tbody></table></div>
       ${b40Html}
       ${b50Html}
+      ${c10Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
