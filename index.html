@@ -558,6 +558,27 @@
 
   /* Постоянно досие — описани документи (слотове), подредени в досие */
   .pd-purpose { padding: 14px 16px; font-size: 13px; color: var(--p-text2); line-height: 1.6; white-space: pre-line; }
+  /* B-40 — бюджет на часовете (grid) */
+  .b40-wrap { overflow-x: auto; border: 1px solid var(--p-border); border-radius: 10px; margin-top: 4px; }
+  .b40 { border-collapse: collapse; width: 100%; min-width: 1180px; font-size: 11.5px; }
+  .b40 th, .b40 td { border: 1px solid var(--p-border); padding: 5px 6px; vertical-align: middle; }
+  .b40 thead th { background: var(--p-surface2); font-weight: 700; color: var(--p-text2); font-size: 10.5px; line-height: 1.25; text-align: center; position: sticky; top: 0; }
+  .b40 td.calc { background: var(--p-surface2); font-weight: 700; text-align: right; color: var(--p-text1); white-space: nowrap; }
+  .b40 td.num { text-align: right; }
+  .b40 .b40-stg { min-width: 150px; font-weight: 600; color: var(--p-text1); }
+  .b40 .b40-desc { min-width: 210px; color: var(--p-text3); font-size: 10.5px; line-height: 1.4; }
+  .b40 input, .b40 select { width: 100%; border: 1px solid var(--p-border); border-radius: 6px; padding: 4px 5px; font: inherit; font-size: 11.5px; background: var(--p-surface); color: var(--p-text1); outline: none; }
+  .b40 input.h { width: 54px; text-align: right; }
+  .b40 input.dt { width: 124px; }
+  .b40 .b40-flag { font-size: 10px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+  .b40-flag.warn { color: var(--p-amber); }
+  .b40-flag.bad { color: #d92d20; }
+  .b40-flag.ok { color: var(--p-green); }
+  .b40-sum-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 20px; padding: 14px 16px; }
+  .b40-si { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--p-text2); border-bottom: 1px dashed var(--p-border); padding-bottom: 5px; }
+  .b40-si b { color: var(--p-text1); font-weight: 700; }
+  .b40-si.alert b { color: #d92d20; }
+  @media (max-width: 640px) { .b40-sum-grid { grid-template-columns: 1fr; } }
   .pd-slot { border: 1px solid var(--p-border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: var(--p-surface); }
   .pd-slot:last-child { margin-bottom: 0; }
   .pd-slot.filled { border-color: var(--p-border-strong); }
@@ -3723,10 +3744,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630121221"></script>
-<script src="pd-spec.js?v=20260630121221"></script>
-<script src="pd-details.js?v=20260630121221"></script>
-<script src="test-details.js?v=20260630121221"></script>
+<script src="questions.js?v=20260630131853"></script>
+<script src="pd-spec.js?v=20260630131853"></script>
+<script src="pd-details.js?v=20260630131853"></script>
+<script src="test-details.js?v=20260630131853"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5390,6 +5411,165 @@ function fillConcl(code) {
   setConcl(code, ex);
 }
 
+// ── B-40 „Бюджет на часовете и времеви график" — интерактивен grid с автоматични изчисления ──
+function b40Num(v) { const n = parseFloat(v); return isFinite(n) ? n : 0; }
+function b40Fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+function b40Pct(p) { return p === null ? '—' : (p > 0 ? '+' : '') + (Number.isInteger(p) ? p : p.toFixed(1)) + '%'; }
+function b40Sign(n) { return (n > 0 ? '+' : '') + b40Fmt(n); }
+function b40Today() { try { return new Date().toISOString().slice(0, 10); } catch (e) { return '9999-12-31'; } }
+function b40TeamNames() {
+  const t = window.team || {}, us = (typeof users !== 'undefined' && users) ? users : {};
+  return Object.keys(t).filter(id => us[id]).map(id => us[id].name);
+}
+function b40RowCalc(ans, r) {
+  const hp = b40Num(ans['b40r' + r + '-hp']), hm = b40Num(ans['b40r' + r + '-hm']),
+        hs = b40Num(ans['b40r' + r + '-hs']), ha = b40Num(ans['b40r' + r + '-ha']);
+  const total = hp + hm + hs + ha;
+  const act = b40Num(ans['b40r' + r + '-act']);
+  const variance = act - total;
+  const pct = total > 0 ? (variance / total * 100) : null;
+  const start = ans['b40r' + r + '-start'] || '', end = ans['b40r' + r + '-end'] || '';
+  const status = ans['b40r' + r + '-status'] || '';
+  const badDate = !!(start && end && end < start);
+  const overdue = !!(end && status !== 'Завършен' && status !== 'Неприложимо' && end < b40Today());
+  const noBudget = total === 0;
+  const significant = total > 0 && Math.abs(pct) > 20;
+  return { hp, hm, hs, ha, total, act, variance, pct, start, end, status, badDate, overdue, noBudget, significant };
+}
+function b40FlagHtml(c) {
+  const f = [];
+  if (c.badDate) f.push('<span class="b40-flag bad">Невалиден график</span>');
+  if (c.overdue) f.push('<span class="b40-flag bad">Просрочен</span>');
+  if (c.significant) f.push('<span class="b40-flag bad">Значително отклонение</span>');
+  if (c.noBudget) f.push('<span class="b40-flag warn">Не е въведен бюджет</span>');
+  return f.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function b40Datalist() {
+  return `<datalist id="b40-team">${b40TeamNames().map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>`;
+}
+function testBudgetPanel(code) {
+  const det = testDet(code);
+  if (!det.budget) return '';
+  return `<div class="sh-card" style="margin-bottom:16px">
+      <div class="ent-card-h">Обобщение на бюджета</div>
+      ${b40SummaryHtml(code)}
+    </div>
+    <div class="sh-card" style="margin-bottom:16px">
+      <div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center"><span>Бюджет на часовете по етапи</span><span style="font-size:11px;color:var(--p-text3);font-weight:600">Авто: общо планирани · отклонение · %</span></div>
+      <div style="padding:12px 14px">
+        ${b40Datalist()}
+        <div class="b40-wrap">${b40GridHtml(code)}</div>
+        <div style="font-size:11px;color:var(--p-text3);margin-top:8px">„Общо планирани", „Отклонение" и „% отклонение" се изчисляват автоматично. Флаговете маркират просрочени етапи, значителни отклонения (>20%), невалиден график и невъведен бюджет.</div>
+      </div>
+    </div>`;
+}
+function b40SummaryHtml(code) {
+  const ans = testAnswers[code] || {};
+  const inp = 'style="border:1px solid var(--p-border);border-radius:6px;padding:3px 6px;font:inherit;font-size:12px;background:var(--p-surface);color:var(--p-text1);outline:none"';
+  const need = ans['b40-need-update'] || '';
+  const si = (label, val) => `<div class="b40-si"><span>${label}</span><span>${val}</span></div>`;
+  return `<div class="b40-sum-grid">
+    ${si('Общо планирани часове', '<b id="b40s-planned">0</b>')}
+    ${si('Общо реално отработени часове', '<b id="b40s-actual">0</b>')}
+    ${si('Общо отклонение (часове)', '<b id="b40s-var">0</b>')}
+    ${si('Общо % отклонение', '<b id="b40s-pct">—</b>')}
+    ${si('Брой просрочени етапи', '<b id="b40s-overdue">0</b>')}
+    ${si('Брой незавършени етапи', '<b id="b40s-incomplete">0</b>')}
+    ${si('Значителни отклонения от бюджета', '<b id="b40s-signif">Не</b>')}
+    ${si('Планирана дата за издаване на доклад', `<input type="date" value="${escHtml(ans['b40-rep-planned'] || '')}" onchange="setAnswer('${code}','b40-rep-planned',this.value)" ${inp}>`)}
+    ${si('Реална дата на издаване', `<input type="date" value="${escHtml(ans['b40-rep-actual'] || '')}" onchange="setAnswer('${code}','b40-rep-actual',this.value)" ${inp}>`)}
+    ${si('Необходимо ли е актуализиране на плана', `<select onchange="setAnswer('${code}','b40-need-update',this.value)" ${inp}><option value=""></option><option${need === 'Да' ? ' selected' : ''}>Да</option><option${need === 'Не' ? ' selected' : ''}>Не</option></select>`)}
+  </div>`;
+}
+function b40GridHtml(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const head = `<thead><tr>
+    <th>№</th><th>Етап от одита</th><th>Описание на дейността</th><th>Отговорен</th>
+    <th>Планирана<br>начална</th><th>Планирана<br>крайна</th>
+    <th>Партньор</th><th>Мениджър</th><th>Старши</th><th>Асистент</th>
+    <th>Общо<br>планирани</th><th>Реално</th><th>Откл.<br>(ч)</th><th>%<br>откл.</th>
+    <th>Статус</th><th>Флаг / риск</th><th>Бележки</th></tr></thead>`;
+  const v = (r, k) => escHtml(ans['b40r' + r + '-' + k] || '');
+  const rows = (det.budget.stages || []).map(st => {
+    const r = st.n, c = b40RowCalc(ans, r);
+    const statuses = st.statuses || ['Не започнат', 'В процес', 'Завършен'];
+    const stOpts = '<option value=""></option>' + statuses.map(s => `<option${ans['b40r' + r + '-status'] === s ? ' selected' : ''}>${s}</option>`).join('');
+    const h = (k) => `<td><input type="number" class="h" min="0" step="0.5" value="${v(r, k)}" oninput="b40Set('${code}','b40r${r}-${k}',this.value)"></td>`;
+    return `<tr>
+      <td class="num">${r}</td>
+      <td class="b40-stg">${escHtml(st.stage)}</td>
+      <td class="b40-desc">${escHtml(st.desc)}</td>
+      <td><input list="b40-team" value="${v(r, 'resp')}" onchange="b40Set('${code}','b40r${r}-resp',this.value)"></td>
+      <td><input type="date" class="dt" value="${v(r, 'start')}" onchange="b40Set('${code}','b40r${r}-start',this.value)"></td>
+      <td><input type="date" class="dt" value="${v(r, 'end')}" onchange="b40Set('${code}','b40r${r}-end',this.value)"></td>
+      ${h('hp')}${h('hm')}${h('hs')}${h('ha')}
+      <td class="calc" id="b40c-r${r}-total">${b40Fmt(c.total)}</td>
+      ${h('act')}
+      <td class="calc" id="b40c-r${r}-var">${b40Sign(c.variance)}</td>
+      <td class="calc" id="b40c-r${r}-pct">${b40Pct(c.pct)}</td>
+      <td><select onchange="b40Set('${code}','b40r${r}-status',this.value)">${stOpts}</select></td>
+      <td id="b40c-r${r}-flag">${b40FlagHtml(c)}</td>
+      <td><input value="${v(r, 'note')}" onchange="b40Set('${code}','b40r${r}-note',this.value)"></td>
+    </tr>`;
+  }).join('');
+  return `<table class="b40">${head}<tbody>${rows}</tbody></table>`;
+}
+function b40Set(code, key, value) { setAnswer(code, key, value); b40Recalc(code); }
+function b40Recalc(code) {
+  const det = testDet(code); if (!det.budget) return;
+  const ans = testAnswers[code] || {};
+  let tp = 0, ta = 0, overdue = 0, incomplete = 0, signif = false;
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  (det.budget.stages || []).forEach(st => {
+    const r = st.n, c = b40RowCalc(ans, r);
+    tp += c.total; ta += c.act;
+    if (c.overdue) overdue++;
+    if (c.status !== 'Завършен' && c.status !== 'Неприложимо') incomplete++;
+    if (c.significant) signif = true;
+    set('b40c-r' + r + '-total', b40Fmt(c.total));
+    set('b40c-r' + r + '-var', b40Sign(c.variance));
+    set('b40c-r' + r + '-pct', b40Pct(c.pct));
+    set('b40c-r' + r + '-flag', b40FlagHtml(c));
+  });
+  const tv = ta - tp, tpct = tp > 0 ? tv / tp * 100 : null;
+  const S = (id, html, alert) => { const el = document.getElementById(id); if (!el) return; el.innerHTML = html; const si = el.closest && el.closest('.b40-si'); if (si && alert !== undefined) si.classList.toggle('alert', !!alert); };
+  S('b40s-planned', b40Fmt(tp));
+  S('b40s-actual', b40Fmt(ta));
+  S('b40s-var', b40Sign(tv));
+  S('b40s-pct', b40Pct(tpct));
+  S('b40s-overdue', String(overdue), overdue > 0);
+  S('b40s-incomplete', String(incomplete));
+  S('b40s-signif', signif ? 'Да' : 'Не', signif);
+}
+// Работен документ (преглед/PDF) за B-40: обобщение + компактна таблица (само за четене).
+function b40WpHtml(code, secN) {
+  const det = testDet(code); if (!det.budget) return '';
+  const ans = testAnswers[code] || {};
+  let tp = 0, ta = 0, overdue = 0, incomplete = 0, signif = false;
+  const rowsArr = (det.budget.stages || []).map(st => {
+    const c = b40RowCalc(ans, st.n); tp += c.total; ta += c.act;
+    if (c.overdue) overdue++;
+    if (c.status !== 'Завършен' && c.status !== 'Неприложимо') incomplete++;
+    if (c.significant) signif = true;
+    const per = (c.start || c.end) ? escHtml((c.start || '…') + ' – ' + (c.end || '…')) : '—';
+    const fl = []; if (c.badDate) fl.push('Невалиден график'); if (c.overdue) fl.push('Просрочен'); if (c.significant) fl.push('Значително отклонение'); if (c.noBudget) fl.push('Не е въведен бюджет');
+    return `<tr><td>${st.n}</td><td>${escHtml(st.stage)}</td><td>${escHtml(ans['b40r' + st.n + '-resp'] || '—')}</td><td>${per}</td><td class="c">${b40Fmt(c.total)}</td><td class="c">${b40Fmt(c.act)}</td><td class="c">${b40Sign(c.variance)}</td><td class="c">${b40Pct(c.pct)}</td><td>${escHtml(c.status || '—')}</td><td>${fl.join('; ') || '—'}</td></tr>`;
+  }).join('');
+  const tv = ta - tp, tpct = tp > 0 ? tv / tp * 100 : null;
+  const sum = [
+    ['Общо планирани часове', b40Fmt(tp)], ['Общо реално отработени часове', b40Fmt(ta)],
+    ['Общо отклонение (часове)', b40Sign(tv)], ['Общо % отклонение', b40Pct(tpct)],
+    ['Брой просрочени етапи', String(overdue)], ['Брой незавършени етапи', String(incomplete)],
+    ['Значителни отклонения от бюджета', signif ? 'Да' : 'Не'],
+    ['Планирана дата за издаване на доклад', escHtml(ans['b40-rep-planned'] || '—')],
+    ['Реална дата на издаване', escHtml(ans['b40-rep-actual'] || '—')],
+    ['Необходимо ли е актуализиране на плана', escHtml(ans['b40-need-update'] || '—')]
+  ].map(x => `<tr><td>${x[0]}</td><td class="c">${x[1]}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Бюджет на часовете и времеви график</h3>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>${sum}</tbody></table>
+    <table class="wp-std"><thead><tr><th>№</th><th>Етап</th><th>Отговорен</th><th>Срок</th><th class="c">План.</th><th class="c">Реално</th><th class="c">Откл.</th><th class="c">%</th><th>Статус</th><th>Флаг</th></tr></thead><tbody>${rowsArr}</tbody></table></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -5434,6 +5614,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${infoStrip}
       ${testDetailCards(code)}
       ${testAiPanel(code)}
+      ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
         <div style="padding:13px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
@@ -5452,6 +5633,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
     </div>`;
 
   if (isAi) updatePrompt(code); else updateConclusion(code);
+  if (testDet(code).budget) b40Recalc(code);
   qProgress(code);
 }
 
@@ -6490,7 +6672,8 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
     const files = testFiles(code, AI_DOC_BASE + i);
     const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
@@ -6509,6 +6692,7 @@ function testWpSections(code) {
   return `<div class="wp-sec"><h3><span class="n">${secP}.</span>Цел и съдържание</h3><div class="wp-text">${testPurpose(code) || '—'}</div></div>
       <div class="wp-sec"><h3><span class="n">${secS}.</span>Приложими стандарти</h3>
         <table class="wp-std"><tbody>${testStandardsRows(code)}</tbody></table></div>
+      ${b40Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
