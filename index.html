@@ -3796,10 +3796,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260630214756"></script>
-<script src="pd-spec.js?v=20260630214756"></script>
-<script src="pd-details.js?v=20260630214756"></script>
-<script src="test-details.js?v=20260630214756"></script>
+<script src="questions.js?v=20260630220347"></script>
+<script src="pd-spec.js?v=20260630220347"></script>
+<script src="pd-details.js?v=20260630220347"></script>
+<script src="test-details.js?v=20260630220347"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5537,6 +5537,15 @@ function b10Generate(code, auto) {
   const inputs = testDet(code).aiInputs || [];
   const missing = inputs.filter(inp => !aiInputOk(code, inp)).map(inp => inp.label);
   const used = inputs.map(inp => `${aiInputOk(code, inp) ? '✓' : '—'} ${escHtml(inp.label)}`).join(' · ');
+  // AI попълва чернова в „Теми за обсъждане" (само празните полета) и опреснява таблицата.
+  let fillNote = '';
+  if (testDet(code).discussion) {
+    const n = b50AiFill(code);
+    b50TopicsRefresh(code); b50Recalc(code);
+    fillNote = n
+      ? `<div style="margin-top:6px">Попълнени са чернови в „Теми за обсъждане" (${n} нови) — текстът и полетата остават свободни за редакция от одитора.</div>`
+      : `<div style="margin-top:6px">Полетата в „Теми за обсъждане" вече са попълнени — свободни за редакция от одитора.</div>`;
+  }
   res.style.display = 'block';
   const warn = missing.length
     ? `<div style="margin-top:8px;color:var(--p-amber);font-size:12.5px;line-height:1.55">Забележка: черновата е изготвена при липсващи източници — ${escHtml(missing.join(', '))}. Допълнете ги за по-пълна чернова.</div>` : '';
@@ -5545,6 +5554,7 @@ function b10Generate(code, auto) {
       <div style="padding:12px 14px;font-size:13px;color:var(--p-text2);line-height:1.6">
         <div>Използвани източници: ${used}.</div>
         <div style="margin-top:6px">В реална среда AI връща структуриран проект, изготвен на база посочените източници, който се преглежда и одобрява от отговорния одитор/партньор.</div>
+        ${fillNote}
         ${warn}
       </div></div>`;
 }
@@ -5850,11 +5860,31 @@ function testDiscussionPanel(code) {
   const det = testDet(code);
   if (!det.discussion) return '';
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Данни за проведеното обсъждане</div>${b50MeetingHtml(code)}</div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Теми за обсъждане</div><div style="padding:12px 14px">${b50DiscussionHtml(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Теми за обсъждане</div><div id="b50-topics" style="padding:12px 14px">${b50DiscussionHtml(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Присъствие на екипа</div><div style="padding:12px 14px;overflow-x:auto">${b50AttendanceHtml(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="b50-checks" class="b50-checks">${b50ChecksInner(code)}</div></div>`;
 }
 function b50Set(code, key, value) { setAnswer(code, key, value); b50Recalc(code); }
+function b50TopicsRefresh(code) { const el = document.getElementById('b50-topics'); if (el) el.innerHTML = b50DiscussionHtml(code); }
+// AI попълва чернова в „Теми за обсъждане" само в празните полета (не презаписва ръчно въведеното — остава за редакция).
+function b50AiFill(code) {
+  const det = testDet(code); if (!det.discussion) return 0;
+  const inputs = det.aiInputs || [];
+  const srcs = inputs.filter(inp => aiInputOk(code, inp)).map(inp => inp.type === 'test' ? inp.code : (inp.type === 'section' ? ('Раздел ' + inp.section) : inp.label));
+  const srcTxt = srcs.length ? srcs.join(', ') : 'наличните данни';
+  const ans = testAnswers[code] || {};
+  let filled = 0;
+  (det.discussion.topics || []).forEach(t => {
+    const ak = 'b50r' + t.n + '-ans';
+    if (!((ans[ak] || '').trim())) {
+      setAnswer(code, ak, 'Чернова (AI) по тема „' + t.area + '": на база наличните източници (' + srcTxt + ') — да се прегледа, потвърди и допълни от екипа.');
+      const sk = 'b50r' + t.n + '-status';
+      if (!((ans[sk] || '').trim())) setAnswer(code, sk, 'В процес');
+      filled++;
+    }
+  });
+  return filled;
+}
 function b50Recalc(code) {
   const det = testDet(code); if (!det.discussion) return;
   const ans = testAnswers[code] || {};
@@ -6287,11 +6317,11 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>
       ${infoStrip}
       ${testDetailCards(code)}
+      ${testAiPanel(code)}
       ${testDiscussionPanel(code)}
       ${testUnderstandingPanel(code)}
       ${testFrameworkPanel(code)}
       ${testBudgetPanel(code)}
-      ${testAiPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
         <div style="padding:13px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
