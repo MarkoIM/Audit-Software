@@ -3771,10 +3771,11 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630170538"></script>
-<script src="pd-spec.js?v=20260630170538"></script>
-<script src="pd-details.js?v=20260630170538"></script>
-<script src="test-details.js?v=20260630170538"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="questions.js?v=20260630172623"></script>
+<script src="pd-spec.js?v=20260630172623"></script>
+<script src="pd-details.js?v=20260630172623"></script>
+<script src="test-details.js?v=20260630172623"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5823,7 +5824,16 @@ function c10ChecksInner(code) {
 function testUnderstandingPanel(code) {
   const det = testDet(code);
   if (!det.understanding) return '';
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Разбиране на предприятието и средата</div><div style="padding:12px 14px">${c10DiscussionHtml(code)}</div></div>
+  return `<div class="sh-card" style="margin-bottom:16px">
+      <div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>Разбиране на предприятието и средата</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="c10DoExport('${code}')">⬇ Експорт на въпросите (Excel)</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">⬆ Импорт на попълнена таблица<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="c10DoImport('${code}',this.files[0]);this.value=''"></label>
+        </span>
+      </div>
+      <div style="padding:10px 14px 0;font-size:11.5px;color:var(--p-text3)">Експортирайте въпросите в Excel, попълнете колоната „Документирана информация" и импортирайте файла — отговорите се наливат автоматично по въпросите.</div>
+      <div style="padding:12px 14px">${c10DiscussionHtml(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на идентифицираните рискове</div><div id="c10-risksum">${c10RiskSummaryInner(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c10-checks" class="b50-checks">${c10ChecksInner(code)}</div></div>`;
 }
@@ -5855,6 +5865,98 @@ function c10WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Ниво</th><th>Одиторски отговор</th><th>Отговорен</th></tr></thead><tbody>${rRows}</tbody></table>
     <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+// ── C-10 експорт/импорт на въпросите в Excel (.xlsx чрез SheetJS, иначе .csv) ──
+function c10ExportRows(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = [['№', 'Област', 'Въпрос / процедура', 'Какво да документирате', 'Документирана информация']];
+  (det.understanding.rows || []).forEach(t => rows.push([t.n, t.area, t.q, t.doc || '', ans['c10r' + t.n + '-ans'] || '']));
+  return rows;
+}
+function c10CsvFromRows(rows) {
+  const esc = (v) => { v = String(v == null ? '' : v); return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  return rows.map(r => r.map(esc).join(';')).join('\r\n');
+}
+function c10ParseCsv(text) {
+  text = String(text || '').replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const cnt = (ch) => first.split(ch).length;
+  const delim = cnt(';') > cnt(',') ? ';' : (cnt('\t') > cnt(',') ? '\t' : ',');
+  const rows = []; let row = [], cur = '', inQ = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i += 2; continue; } inQ = false; i++; continue; }
+      cur += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === delim) { row.push(cur); cur = ''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; i++; continue; }
+    cur += c; i++;
+  }
+  if (cur.length || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function c10ImportFill(code, dataRows) {
+  if (!dataRows || !dataRows.length) return 0;
+  const header = dataRows[0].map(x => String(x == null ? '' : x).trim().toLowerCase());
+  let numCol = header.indexOf('№'); if (numCol < 0) numCol = 0;
+  let ansCol = header.findIndex(h => h.indexOf('документирана информация') >= 0);
+  if (ansCol < 0) ansCol = dataRows[0].length - 1;
+  const maxN = ((testDet(code).understanding || {}).rows || []).length;
+  let count = 0;
+  for (let i = 1; i < dataRows.length; i++) {
+    const r = dataRows[i]; if (!r) continue;
+    const n = parseInt(String(r[numCol] == null ? '' : r[numCol]).trim(), 10);
+    if (!n || n < 1 || n > maxN) continue;
+    setAnswer(code, 'c10r' + n + '-ans', String(r[ansCol] == null ? '' : r[ansCol]).trim());
+    count++;
+  }
+  return count;
+}
+function c10ExportName(code) {
+  const client = (typeof iosCurrentClient !== 'undefined' && iosCurrentClient) ? iosCurrentClient : 'klient';
+  const year = (typeof iosCurrentYear !== 'undefined' && iosCurrentYear) ? iosCurrentYear : '';
+  return code + '_Razbirane_' + String(client).replace(/[^0-9A-Za-zА-Яа-я]+/g, '_') + (year ? '_' + year : '');
+}
+function c10DownloadBlob(filename, blob) {
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 1500);
+  } catch (e) { alert('Неуспешно сваляне на файла: ' + e.message); }
+}
+function c10DoExport(code) {
+  const rows = c10ExportRows(code);
+  if (typeof XLSX !== 'undefined') {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 5 }, { wch: 24 }, { wch: 50 }, { wch: 42 }, { wch: 60 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Разбиране');
+    XLSX.writeFile(wb, c10ExportName(code) + '.xlsx');
+  } else {
+    c10DownloadBlob(c10ExportName(code) + '.csv', new Blob(['﻿' + c10CsvFromRows(rows)], { type: 'text/csv;charset=utf-8' }));
+  }
+}
+function c10DoImport(code, file) {
+  if (!file) return;
+  const done = (dataRows) => {
+    let n = 0;
+    try { n = c10ImportFill(code, dataRows); } catch (e) { alert('Грешка при разчитане на файла: ' + e.message); return; }
+    entShowWd(code);
+    alert(n ? ('Импортирани са ' + n + ' въпроса в полетата „Документирана информация".') : 'Във файла не бяха разпознати редове за импорт. Проверете дали колоните „№" и „Документирана информация" са запазени.');
+  };
+  const name = (file.name || '').toLowerCase();
+  const reader = new FileReader();
+  if ((name.endsWith('.xlsx') || name.endsWith('.xls')) && typeof XLSX !== 'undefined') {
+    reader.onload = (e) => { try { const wb = XLSX.read(e.target.result, { type: 'array' }); const ws = wb.Sheets[wb.SheetNames[0]]; done(XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' })); } catch (err) { alert('Грешка при четене на Excel файла: ' + err.message); } };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = (e) => done(c10ParseCsv(String(e.target.result || '')));
+    reader.readAsText(file, 'utf-8');
+  }
 }
 
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
