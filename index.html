@@ -558,22 +558,31 @@
 
   /* Постоянно досие — описани документи (слотове), подредени в досие */
   .pd-purpose { padding: 14px 16px; font-size: 13px; color: var(--p-text2); line-height: 1.6; white-space: pre-line; }
-  /* B-40 — бюджет на часовете (grid) */
-  .b40-wrap { overflow-x: auto; border: 1px solid var(--p-border); border-radius: 10px; margin-top: 4px; }
-  .b40 { border-collapse: collapse; width: 100%; min-width: 1180px; font-size: 11.5px; }
-  .b40 th, .b40 td { border: 1px solid var(--p-border); padding: 5px 6px; vertical-align: middle; }
-  .b40 thead th { background: var(--p-surface2); font-weight: 700; color: var(--p-text2); font-size: 10.5px; line-height: 1.25; text-align: center; position: sticky; top: 0; }
-  .b40 td.calc { background: var(--p-surface2); font-weight: 700; text-align: right; color: var(--p-text1); white-space: nowrap; }
-  .b40 td.num { text-align: right; }
-  .b40 .b40-stg { min-width: 150px; font-weight: 600; color: var(--p-text1); }
-  .b40 .b40-desc { min-width: 210px; color: var(--p-text3); font-size: 10.5px; line-height: 1.4; }
-  .b40 input, .b40 select { width: 100%; border: 1px solid var(--p-border); border-radius: 6px; padding: 4px 5px; font: inherit; font-size: 11.5px; background: var(--p-surface); color: var(--p-text1); outline: none; }
-  .b40 input.h { width: 54px; text-align: right; }
-  .b40 input.dt { width: 124px; }
-  .b40 .b40-flag { font-size: 10px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+  /* B-40 — бюджет на часовете (карти по етапи) */
+  .b40-cards { display: flex; flex-direction: column; gap: 12px; }
+  .b40-card { border: 1px solid var(--p-border); border-radius: 10px; padding: 13px 15px; background: var(--p-surface); }
+  .b40-card.flagged { border-color: var(--p-amber); }
+  .b40-card.flagged.err { border-color: #d92d20; }
+  .b40-card-h { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--p-text1); }
+  .b40-card-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--p-accent-bg); color: var(--p-accent); font-weight: 700; font-size: 11px; flex: none; }
+  .b40-card-desc { font-size: 11.5px; color: var(--p-text3); line-height: 1.45; margin: 6px 0 11px; }
+  .b40-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px 12px; }
+  .b40-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .b40-f.span { grid-column: 1 / -1; }
+  .b40-fl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); }
+  .b40-f input, .b40-f select { border: 1px solid var(--p-border); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12.5px; background: var(--p-surface); color: var(--p-text1); outline: none; width: 100%; }
+  .b40-f input:focus, .b40-f select:focus { border-color: var(--p-accent); }
+  .b40-hours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .b40-h { display: flex; flex-direction: column; gap: 2px; }
+  .b40-h span { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .2px; color: var(--p-text3); }
+  .b40-h input { border: 1px solid var(--p-border); border-radius: 7px; padding: 6px 6px; font: inherit; font-size: 12.5px; text-align: right; background: var(--p-surface); color: var(--p-text1); outline: none; width: 100%; }
+  .b40-calc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 11px; padding-top: 10px; border-top: 1px dashed var(--p-border); font-size: 12px; color: var(--p-text2); }
+  .b40-calc b { color: var(--p-text1); font-weight: 700; }
+  .b40-flag { font-size: 11px; font-weight: 700; line-height: 1.3; }
   .b40-flag.warn { color: var(--p-amber); }
   .b40-flag.bad { color: #d92d20; }
   .b40-flag.ok { color: var(--p-green); }
+  @media (max-width: 600px) { .b40-hours { grid-template-columns: repeat(2, 1fr); } }
   .b40-sum-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 20px; padding: 14px 16px; }
   .b40-si { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--p-text2); border-bottom: 1px dashed var(--p-border); padding-bottom: 5px; }
   .b40-si b { color: var(--p-text1); font-weight: 700; }
@@ -3744,10 +3753,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630131853"></script>
-<script src="pd-spec.js?v=20260630131853"></script>
-<script src="pd-details.js?v=20260630131853"></script>
-<script src="test-details.js?v=20260630131853"></script>
+<script src="questions.js?v=20260630133447"></script>
+<script src="pd-spec.js?v=20260630133447"></script>
+<script src="pd-details.js?v=20260630133447"></script>
+<script src="test-details.js?v=20260630133447"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5458,8 +5467,8 @@ function testBudgetPanel(code) {
       <div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center"><span>Бюджет на часовете по етапи</span><span style="font-size:11px;color:var(--p-text3);font-weight:600">Авто: общо планирани · отклонение · %</span></div>
       <div style="padding:12px 14px">
         ${b40Datalist()}
-        <div class="b40-wrap">${b40GridHtml(code)}</div>
-        <div style="font-size:11px;color:var(--p-text3);margin-top:8px">„Общо планирани", „Отклонение" и „% отклонение" се изчисляват автоматично. Флаговете маркират просрочени етапи, значителни отклонения (>20%), невалиден график и невъведен бюджет.</div>
+        ${b40CardsHtml(code)}
+        <div style="font-size:11px;color:var(--p-text3);margin-top:10px">„Σ планирани", „Отклонение" и „% отклонение" се изчисляват автоматично за всеки етап. Флаговете маркират просрочени етапи, значителни отклонения (>20%), невалиден график и невъведен бюджет.</div>
       </div>
     </div>`;
 }
@@ -5481,38 +5490,36 @@ function b40SummaryHtml(code) {
     ${si('Необходимо ли е актуализиране на плана', `<select onchange="setAnswer('${code}','b40-need-update',this.value)" ${inp}><option value=""></option><option${need === 'Да' ? ' selected' : ''}>Да</option><option${need === 'Не' ? ' selected' : ''}>Не</option></select>`)}
   </div>`;
 }
-function b40GridHtml(code) {
+function b40CardsHtml(code) {
   const det = testDet(code), ans = testAnswers[code] || {};
-  const head = `<thead><tr>
-    <th>№</th><th>Етап от одита</th><th>Описание на дейността</th><th>Отговорен</th>
-    <th>Планирана<br>начална</th><th>Планирана<br>крайна</th>
-    <th>Партньор</th><th>Мениджър</th><th>Старши</th><th>Асистент</th>
-    <th>Общо<br>планирани</th><th>Реално</th><th>Откл.<br>(ч)</th><th>%<br>откл.</th>
-    <th>Статус</th><th>Флаг / риск</th><th>Бележки</th></tr></thead>`;
   const v = (r, k) => escHtml(ans['b40r' + r + '-' + k] || '');
-  const rows = (det.budget.stages || []).map(st => {
+  const cards = (det.budget.stages || []).map(st => {
     const r = st.n, c = b40RowCalc(ans, r);
     const statuses = st.statuses || ['Не започнат', 'В процес', 'Завършен'];
     const stOpts = '<option value=""></option>' + statuses.map(s => `<option${ans['b40r' + r + '-status'] === s ? ' selected' : ''}>${s}</option>`).join('');
-    const h = (k) => `<td><input type="number" class="h" min="0" step="0.5" value="${v(r, k)}" oninput="b40Set('${code}','b40r${r}-${k}',this.value)"></td>`;
-    return `<tr>
-      <td class="num">${r}</td>
-      <td class="b40-stg">${escHtml(st.stage)}</td>
-      <td class="b40-desc">${escHtml(st.desc)}</td>
-      <td><input list="b40-team" value="${v(r, 'resp')}" onchange="b40Set('${code}','b40r${r}-resp',this.value)"></td>
-      <td><input type="date" class="dt" value="${v(r, 'start')}" onchange="b40Set('${code}','b40r${r}-start',this.value)"></td>
-      <td><input type="date" class="dt" value="${v(r, 'end')}" onchange="b40Set('${code}','b40r${r}-end',this.value)"></td>
-      ${h('hp')}${h('hm')}${h('hs')}${h('ha')}
-      <td class="calc" id="b40c-r${r}-total">${b40Fmt(c.total)}</td>
-      ${h('act')}
-      <td class="calc" id="b40c-r${r}-var">${b40Sign(c.variance)}</td>
-      <td class="calc" id="b40c-r${r}-pct">${b40Pct(c.pct)}</td>
-      <td><select onchange="b40Set('${code}','b40r${r}-status',this.value)">${stOpts}</select></td>
-      <td id="b40c-r${r}-flag">${b40FlagHtml(c)}</td>
-      <td><input value="${v(r, 'note')}" onchange="b40Set('${code}','b40r${r}-note',this.value)"></td>
-    </tr>`;
+    const hour = (k, label) => `<label class="b40-h"><span>${label}</span><input type="number" min="0" step="0.5" value="${v(r, k)}" oninput="b40Set('${code}','b40r${r}-${k}',this.value)"></label>`;
+    const cls = 'b40-card' + (c.badDate || c.overdue || c.significant ? ' flagged err' : (c.noBudget ? ' flagged' : ''));
+    return `<div class="${cls}" id="b40c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(st.stage)}</b></div>
+      <div class="b40-card-desc">${escHtml(st.desc)}</div>
+      <div class="b40-fields">
+        <div class="b40-f"><span class="b40-fl">Отговорен</span><input list="b40-team" value="${v(r, 'resp')}" onchange="b40Set('${code}','b40r${r}-resp',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Статус</span><select onchange="b40Set('${code}','b40r${r}-status',this.value)">${stOpts}</select></div>
+        <div class="b40-f"><span class="b40-fl">Планирана начална</span><input type="date" value="${v(r, 'start')}" onchange="b40Set('${code}','b40r${r}-start',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Планирана крайна</span><input type="date" value="${v(r, 'end')}" onchange="b40Set('${code}','b40r${r}-end',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Реално отработени</span><input type="number" min="0" step="0.5" value="${v(r, 'act')}" oninput="b40Set('${code}','b40r${r}-act',this.value)"></div>
+        <div class="b40-f span"><span class="b40-fl">Планирани часове</span><div class="b40-hours">${hour('hp', 'Партньор')}${hour('hm', 'Мениджър')}${hour('hs', 'Старши')}${hour('ha', 'Асистент')}</div></div>
+      </div>
+      <div class="b40-calc">
+        <span>Σ планирани <b id="b40c-r${r}-total">${b40Fmt(c.total)}</b></span>
+        <span>Отклонение <b id="b40c-r${r}-var">${b40Sign(c.variance)}</b></span>
+        <span>% откл. <b id="b40c-r${r}-pct">${b40Pct(c.pct)}</b></span>
+        <span id="b40c-r${r}-flag">${b40FlagHtml(c)}</span>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><input value="${v(r, 'note')}" onchange="b40Set('${code}','b40r${r}-note',this.value)"></div>
+    </div>`;
   }).join('');
-  return `<table class="b40">${head}<tbody>${rows}</tbody></table>`;
+  return `<div class="b40-cards">${cards}</div>`;
 }
 function b40Set(code, key, value) { setAnswer(code, key, value); b40Recalc(code); }
 function b40Recalc(code) {
@@ -5530,6 +5537,8 @@ function b40Recalc(code) {
     set('b40c-r' + r + '-var', b40Sign(c.variance));
     set('b40c-r' + r + '-pct', b40Pct(c.pct));
     set('b40c-r' + r + '-flag', b40FlagHtml(c));
+    const card = document.getElementById('b40c-r' + r + '-card');
+    if (card) { card.className = 'b40-card' + (c.badDate || c.overdue || c.significant ? ' flagged err' : (c.noBudget ? ' flagged' : '')); }
   });
   const tv = ta - tp, tpct = tp > 0 ? tv / tp * 100 : null;
   const S = (id, html, alert) => { const el = document.getElementById(id); if (!el) return; el.innerHTML = html; const si = el.closest && el.closest('.b40-si'); if (si && alert !== undefined) si.classList.toggle('alert', !!alert); };
