@@ -598,6 +598,9 @@
   .b50-chk.ok .ic { color: var(--p-green); }
   .b50-chk.warn .ic { color: var(--p-amber); }
   .b50-chk.bad .ic { color: #d92d20; }
+  .b50-att textarea { width: 100%; border: 1px solid var(--p-border); border-radius: 6px; padding: 5px 6px; font: inherit; font-size: 12px; background: var(--p-surface); color: var(--p-text1); outline: none; resize: vertical; min-height: 34px; line-height: 1.4; }
+  .b50-att textarea:focus { border-color: var(--p-accent); }
+  .b50-att td.b50-sign { color: var(--p-text3); font-size: 11px; font-style: italic; white-space: nowrap; min-width: 120px; }
   .b40-sum-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 20px; padding: 14px 16px; }
   .b40-si { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--p-text2); border-bottom: 1px dashed var(--p-border); padding-bottom: 5px; }
   .b40-si b { color: var(--p-text1); font-weight: 700; }
@@ -3768,10 +3771,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630162530"></script>
-<script src="pd-spec.js?v=20260630162530"></script>
-<script src="pd-details.js?v=20260630162530"></script>
-<script src="test-details.js?v=20260630162530"></script>
+<script src="questions.js?v=20260630164312"></script>
+<script src="pd-spec.js?v=20260630164312"></script>
+<script src="pd-details.js?v=20260630164312"></script>
+<script src="test-details.js?v=20260630164312"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5640,8 +5643,8 @@ function b50DiscussionHtml(code) {
         <div class="b40-f"><span class="b40-fl">Срок</span><input type="date" value="${v(r, 'due')}" onchange="b50Set('${code}','b50r${r}-due',this.value)"></div>
         <div class="b40-f"><span class="b40-fl">Статус</span><select onchange="b50Set('${code}','b50r${r}-status',this.value)">${optsHtml(ans['b50r' + r + '-status'], ['Не започнат', 'В процес', 'Завършен'])}</select></div>
       </div>
-      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходими последващи действия</span><input value="${v(r, 'follow')}" onchange="b50Set('${code}','b50r${r}-follow',this.value)"></div>
-      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><input value="${v(r, 'note')}" onchange="b50Set('${code}','b50r${r}-note',this.value)"></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходими последващи действия</span><textarea rows="2" oninput="b50Set('${code}','b50r${r}-follow',this.value)">${v(r, 'follow')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><textarea rows="2" oninput="b50Set('${code}','b50r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
       <div class="b40-calc"><span id="b50c-r${r}-flag">${b50FlagHtml(f)}</span></div>
     </div>`;
   }).join('');
@@ -5679,8 +5682,8 @@ function b50AttendanceHtml(code) {
       <td><select onchange="b50Set('${code}','b50a${a}-name',this.value)">${teamSelectOpts(ans['b50a' + a + '-name'] || '')}</select></td>
       <td><select onchange="b50Set('${code}','b50a${a}-present',this.value)">${seln('present')}</select></td>
       <td><select onchange="b50Set('${code}','b50a${a}-informed',this.value)">${seln('informed')}</select></td>
-      <td><input value="${escHtml(ans['b50a' + a + '-sign'] || '')}" onchange="b50Set('${code}','b50a${a}-sign',this.value)"></td>
-      <td><input value="${escHtml(ans['b50a' + a + '-note'] || '')}" onchange="b50Set('${code}','b50a${a}-note',this.value)"></td>
+      <td class="b50-sign">подпис след печат</td>
+      <td><textarea rows="2" oninput="b50Set('${code}','b50a${a}-note',this.value)">${escHtml(ans['b50a' + a + '-note'] || '')}</textarea></td>
     </tr>`;
   }).join('');
   return `<table class="b50-att"><thead><tr><th>Роля</th><th>Име</th><th>Присъствал</th><th>Запознат</th><th>Подпис</th><th>Бележки</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -5737,7 +5740,7 @@ function b50WpHtml(code, secN) {
     const r = t.n, g = (k) => escHtml(ans['b50r' + r + '-' + k] || '—');
     return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${g('ans')}</td><td>${g('risk')}</td><td>${g('level')}</td><td>${g('resp')}</td><td>${g('follow')}</td><td>${g('status')}</td></tr>`;
   }).join('');
-  const aRows = (det.discussion.attendance || []).map((role, i) => { const a = i + 1, g = (k) => escHtml(ans['b50a' + a + '-' + k] || '—'); return `<tr><td>${escHtml(role)}</td><td>${g('name')}</td><td>${g('present')}</td><td>${g('informed')}</td><td>${g('sign')}</td></tr>`; }).join('');
+  const aRows = (det.discussion.attendance || []).map((role, i) => { const a = i + 1, g = (k) => escHtml(ans['b50a' + a + '-' + k] || '—'); return `<tr><td>${escHtml(role)}</td><td>${g('name')}</td><td>${g('present')}</td><td>${g('informed')}</td><td style="min-width:130px">&nbsp;</td></tr>`; }).join('');
   const checks = b50ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
   return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Встъпително обсъждане на екипа</h3>
     <div class="wp-text" style="font-weight:700;margin-bottom:4px">Данни за обсъждането</div>
