@@ -3772,10 +3772,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260630172623"></script>
-<script src="pd-spec.js?v=20260630172623"></script>
-<script src="pd-details.js?v=20260630172623"></script>
-<script src="test-details.js?v=20260630172623"></script>
+<script src="questions.js?v=20260630203218"></script>
+<script src="pd-spec.js?v=20260630203218"></script>
+<script src="pd-details.js?v=20260630203218"></script>
+<script src="test-details.js?v=20260630203218"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5959,6 +5959,156 @@ function c10DoImport(code, file) {
   }
 }
 
+// ── C-20 „Разбиране на счетоводната рамка и политика" — основна таблица + политики + оценки (МОС 540) ──
+function c20RowFlags(ans, r) {
+  const risk = ans['c20r' + r + '-risk'] || '', level = ans['c20r' + r + '-level'] || '', infl = (ans['c20r' + r + '-infl'] || '').trim();
+  return { risk, level, infl, riskNoLevel: risk === 'Да' && !level, highRiskNoInfl: level === 'Висок' && !infl };
+}
+function c20FlagHtml(f) {
+  const a = [];
+  if (f.highRiskNoInfl) a.push('<span class="b40-flag bad">Висок риск без одиторски отговор</span>');
+  if (f.riskNoLevel) a.push('<span class="b40-flag bad">Риск без ниво на риск</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c20PolicyFlagHtml(ans, n) {
+  const a = [];
+  if (ans['c20p' + n + '-changed'] === 'Да' && !(ans['c20p' + n + '-desc'] || '').trim()) a.push('<span class="b40-flag bad">Промяна без описание</span>');
+  if (ans['c20p' + n + '-risk'] === 'Да' && !(ans['c20p' + n + '-proc'] || '').trim()) a.push('<span class="b40-flag warn">Риск без последваща процедура</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c20EstFlagHtml(ans, n) {
+  const a = [];
+  if (ans['c20e' + n + '-level'] === 'Висок' && !(ans['c20e' + n + '-proc'] || '').trim()) a.push('<span class="b40-flag bad">Висок риск без процедура</span>');
+  if (ans['c20e' + n + '-applies'] === 'Да' && !(ans['c20e' + n + '-method'] || '').trim()) a.push('<span class="b40-flag warn">Оценка без метод</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c20MainCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['c20r' + r + '-' + k] || '');
+  const optsHtml = (cur, opts) => '<option value=""></option>' + opts.map(o => `<option${cur === o ? ' selected' : ''}>${o}</option>`).join('');
+  const cards = (det.c20.rows || []).map(t => {
+    const r = t.n, f = c20RowFlags(ans, r);
+    const riskOpts = t.risk || ['Да', 'Не'], levelOpts = t.level || ['Нисък', 'Среден', 'Висок'];
+    const cls = 'b40-card' + (f.riskNoLevel || f.highRiskNoInfl ? ' flagged err' : '');
+    return `<div class="${cls}" id="c20c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.area)}</b></div>
+      <div class="b50-q">${escHtml(t.q)}</div>
+      <div class="b40-card-desc"><b>Документирай:</b> ${escHtml(t.doc)}</div>
+      <div class="b40-f span"><span class="b40-fl">Документирана информация</span><textarea rows="2" oninput="c20Set('${code}','c20r${r}-ans',this.value)">${v(r, 'ans')}</textarea></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Източник на информация</span><input value="${v(r, 'src')}" placeholder="${escHtml(t.src || '')}" onchange="c20Set('${code}','c20r${r}-src',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Идентифициран риск?</span><select onchange="c20Set('${code}','c20r${r}-risk',this.value)">${optsHtml(ans['c20r' + r + '-risk'], riskOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c20Set('${code}','c20r${r}-level',this.value)">${optsHtml(ans['c20r' + r + '-level'], levelOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c20Set('${code}','c20r${r}-infl',this.value)"></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c20Set('${code}','c20r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
+      <div class="b40-calc"><span id="c20c-r${r}-flag">${c20FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c20PolicyCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c20p' + n + '-' + k] || '');
+  const sel = (cur, opts) => '<option value=""></option>' + opts.map(o => `<option${cur === o ? ' selected' : ''}>${o}</option>`).join('');
+  const cards = (det.c20.policies || []).map((p, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c20p-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(p)}</b></div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Прилага ли се?</span><select onchange="c20Set('${code}','c20p${n}-applies',this.value)">${sel(ans['c20p' + n + '-applies'], ['Да', 'Не', 'Неприложимо'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Последователна?</span><select onchange="c20Set('${code}','c20p${n}-consistent',this.value)">${sel(ans['c20p' + n + '-consistent'], ['Да', 'Не', 'Неприложимо'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Има ли промяна?</span><select onchange="c20Set('${code}','c20p${n}-changed',this.value)">${sel(ans['c20p' + n + '-changed'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Риск от съществено отклонение?</span><select onchange="c20Set('${code}','c20p${n}-risk',this.value)">${sel(ans['c20p' + n + '-risk'], ['Да', 'Не'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Кратко описание на политиката</span><textarea rows="2" oninput="c20Set('${code}','c20p${n}-desc',this.value)">${v(n, 'desc')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходима последваща процедура</span><textarea rows="2" oninput="c20Set('${code}','c20p${n}-proc',this.value)">${v(n, 'proc')}</textarea></div>
+      <div class="b40-calc"><span id="c20p-r${n}-flag">${c20PolicyFlagHtml(ans, n)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c20EstimateCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c20e' + n + '-' + k] || '');
+  const sel = (cur, opts) => '<option value=""></option>' + opts.map(o => `<option${cur === o ? ' selected' : ''}>${o}</option>`).join('');
+  const cards = (det.c20.estimates || []).map((nm, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c20e-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(nm)}</b></div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Приложима ли е?</span><select onchange="c20Set('${code}','c20e${n}-applies',this.value)">${sel(ans['c20e' + n + '-applies'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Риск от пристрастие на ръководството</span><select onchange="c20Set('${code}','c20e${n}-bias',this.value)">${sel(ans['c20e' + n + '-bias'], ['Нисък', 'Среден', 'Висок', 'Неприложимо'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c20Set('${code}','c20e${n}-level',this.value)">${sel(ans['c20e' + n + '-level'], ['Нисък', 'Среден', 'Висок'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Метод на изчисление</span><textarea rows="2" oninput="c20Set('${code}','c20e${n}-method',this.value)">${v(n, 'method')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Използвани допускания</span><textarea rows="2" oninput="c20Set('${code}','c20e${n}-assump',this.value)">${v(n, 'assump')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Данни, предоставени от ръководството</span><textarea rows="2" oninput="c20Set('${code}','c20e${n}-mgmtdata',this.value)">${v(n, 'mgmtdata')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Последваща одиторска процедура</span><textarea rows="2" oninput="c20Set('${code}','c20e${n}-proc',this.value)">${v(n, 'proc')}</textarea></div>
+      <div class="b40-calc"><span id="c20e-r${n}-flag">${c20EstFlagHtml(ans, n)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c20ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code);
+  const rows = det.c20.rows || [], pols = det.c20.policies || [], ests = det.c20.estimates || [];
+  const ne = (key) => (ans[key] || '').trim().length > 0;
+  const out = [];
+  out.push(ne('c20r1-ans') ? { cls: 'ok', text: 'Идентифицирана е приложимата счетоводна рамка (ред 1).' } : { cls: 'bad', text: 'Липсва приложима счетоводна рамка (ред 1) — критично.' });
+  out.push(ans[3] === 'Не' ? { cls: 'bad', text: 'Счетоводната политика не е получена (контролен въпрос 3) — тестът не може да се приключи.' } : { cls: 'ok', text: 'Счетоводната политика е налична.' });
+  const polChangeNoDesc = pols.filter((p, i) => ans['c20p' + (i + 1) + '-changed'] === 'Да' && !(ans['c20p' + (i + 1) + '-desc'] || '').trim()).length;
+  out.push(polChangeNoDesc ? { cls: 'bad', text: 'Има промяна в политика без описание (' + polChangeNoDesc + ').' } : { cls: 'ok', text: 'Промените в политиките са описани.' });
+  const mainHi = rows.filter(t => c20RowFlags(ans, t.n).highRiskNoInfl).length;
+  const estHi = ests.filter((e, i) => ans['c20e' + (i + 1) + '-level'] === 'Висок' && !(ans['c20e' + (i + 1) + '-proc'] || '').trim()).length;
+  out.push((mainHi + estHi) ? { cls: 'bad', text: 'Има висок риск без последваща процедура (' + (mainHi + estHi) + ').' } : { cls: 'ok', text: 'Високите рискове имат последваща процедура.' });
+  const estNoMethod = ests.filter((e, i) => ans['c20e' + (i + 1) + '-applies'] === 'Да' && !(ans['c20e' + (i + 1) + '-method'] || '').trim()).length;
+  out.push(estNoMethod ? { cls: 'warn', text: 'Има приложима счетоводна оценка без метод на изчисление (' + estNoMethod + ').' } : { cls: 'ok', text: 'Приложимите оценки имат метод на изчисление.' });
+  out.push(ne('c20r17-ans') ? { cls: 'ok', text: 'Политиката за приходи е документирана (ред 17).' } : { cls: 'warn', text: 'Политиката за приходи не е документирана (ред 17).' });
+  out.push(ne('c20r23-ans') ? { cls: 'ok', text: 'Базата за действащо предприятие е документирана (ред 23).' } : { cls: 'warn', text: 'Базата за действащо предприятие не е документирана (ред 23).' });
+  out.push(ne('c20r25-ans') ? { cls: 'ok', text: 'Оповестяванията са прегледани (ред 25).' } : { cls: 'warn', text: 'Оповестяванията не са прегледани (ред 25).' });
+  const allMain = rows.length > 0 && rows.every(t => ne('c20r' + t.n + '-ans'));
+  out.push(allMain ? { cls: 'ok', text: 'Всички области са документирани — готов за приключване.' } : { cls: 'warn', text: 'Има недокументирани области — тестът е „В процес".' });
+  return out;
+}
+function c20ChecksInner(code) {
+  return c20ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testFrameworkPanel(code) {
+  const det = testDet(code);
+  if (!det.c20) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Счетоводна рамка и политика — разбиране</div><div style="padding:12px 14px">${c20MainCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Значими счетоводни политики</div><div style="padding:12px 14px">${c20PolicyCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Счетоводни оценки и преценки (МОС 540)</div><div style="padding:12px 14px">${c20EstimateCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c20-checks" class="b50-checks">${c20ChecksInner(code)}</div></div>`;
+}
+function c20Set(code, key, value) { setAnswer(code, key, value); c20Recalc(code); }
+function c20Recalc(code) {
+  const det = testDet(code); if (!det.c20) return;
+  const ans = testAnswers[code] || {};
+  (det.c20.rows || []).forEach(t => { const r = t.n, f = c20RowFlags(ans, r); const fe = document.getElementById('c20c-r' + r + '-flag'); if (fe) fe.innerHTML = c20FlagHtml(f); const card = document.getElementById('c20c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.riskNoLevel || f.highRiskNoInfl ? ' flagged err' : ''); });
+  (det.c20.policies || []).forEach((p, i) => { const fe = document.getElementById('c20p-r' + (i + 1) + '-flag'); if (fe) fe.innerHTML = c20PolicyFlagHtml(ans, i + 1); });
+  (det.c20.estimates || []).forEach((e, i) => { const fe = document.getElementById('c20e-r' + (i + 1) + '-flag'); if (fe) fe.innerHTML = c20EstFlagHtml(ans, i + 1); });
+  const ce = document.getElementById('c20-checks'); if (ce) ce.innerHTML = c20ChecksInner(code);
+}
+function c20WpHtml(code, secN) {
+  const det = testDet(code); if (!det.c20) return '';
+  const ans = testAnswers[code] || {};
+  const mRows = (det.c20.rows || []).map(t => { const r = t.n, g = (k) => escHtml(ans['c20r' + r + '-' + k] || '—'); return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${g('ans')}</td><td>${g('src')}</td><td>${g('risk')}</td><td>${g('level')}</td><td>${g('infl')}</td></tr>`; }).join('');
+  const pRows = (det.c20.policies || []).map((p, i) => { const n = i + 1, g = (k) => escHtml(ans['c20p' + n + '-' + k] || '—'); return `<tr><td>${escHtml(p)}</td><td>${g('applies')}</td><td>${g('desc')}</td><td>${g('consistent')}</td><td>${g('changed')}</td><td>${g('risk')}</td><td>${g('proc')}</td></tr>`; }).join('');
+  const eRows = (det.c20.estimates || []).map((nm, i) => { const n = i + 1, g = (k) => escHtml(ans['c20e' + n + '-' + k] || '—'); return `<tr><td>${escHtml(nm)}</td><td>${g('applies')}</td><td>${g('method')}</td><td>${g('assump')}</td><td>${g('bias')}</td><td>${g('level')}</td><td>${g('proc')}</td></tr>`; }).join('');
+  const checks = c20ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Счетоводна рамка и политика</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Разбиране на рамката и политиката</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Документирана информация</th><th>Източник</th><th>Риск</th><th>Ниво</th><th>Влияние</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Значими счетоводни политики</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Област</th><th>Прилага</th><th>Описание</th><th>Последователна</th><th>Промяна</th><th>Риск</th><th>Последваща процедура</th></tr></thead><tbody>${pRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Счетоводни оценки и преценки (МОС 540)</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Оценка</th><th>Приложима</th><th>Метод</th><th>Допускания</th><th>Пристрастие</th><th>Ниво</th><th>Процедура</th></tr></thead><tbody>${eRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -6004,6 +6154,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testDetailCards(code)}
       ${testDiscussionPanel(code)}
       ${testUnderstandingPanel(code)}
+      ${testFrameworkPanel(code)}
       ${testBudgetPanel(code)}
       ${testAiPanel(code)}
       ${card}
@@ -6027,6 +6178,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).budget) b40Recalc(code);
   if (testDet(code).discussion) b50Recalc(code);
   if (testDet(code).understanding) c10Recalc(code);
+  if (testDet(code).c20) c20Recalc(code);
   qProgress(code);
 }
 
@@ -7065,10 +7217,11 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
+  const c20Html = aiDet.c20 ? c20WpHtml(code, secC20) : '';
   const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
     const files = testFiles(code, AI_DOC_BASE + i);
     const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
@@ -7090,6 +7243,7 @@ function testWpSections(code) {
       ${b40Html}
       ${b50Html}
       ${c10Html}
+      ${c20Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
