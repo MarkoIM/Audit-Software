@@ -895,6 +895,7 @@
   .q-sub-free { margin-top: 7px; font-size: 12px; }
   .q-sub-ev { font-size: 11px; color: var(--p-text3); margin-top: 5px; line-height: 1.45; }
   .q-sub-ev b { color: var(--p-text2); font-weight: 600; }
+  .q-sub-up { margin-top: 7px; }
   @media (max-width: 640px) { .q-sub-grid { grid-template-columns: 1fr; } }
 
   /* Stage cards */
@@ -3776,10 +3777,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260630205737"></script>
-<script src="pd-spec.js?v=20260630205737"></script>
-<script src="pd-details.js?v=20260630205737"></script>
-<script src="test-details.js?v=20260630205737"></script>
+<script src="questions.js?v=20260630211347"></script>
+<script src="pd-spec.js?v=20260630211347"></script>
+<script src="pd-details.js?v=20260630211347"></script>
+<script src="test-details.js?v=20260630211347"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5359,6 +5360,21 @@ function testUploadField(code, n) {
   if (!testQHasUpload(code, n)) return '';
   return testUploadBlock(code, n);
 }
+// Качване на ниво подвъпрос (ключ-стринг като „1.1") — кавички около ключа, за да не се чете като число.
+function testUploadWidget2(code, n) {
+  const files = testFiles(code, n);
+  const filesHtml = files.length
+    ? `<div class="pd-slot-files" style="margin-top:6px">` + files.map((f, i) =>
+        `<div class="pd-file"><svg class="ico" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="testSubRemoveFile('${code}','${n}',${i})">✕</button></div>`).join('') + `</div>`
+    : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Прикачи документ<input type="file" multiple style="display:none" onchange="testSubAddFiles('${code}','${n}',this.files)"></label>${filesHtml}`;
+}
+function testSubUploadRefresh(code, sn) { const el = document.getElementById('tup-' + code + '-' + sn); if (el) el.innerHTML = testUploadWidget2(code, sn); }
+function testSubAddFiles(code, sn, files) { testAddFiles(code, sn, files); testSubUploadRefresh(code, sn); }
+function testSubRemoveFile(code, sn, i) { testRemoveFile(code, sn, i); testSubUploadRefresh(code, sn); }
+function testSubUploadBlock(code, sn) {
+  return `<div class="q-sub-up"><div id="tup-${code}-${sn}">${testUploadWidget2(code, sn)}</div></div>`;
+}
 function testDetailCards(code) {
   const det = testDet(code);
   const hasStd = det.standards && det.standards.length;
@@ -6356,10 +6372,13 @@ function renderQuestion(code, q) {
 function renderSubQuestion(code, s) {
   const cur  = (testAnswers[code] || {})[s.n] || '';
   const opts = s.options || [];
+  const subUp = !!testDet(code).subUploads;
+  const up = subUp ? testSubUploadBlock(code, s.n) : '';
   if (!opts.length) {
     return `<div class="q-sub">
       <div class="q-sub-q" style="margin-bottom:6px"><span class="q-sub-n">${s.n}</span> ${s.q}</div>
       <textarea class="q-note q-sub-free" rows="2" placeholder="${escHtml(s.note || 'Свободен текст…')}" oninput="setAnswer('${code}','${s.n}',this.value)">${escHtml(cur)}</textarea>
+      ${up}
     </div>`;
   }
   const sel  = `<select class="q-select q-sub-sel" onchange="setAnswer('${code}','${s.n}',this.value)">
@@ -6369,10 +6388,11 @@ function renderSubQuestion(code, s) {
   const ph   = s.ifYes ? ('Ако „Да“ — ' + s.ifYes) : (s.note || '');
   const free = ph
     ? `<textarea class="q-note q-sub-free" rows="1" placeholder="${escHtml(ph)}" oninput="setNote('${code}','${s.n}',this.value)">${escHtml((testNotes[code] || {})[s.n] || '')}</textarea>` : '';
-  const ev   = s.evidence ? `<div class="q-sub-ev"><b>Доказателство:</b> ${escHtml(s.evidence)}</div>` : '';
+  const evLabel = subUp ? 'Примерни документи' : 'Доказателство';
+  const ev   = s.evidence ? `<div class="q-sub-ev"><b>${evLabel}:</b> ${escHtml(s.evidence)}</div>` : '';
   return `<div class="q-sub">
     <div class="q-sub-grid"><div class="q-sub-q"><span class="q-sub-n">${s.n}</span> ${s.q}</div>${sel}</div>
-    ${free}${ev}
+    ${free}${ev}${up}
   </div>`;
 }
 
@@ -7287,14 +7307,19 @@ function testWpSections(code) {
       }
       const sa = ans[s.n] ? escHtml(ans[s.n]) : '—';
       const sn = notes[s.n] ? `<div ${sub}>${escHtml(notes[s.n])}</div>` : '';
-      return `<tr><td style="padding-left:22px;color:var(--p-text2)"><b>${s.n}</b> ${escHtml(s.q)}${sn}</td><td class="c" style="white-space:normal;width:190px">${sa}</td></tr>`;
+      const sfiles = testFiles(code, s.n);
+      const sf = sfiles.length ? `<div ${sub}><b>Документи:</b> ${sfiles.map(f => escHtml(f.name)).join(' · ')}</div>` : '';
+      return `<tr><td style="padding-left:22px;color:var(--p-text2)"><b>${s.n}</b> ${escHtml(s.q)}${sn}${sf}</td><td class="c" style="white-space:normal;width:190px">${sa}</td></tr>`;
     }).join('');
     return `<tr><td><b>${q.n}.</b> ${escHtml(q.q)}${note}${att}</td><td class="c" style="white-space:normal;width:190px">${a}</td></tr>${subRows}`;
   }).join('');
+  const docBlock = (label, files) => `<div class="wp-doc"><div class="wp-doc-name">${escHtml(label)}</div><div class="wp-doc-files">${files.map(f => `<span>• ${escHtml(f.name)} <span style="color:var(--p-text3)">(${pdFmtSize(f.size)})</span></span>`).join('')}</div></div>`;
   const docBlocks = (def.questions || []).map(q => {
+    const blocks = [];
     const files = testFiles(code, q.n);
-    if (!files.length) return '';
-    return `<div class="wp-doc"><div class="wp-doc-name">${escHtml(q.q)}</div><div class="wp-doc-files">${files.map(f => `<span>• ${escHtml(f.name)} <span style="color:var(--p-text3)">(${pdFmtSize(f.size)})</span></span>`).join('')}</div></div>`;
+    if (files.length) blocks.push(docBlock(q.q, files));
+    (q.subs || []).forEach(s => { const sf = testFiles(code, s.n); if (sf.length) blocks.push(docBlock(s.n + ' ' + s.q, sf)); });
+    return blocks.join('');
   }).filter(Boolean).join('');
   const showDocs = !!docBlocks || testQUploads(code).length > 0;
   const conclQ = testConclQ(def);
