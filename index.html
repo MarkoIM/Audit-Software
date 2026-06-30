@@ -601,6 +601,10 @@
   .b50-att textarea { width: 100%; border: 1px solid var(--p-border); border-radius: 6px; padding: 5px 6px; font: inherit; font-size: 12px; background: var(--p-surface); color: var(--p-text1); outline: none; resize: vertical; min-height: 34px; line-height: 1.4; }
   .b50-att textarea:focus { border-color: var(--p-accent); }
   .b50-att td.b50-sign { color: var(--p-text3); font-size: 11px; font-style: italic; white-space: nowrap; min-width: 120px; }
+  /* B-10 AI асистент — входни редове */
+  .b10-ai-in { border: 1px solid var(--p-border); border-radius: 9px; padding: 11px 13px; margin-bottom: 10px; background: var(--p-surface); }
+  .b10-ai-in-h { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--p-text1); flex-wrap: wrap; }
+  .b10-ai-in-d { font-size: 11.5px; color: var(--p-text3); line-height: 1.45; margin-top: 5px; }
   .b40-sum-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 20px; padding: 14px 16px; }
   .b40-si { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--p-text2); border-bottom: 1px dashed var(--p-border); padding-bottom: 5px; }
   .b40-si b { color: var(--p-text1); font-weight: 700; }
@@ -3772,10 +3776,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260630203218"></script>
-<script src="pd-spec.js?v=20260630203218"></script>
-<script src="pd-details.js?v=20260630203218"></script>
-<script src="test-details.js?v=20260630203218"></script>
+<script src="questions.js?v=20260630205737"></script>
+<script src="pd-spec.js?v=20260630205737"></script>
+<script src="pd-details.js?v=20260630205737"></script>
+<script src="test-details.js?v=20260630205737"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5373,6 +5377,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
+  if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
   const slots = docs.map((d, i) => {
@@ -5419,6 +5424,85 @@ function testRunAiPanel(code) {
         <div style="margin-top:6px">В реална среда AI връща структуриран проект (обхват, същественост, рискови области, подход, ресурси, график и заключение) съгласно инструкцията, който се преглежда и одобрява от отговорния одитор/партньор.</div>
       </div>
     </div>`;
+}
+
+// ── B-10 AI асистент — чернова на стратегията (т.1/2 = качване; т.3 = от C-10; т.4 = от Раздел E) ──
+function b10UploadOk(code, key) { return testFiles(code, key).length > 0; }
+function b10C10Ok() {
+  const a = (window.testAnswers && testAnswers['C-10']) || null;
+  if (!a) return false;
+  return Object.keys(a).some(k => /^c10r\d+-ans$/.test(k) && String(a[k] || '').trim() !== '');
+}
+function b10SectionECodes() {
+  try { for (let i = 0; i < auditPhases.length; i++) { const s = (auditPhases[i].sections || []).find(x => x.code === 'E'); if (s) return (s.wds || []).map(w => w.code); } } catch (e) {}
+  return ['E-10', 'E-20', 'E-30', 'E-40'];
+}
+function b10SectionEOk() {
+  return b10SectionECodes().some(c => { const a = (window.testAnswers && testAnswers[c]) || null; return a && Object.keys(a).some(k => String(a[k] || '').trim() !== ''); });
+}
+function b10InputsComplete(code) { return b10UploadOk(code, 101) && b10UploadOk(code, 102) && b10C10Ok() && b10SectionEOk(); }
+function b10StrategyPanel(code) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px">
+    <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>AI асистент — чернова на стратегията</span><span class="ai-badge">AI</span></div>
+    <div id="b10-ai-wrap">${b10AiInner(code)}</div>
+  </div>`;
+}
+function b10AiInner(code) {
+  const det = testDet(code);
+  const up1 = b10UploadOk(code, 101), up2 = b10UploadOk(code, 102), c10 = b10C10Ok(), e = b10SectionEOk();
+  const complete = up1 && up2 && c10 && e;
+  const chip = (ok) => ok ? '<span class="b40-flag ok">✓ наличен</span>' : '<span class="b40-flag warn">⚠ липсва</span>';
+  const upWidget = (key) => {
+    const files = testFiles(code, key);
+    const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="b10RemoveFile('${code}',${key},${i})">✕</button></div>`).join('') + '</div>' : '';
+    return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${key},this.files)"></label>${fl}`;
+  };
+  const row = (num, title, desc, control, ok) => `<div class="b10-ai-in">
+      <div class="b10-ai-in-h"><span class="b40-card-n">${num}</span><b>${escHtml(title)}</b> ${chip(ok)}</div>
+      <div class="b10-ai-in-d">${escHtml(desc)}</div>
+      <div style="margin-top:8px">${control}</div>
+    </div>`;
+  return `<div style="padding:14px 16px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:12px">Черновата на стратегията се <b>генерира автоматично</b>, след като качите документите по <b>точки 1 и 2</b> и са налични данни по <b>точка 3</b> (от тест C-10) и <b>точка 4</b> (от Раздел E). Можете и сами да я генерирате по всяко време с бутона по-долу, дори някой източник да липсва.</div>
+    ${row(1, 'Писмо за поемане на ангажимент / договор за одит', 'Качете подписаното писмо за ангажимент или договор за одит.', upWidget(101), up1)}
+    ${row(2, 'Последен ГФО / предварителен отчет / оборотна ведомост', 'Качете последния наличен финансов отчет или оборотна ведомост.', upWidget(102), up2)}
+    ${row(3, 'Обобщение за клиента и средата', 'Взема се автоматично от тест C-10 — Разбиране на предприятието, бизнес модела и средата.', `<button class="btn btn-secondary btn-sm" onclick="entShowWd('C-10')">Отвори C-10</button>`, c10)}
+    ${row(4, 'Основни договори и справки за клиенти/доставчици/финансиране', 'Взема се автоматично от Раздел E — Оценка на риска и одиторски подход.', `<button class="btn btn-secondary btn-sm" onclick="entShowSection('E')">Отвори Раздел E</button>`, e)}
+    <details style="margin-top:14px">
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt || '')}</div>
+    </details>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Генерирай чернова с AI</button>
+      <span style="font-size:12px;color:var(--p-text3)">${complete ? 'Всички източници са налични — черновата се генерира автоматично.' : 'Може да генерирате и при липсващи източници.'}</span>
+    </div>
+    <div id="b10-ai-result" style="display:none;margin-top:14px"></div>
+  </div>`;
+}
+function b10RefreshPanel(code) { const wrap = document.getElementById('b10-ai-wrap'); if (wrap) wrap.innerHTML = b10AiInner(code); }
+function b10AddFiles(code, key, files) { testAddFiles(code, key, files); b10RefreshPanel(code); b10AiAuto(code); }
+function b10RemoveFile(code, key, i) { testRemoveFile(code, key, i); b10RefreshPanel(code); }
+function b10AiAuto(code) { if (testDet(code).aiInputs && b10InputsComplete(code)) b10Generate(code, true); }
+function b10DoGenerate(code) { b10Generate(code, false); }
+function b10Generate(code, auto) {
+  const res = document.getElementById('b10-ai-result'); if (!res) return;
+  const up1 = b10UploadOk(code, 101), up2 = b10UploadOk(code, 102), c10 = b10C10Ok(), e = b10SectionEOk();
+  const missing = [];
+  if (!up1) missing.push('писмо за ангажимент/договор (т.1)');
+  if (!up2) missing.push('ГФО/оборотна ведомост (т.2)');
+  if (!c10) missing.push('данни от C-10 (т.3)');
+  if (!e) missing.push('данни от Раздел E (т.4)');
+  res.style.display = 'block';
+  const warn = missing.length
+    ? `<div style="margin-top:8px;color:var(--p-amber);font-size:12.5px;line-height:1.55">Забележка: черновата е изготвена при липсващи източници — ${escHtml(missing.join(', '))}. Допълнете ги за по-пълна стратегия.</div>` : '';
+  res.innerHTML = `<div style="border:1px solid var(--p-border);border-radius:8px;overflow:hidden">
+      <div style="padding:10px 14px;background:var(--p-green-bg);color:var(--p-green);font-weight:700;font-size:13px">✓ AI генерира чернова на стратегията ${auto ? 'автоматично ' : ''}(демонстрация)</div>
+      <div style="padding:12px 14px;font-size:13px;color:var(--p-text2);line-height:1.6">
+        <div>Използвани източници: ${up1 ? '✓' : '—'} писмо/договор · ${up2 ? '✓' : '—'} финансов отчет · ${c10 ? '✓' : '—'} обобщение от C-10 · ${e ? '✓' : '—'} данни от Раздел E.</div>
+        <div style="margin-top:6px">В реална среда AI връща структуриран проект на цялостната одиторска стратегия (обхват, същественост, рискови области, подход, ресурси, график и заключение), който се преглежда и одобрява от отговорния одитор/партньор.</div>
+        ${warn}
+      </div></div>`;
 }
 
 // Примерен текст за заключение (по избор): сгъваем помощник под полето „Заключение" + бутон за попълване.
@@ -6179,6 +6263,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).discussion) b50Recalc(code);
   if (testDet(code).understanding) c10Recalc(code);
   if (testDet(code).c20) c20Recalc(code);
+  if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
 
@@ -7222,10 +7307,13 @@ function testWpSections(code) {
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
   const c20Html = aiDet.c20 ? c20WpHtml(code, secC20) : '';
-  const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
-    const files = testFiles(code, AI_DOC_BASE + i);
-    const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
-    return `<div class="wp-doc"><div class="wp-doc-name">${i + 1}. ${escHtml(d)}</div><div class="wp-doc-files"><span>${fn}</span></div></div>`;
+  const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
+  const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
+    let val;
+    if (inp.type === 'test') val = b10C10Ok() ? ('налично от тест ' + escHtml(inp.code)) : ('— няма данни от ' + escHtml(inp.code));
+    else if (inp.type === 'section') val = b10SectionEOk() ? ('налично от Раздел ' + escHtml(inp.section)) : ('— няма данни от Раздел ' + escHtml(inp.section));
+    else { const files = testFiles(code, inp.key); val = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>'; }
+    return `<div class="wp-doc"><div class="wp-doc-name">${i + 1}. ${escHtml(inp.label)}</div><div class="wp-doc-files"><span>${val}</span></div></div>`;
   }).join('') : '';
   const aiHtml = aiOn
     ? `<div class="wp-sec"><h3><span class="n">${secAI}.</span>AI асистент — входни документи и инструкция</h3>${aiDocRows}<div class="wp-text" style="margin-top:8px"><b>Инструкция към AI:</b></div><div style="white-space:pre-wrap;font-family:monospace;font-size:10.5px;line-height:1.55;color:var(--p-text2);background:var(--p-surface2);border-radius:6px;padding:10px 12px;margin-top:4px">${escHtml(aiDet.aiPrompt)}</div></div>`
