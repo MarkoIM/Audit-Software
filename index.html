@@ -583,6 +583,21 @@
   .b40-flag.bad { color: #d92d20; }
   .b40-flag.ok { color: var(--p-green); }
   @media (max-width: 600px) { .b40-hours { grid-template-columns: repeat(2, 1fr); } }
+  /* B-50 — встъпително обсъждане */
+  .b40-f textarea { border: 1px solid var(--p-border); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12.5px; background: var(--p-surface); color: var(--p-text1); outline: none; width: 100%; resize: vertical; line-height: 1.5; }
+  .b40-f textarea:focus { border-color: var(--p-accent); }
+  .b50-q { font-size: 12px; color: var(--p-text2); margin: 2px 0 10px; line-height: 1.5; }
+  .b50-att { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 620px; }
+  .b50-att th, .b50-att td { border: 1px solid var(--p-border); padding: 6px 7px; text-align: left; vertical-align: middle; }
+  .b50-att th { background: var(--p-surface2); font-size: 10px; font-weight: 700; color: var(--p-text2); text-transform: uppercase; letter-spacing: .3px; }
+  .b50-att input, .b50-att select { width: 100%; border: 1px solid var(--p-border); border-radius: 6px; padding: 5px 6px; font: inherit; font-size: 12px; background: var(--p-surface); color: var(--p-text1); outline: none; }
+  .b50-att .role { font-weight: 600; color: var(--p-text1); white-space: nowrap; }
+  .b50-checks { display: flex; flex-direction: column; gap: 7px; padding: 14px 16px; }
+  .b50-chk { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--p-text2); line-height: 1.45; }
+  .b50-chk .ic { flex: none; font-weight: 700; }
+  .b50-chk.ok .ic { color: var(--p-green); }
+  .b50-chk.warn .ic { color: var(--p-amber); }
+  .b50-chk.bad .ic { color: #d92d20; }
   .b40-sum-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 20px; padding: 14px 16px; }
   .b40-si { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--p-text2); border-bottom: 1px dashed var(--p-border); padding-bottom: 5px; }
   .b40-si b { color: var(--p-text1); font-weight: 700; }
@@ -3753,10 +3768,10 @@
   </div>
 </div>
 
-<script src="questions.js?v=20260630134406"></script>
-<script src="pd-spec.js?v=20260630134406"></script>
-<script src="pd-details.js?v=20260630134406"></script>
-<script src="test-details.js?v=20260630134406"></script>
+<script src="questions.js?v=20260630140211"></script>
+<script src="pd-spec.js?v=20260630140211"></script>
+<script src="pd-details.js?v=20260630140211"></script>
+<script src="test-details.js?v=20260630140211"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5437,6 +5452,13 @@ function b40TeamMembers() {
   const lbl = k => (roles.find(r => r.k === k) || {}).l || k;
   return Object.keys(t).filter(id => us[id]).map(id => ({ name: us[id].name, role: lbl(t[id]) }));
 }
+// Опции за падащо меню от екипа по ангажимента (запазва стара стойност извън екипа).
+function teamSelectOpts(current) {
+  const team = b40TeamMembers();
+  let o = '<option value="">— Изберете —</option>' + team.map(m => `<option value="${escHtml(m.name)}"${current === m.name ? ' selected' : ''}>${escHtml(m.name + (m.role ? ' · ' + m.role : ''))}</option>`).join('');
+  if (current && !team.some(m => m.name === current)) o += `<option value="${escHtml(current)}" selected>${escHtml(current)} (извън екипа)</option>`;
+  return o;
+}
 function b40RowCalc(ans, r) {
   const hp = b40Num(ans['b40r' + r + '-hp']), hm = b40Num(ans['b40r' + r + '-hm']),
         hs = b40Num(ans['b40r' + r + '-hs']), ha = b40Num(ans['b40r' + r + '-ha']);
@@ -5500,14 +5522,11 @@ function b40SummaryHtml(code) {
 function b40CardsHtml(code) {
   const det = testDet(code), ans = testAnswers[code] || {};
   const v = (r, k) => escHtml(ans['b40r' + r + '-' + k] || '');
-  const team = b40TeamMembers();
   const cards = (det.budget.stages || []).map(st => {
     const r = st.n, c = b40RowCalc(ans, r);
     const statuses = st.statuses || ['Не започнат', 'В процес', 'Завършен'];
     const stOpts = '<option value=""></option>' + statuses.map(s => `<option${ans['b40r' + r + '-status'] === s ? ' selected' : ''}>${s}</option>`).join('');
-    const resp = ans['b40r' + r + '-resp'] || '';
-    let respOpts = '<option value="">— Изберете —</option>' + team.map(m => `<option value="${escHtml(m.name)}"${resp === m.name ? ' selected' : ''}>${escHtml(m.name + (m.role ? ' · ' + m.role : ''))}</option>`).join('');
-    if (resp && !team.some(m => m.name === resp)) respOpts += `<option value="${escHtml(resp)}" selected>${escHtml(resp)} (извън екипа)</option>`;
+    const respOpts = teamSelectOpts(ans['b40r' + r + '-resp'] || '');
     const hour = (k, label) => `<label class="b40-h"><span>${label}</span><input type="number" min="0" step="0.5" value="${v(r, k)}" oninput="b40Set('${code}','b40r${r}-${k}',this.value)"></label>`;
     const cls = 'b40-card' + (c.badDate || c.overdue || c.significant ? ' flagged err' : (c.noBudget ? ' flagged' : ''));
     return `<div class="${cls}" id="b40c-r${r}-card">
@@ -5590,6 +5609,147 @@ function b40WpHtml(code, secN) {
     <table class="wp-std"><thead><tr><th>№</th><th>Етап</th><th>Отговорен</th><th>Срок</th><th class="c">План.</th><th class="c">Реално</th><th class="c">Откл.</th><th class="c">%</th><th>Статус</th><th>Флаг</th></tr></thead><tbody>${rowsArr}</tbody></table></div>`;
 }
 
+// ── B-50 „Встъпително обсъждане на екипа" — теми за обсъждане (карти) + срещa + присъствие + проверки ──
+function b50RowFlags(ans, r) {
+  const risk = ans['b50r' + r + '-risk'] || '', level = ans['b50r' + r + '-level'] || '';
+  const resp = ans['b50r' + r + '-resp'] || '', follow = (ans['b50r' + r + '-follow'] || '').trim();
+  return { risk, level, resp, follow, riskNoResp: risk === 'Да' && !resp, highRiskNoFollow: level === 'Висок' && !follow };
+}
+function b50FlagHtml(f) {
+  const a = [];
+  if (f.highRiskNoFollow) a.push('<span class="b40-flag bad">Висок риск без последващо действие</span>');
+  if (f.riskNoResp) a.push('<span class="b40-flag bad">Риск без отговорен член</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function b50DiscussionHtml(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['b50r' + r + '-' + k] || '');
+  const optsHtml = (cur, opts) => '<option value=""></option>' + opts.map(o => `<option${cur === o ? ' selected' : ''}>${o}</option>`).join('');
+  const cards = (det.discussion.topics || []).map(t => {
+    const r = t.n, f = b50RowFlags(ans, r);
+    const riskOpts = t.risk || ['Да', 'Не'], levelOpts = t.level || ['Нисък', 'Среден', 'Висок', 'Неприложимо'];
+    const cls = 'b40-card' + (f.riskNoResp || f.highRiskNoFollow ? ' flagged err' : '');
+    return `<div class="${cls}" id="b50c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.area)}</b></div>
+      <div class="b50-q">${escHtml(t.q)}</div>
+      <div class="b40-f span"><span class="b40-fl">Отговор / документирано обсъждане</span><textarea rows="2" oninput="b50Set('${code}','b50r${r}-ans',this.value)">${v(r, 'ans')}</textarea></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Има ли риск?</span><select onchange="b50Set('${code}','b50r${r}-risk',this.value)">${optsHtml(ans['b50r' + r + '-risk'], riskOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="b50Set('${code}','b50r${r}-level',this.value)">${optsHtml(ans['b50r' + r + '-level'], levelOpts)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Отговорен член</span><select onchange="b50Set('${code}','b50r${r}-resp',this.value)">${teamSelectOpts(ans['b50r' + r + '-resp'] || '')}</select></div>
+        <div class="b40-f"><span class="b40-fl">Срок</span><input type="date" value="${v(r, 'due')}" onchange="b50Set('${code}','b50r${r}-due',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Статус</span><select onchange="b50Set('${code}','b50r${r}-status',this.value)">${optsHtml(ans['b50r' + r + '-status'], ['Не започнат', 'В процес', 'Завършен'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходими последващи действия</span><input value="${v(r, 'follow')}" onchange="b50Set('${code}','b50r${r}-follow',this.value)"></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><input value="${v(r, 'note')}" onchange="b50Set('${code}','b50r${r}-note',this.value)"></div>
+      <div class="b40-calc"><span id="b50c-r${r}-flag">${b50FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function b50MeetingHtml(code) {
+  const ans = testAnswers[code] || {};
+  const client = (typeof iosCurrentClient !== 'undefined' && iosCurrentClient) ? iosCurrentClient : '';
+  const year = (typeof iosCurrentYear !== 'undefined') ? iosCurrentYear : '';
+  const inp = 'style="border:1px solid var(--p-border);border-radius:6px;padding:4px 7px;font:inherit;font-size:12px;background:var(--p-surface);color:var(--p-text1);outline:none;min-width:160px"';
+  const fmt = ans['b50m-format'] || '';
+  const si = (label, val) => `<div class="b40-si"><span>${label}</span><span>${val}</span></div>`;
+  const ts = (key) => `<select onchange="b50Set('${code}','${key}',this.value)" ${inp}>${teamSelectOpts(ans[key] || '')}</select>`;
+  return `<div class="b40-sum-grid">
+    ${si('Дата на встъпителното обсъждане', `<input type="date" value="${escHtml(ans['b50m-date'] || '')}" onchange="b50Set('${code}','b50m-date',this.value)" ${inp}>`)}
+    ${si('Място / формат', `<select onchange="b50Set('${code}','b50m-format',this.value)" ${inp}><option value=""></option>${['Присъствено', 'Онлайн', 'Хибридно'].map(o => `<option${fmt === o ? ' selected' : ''}>${o}</option>`).join('')}</select>`)}
+    ${si('Клиент', `<b>${escHtml(client || '—')}</b>`)}
+    ${si('Отчетен период', `<b>${escHtml(String(year || '—'))}</b>`)}
+    ${si('Отговорен партньор', ts('b50m-partner'))}
+    ${si('Мениджър', ts('b50m-manager'))}
+    ${si('Старши одитор', ts('b50m-senior'))}
+    ${si('Други участници', `<input value="${escHtml(ans['b50m-others'] || '')}" onchange="b50Set('${code}','b50m-others',this.value)" ${inp}>`)}
+    ${si('Изготвил протокола', ts('b50m-author'))}
+    ${si('Дата на документиране', `<input type="date" value="${escHtml(ans['b50m-docdate'] || '')}" onchange="b50Set('${code}','b50m-docdate',this.value)" ${inp}>`)}
+  </div>`;
+}
+function b50AttendanceHtml(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = (det.discussion.attendance || []).map((role, i) => {
+    const a = i + 1, isExpert = /Експерт/.test(role);
+    const yn = isExpert ? ['Да', 'Не', 'Неприложимо'] : ['Да', 'Не'];
+    const seln = (key) => '<option value=""></option>' + yn.map(o => `<option${ans['b50a' + a + '-' + key] === o ? ' selected' : ''}>${o}</option>`).join('');
+    return `<tr>
+      <td class="role">${escHtml(role)}</td>
+      <td><select onchange="b50Set('${code}','b50a${a}-name',this.value)">${teamSelectOpts(ans['b50a' + a + '-name'] || '')}</select></td>
+      <td><select onchange="b50Set('${code}','b50a${a}-present',this.value)">${seln('present')}</select></td>
+      <td><select onchange="b50Set('${code}','b50a${a}-informed',this.value)">${seln('informed')}</select></td>
+      <td><input value="${escHtml(ans['b50a' + a + '-sign'] || '')}" onchange="b50Set('${code}','b50a${a}-sign',this.value)"></td>
+      <td><input value="${escHtml(ans['b50a' + a + '-note'] || '')}" onchange="b50Set('${code}','b50a${a}-note',this.value)"></td>
+    </tr>`;
+  }).join('');
+  return `<table class="b50-att"><thead><tr><th>Роля</th><th>Име</th><th>Присъствал</th><th>Запознат</th><th>Подпис</th><th>Бележки</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function b50ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code), topics = det.discussion.topics || [];
+  const ne = (r) => (ans['b50r' + r + '-ans'] || '').trim().length > 0;
+  const out = [];
+  out.push(ans['b50m-date'] ? { cls: 'ok', text: 'Въведена е дата на встъпителното обсъждане.' } : { cls: 'warn', text: 'Няма дата на встъпителното обсъждане.' });
+  const lead = ans['b50a1-present'] === 'Да' || ans['b50a2-present'] === 'Да';
+  out.push(lead ? { cls: 'ok', text: 'Потвърдено е присъствие на партньор или мениджър.' } : { cls: 'warn', text: 'Няма потвърдено присъствие на партньор или мениджър.' });
+  out.push(ne(7) ? { cls: 'ok', text: 'Документиран е рискът от измами (ред 7).' } : { cls: 'warn', text: 'Рискът от измами не е документиран (ред 7) — висок приоритет.' });
+  out.push(ne(8) ? { cls: 'ok', text: 'Документирано е признаването на приходи (ред 8).' } : { cls: 'warn', text: 'Признаването на приходи не е документирано (ред 8).' });
+  out.push(ne(16) ? { cls: 'ok', text: 'Документирано е разпределението на задачите (ред 16).' } : { cls: 'warn', text: 'Разпределението на задачите не е документирано (ред 16).' });
+  out.push(ne(18) ? { cls: 'ok', text: 'Документиран е професионалният скептицизъм (ред 18).' } : { cls: 'warn', text: 'Професионалният скептицизъм не е документиран (ред 18).' });
+  const hi = topics.filter(t => b50RowFlags(ans, t.n).highRiskNoFollow).length;
+  out.push(hi ? { cls: 'bad', text: 'Има висок риск без последващо действие (' + hi + ').' } : { cls: 'ok', text: 'Няма висок риск без последващо действие.' });
+  const nr = topics.filter(t => b50RowFlags(ans, t.n).riskNoResp).length;
+  out.push(nr ? { cls: 'bad', text: 'Има идентифициран риск без отговорен член (' + nr + ').' } : { cls: 'ok', text: 'Всеки идентифициран риск има отговорен член.' });
+  const allDone = topics.length > 0 && topics.every(t => ans['b50r' + t.n + '-status'] === 'Завършен');
+  out.push(allDone ? { cls: 'ok', text: 'Всички теми са със статус „Завършен" — готов за приключване.' } : { cls: 'warn', text: 'Има незавършени теми — тестът е „В процес".' });
+  return out;
+}
+function b50ChecksInner(code) {
+  return b50ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testDiscussionPanel(code) {
+  const det = testDet(code);
+  if (!det.discussion) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Данни за проведеното обсъждане</div>${b50MeetingHtml(code)}</div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Теми за обсъждане</div><div style="padding:12px 14px">${b50DiscussionHtml(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Присъствие на екипа</div><div style="padding:12px 14px;overflow-x:auto">${b50AttendanceHtml(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="b50-checks" class="b50-checks">${b50ChecksInner(code)}</div></div>`;
+}
+function b50Set(code, key, value) { setAnswer(code, key, value); b50Recalc(code); }
+function b50Recalc(code) {
+  const det = testDet(code); if (!det.discussion) return;
+  const ans = testAnswers[code] || {};
+  (det.discussion.topics || []).forEach(t => {
+    const r = t.n, f = b50RowFlags(ans, r);
+    const fe = document.getElementById('b50c-r' + r + '-flag'); if (fe) fe.innerHTML = b50FlagHtml(f);
+    const card = document.getElementById('b50c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.riskNoResp || f.highRiskNoFollow ? ' flagged err' : '');
+  });
+  const ce = document.getElementById('b50-checks'); if (ce) ce.innerHTML = b50ChecksInner(code);
+}
+function b50WpHtml(code, secN) {
+  const det = testDet(code); if (!det.discussion) return '';
+  const ans = testAnswers[code] || {};
+  const client = (typeof iosCurrentClient !== 'undefined' && iosCurrentClient) ? iosCurrentClient : '';
+  const year = (typeof iosCurrentYear !== 'undefined') ? iosCurrentYear : '';
+  const mRows = [['Дата на встъпителното обсъждане', ans['b50m-date']], ['Място / формат', ans['b50m-format']], ['Клиент', client], ['Отчетен период', year], ['Отговорен партньор', ans['b50m-partner']], ['Мениджър', ans['b50m-manager']], ['Старши одитор', ans['b50m-senior']], ['Други участници', ans['b50m-others']], ['Изготвил протокола', ans['b50m-author']], ['Дата на документиране', ans['b50m-docdate']]]
+    .map(x => `<tr><td>${x[0]}</td><td class="c">${escHtml(String(x[1] || '—'))}</td></tr>`).join('');
+  const dRows = (det.discussion.topics || []).map(t => {
+    const r = t.n, g = (k) => escHtml(ans['b50r' + r + '-' + k] || '—');
+    return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${g('ans')}</td><td>${g('risk')}</td><td>${g('level')}</td><td>${g('resp')}</td><td>${g('follow')}</td><td>${g('status')}</td></tr>`;
+  }).join('');
+  const aRows = (det.discussion.attendance || []).map((role, i) => { const a = i + 1, g = (k) => escHtml(ans['b50a' + a + '-' + k] || '—'); return `<tr><td>${escHtml(role)}</td><td>${g('name')}</td><td>${g('present')}</td><td>${g('informed')}</td><td>${g('sign')}</td></tr>`; }).join('');
+  const checks = b50ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Встъпително обсъждане на екипа</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Данни за обсъждането</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Теми за обсъждане</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Документирано обсъждане</th><th>Риск</th><th>Ниво</th><th>Отговорен</th><th>Последващи</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Присъствие на екипа</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Роля</th><th>Име</th><th>Присъствал</th><th>Запознат</th><th>Подпис</th></tr></thead><tbody>${aRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -5633,8 +5793,9 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>
       ${infoStrip}
       ${testDetailCards(code)}
-      ${testAiPanel(code)}
+      ${testDiscussionPanel(code)}
       ${testBudgetPanel(code)}
+      ${testAiPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
         <div style="padding:13px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
@@ -5654,6 +5815,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
 
   if (isAi) updatePrompt(code); else updateConclusion(code);
   if (testDet(code).budget) b40Recalc(code);
+  if (testDet(code).discussion) b50Recalc(code);
   qProgress(code);
 }
 
@@ -6692,8 +6854,9 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
+  const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const aiDocRows = aiOn ? (aiDet.aiDocs || []).map((d, i) => {
     const files = testFiles(code, AI_DOC_BASE + i);
     const fn = files.length ? files.map(f => escHtml(f.name)).join(' · ') : '<span style="color:var(--p-text3)">няма приложен документ</span>';
@@ -6713,6 +6876,7 @@ function testWpSections(code) {
       <div class="wp-sec"><h3><span class="n">${secS}.</span>Приложими стандарти</h3>
         <table class="wp-std"><tbody>${testStandardsRows(code)}</tbody></table></div>
       ${b40Html}
+      ${b50Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
