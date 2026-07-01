@@ -3796,10 +3796,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260701203644"></script>
-<script src="pd-spec.js?v=20260701203644"></script>
-<script src="pd-details.js?v=20260701203644"></script>
-<script src="test-details.js?v=20260701203644"></script>
+<script src="questions.js?v=20260701205235"></script>
+<script src="pd-spec.js?v=20260701205235"></script>
+<script src="pd-details.js?v=20260701205235"></script>
+<script src="test-details.js?v=20260701205235"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -6410,6 +6410,191 @@ function c30WpHtml(code, secN) {
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
 }
 
+// ── C-40 „IT среда и общи ИТ контроли (ITGC)" — основна таблица + регистър системи + потребители + ITGC + автоматизирани контроли ──
+function c40Opts(cur, opts) { return '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join(''); }
+function c40RowFlags(ans, r) {
+  const rel = ans['c40r' + r + '-rel'] || '', des = ans['c40r' + r + '-des'] || '', imp = ans['c40r' + r + '-imp'] || '', def = ans['c40r' + r + '-def'] || '', lvl = ans['c40r' + r + '-lvl'] || '', infl = (ans['c40r' + r + '-infl'] || '').trim();
+  return { relNoDesign: rel === 'Да' && !des, relNoImpl: rel === 'Да' && !imp, defNoLevel: def === 'Да' && !lvl, highNoInfl: lvl === 'Висок' && !infl };
+}
+function c40FlagHtml(f) {
+  const a = [];
+  if (f.highNoInfl) a.push('<span class="b40-flag bad">Висок IT риск без одиторски отговор</span>');
+  if (f.defNoLevel) a.push('<span class="b40-flag bad">Слабост без ниво на риск</span>');
+  if (f.relNoDesign) a.push('<span class="b40-flag bad">Релевантен контрол без оценка на дизайн</span>');
+  if (f.relNoImpl) a.push('<span class="b40-flag bad">Релевантен контрол без оценка на внедряване</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c40MainCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['c40r' + r + '-' + k] || '');
+  const cards = (det.c40.rows || []).map(t => {
+    const r = t.n, f = c40RowFlags(ans, r);
+    const rel = t.relevant || ['Да', 'Не'], di = t.designed || ['Да', 'Не', 'Частично'], lv = t.level || ['Нисък', 'Среден', 'Висок'];
+    const cls = 'b40-card' + (f.relNoDesign || f.relNoImpl || f.defNoLevel || f.highNoInfl ? ' flagged err' : '');
+    return `<div class="${cls}" id="c40c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.area)}</b></div>
+      <div class="b50-q">${escHtml(t.q)}</div>
+      <div class="b40-card-desc"><b>Документирай:</b> ${escHtml(t.doc)}</div>
+      <div class="b40-f span"><span class="b40-fl">Документирана информация</span><textarea rows="2" oninput="c40Set('${code}','c40r${r}-ans',this.value)">${v(r, 'ans')}</textarea></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Източник на информация</span><input value="${v(r, 'src')}" placeholder="${escHtml(t.src || '')}" onchange="c40Set('${code}','c40r${r}-src',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Релевантно за одита?</span><select onchange="c40Set('${code}','c40r${r}-rel',this.value)">${c40Opts(ans['c40r' + r + '-rel'], rel)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Проектиран подходящо?</span><select onchange="c40Set('${code}','c40r${r}-des',this.value)">${c40Opts(ans['c40r' + r + '-des'], di)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Внедрен?</span><select onchange="c40Set('${code}','c40r${r}-imp',this.value)">${c40Opts(ans['c40r' + r + '-imp'], di)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Идентифициран риск/слабост?</span><select onchange="c40Set('${code}','c40r${r}-def',this.value)">${c40Opts(ans['c40r' + r + '-def'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c40Set('${code}','c40r${r}-lvl',this.value)">${c40Opts(ans['c40r' + r + '-lvl'], lv)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c40Set('${code}','c40r${r}-infl',this.value)"></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c40Set('${code}','c40r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
+      <div class="b40-calc"><span id="c40c-r${r}-flag">${c40FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c40SystemCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c40s' + n + '-' + k] || '');
+  const cards = (det.c40.systems || []).map((s, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c40s-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(s.name)}</b></div>
+      <div class="b40-card-desc">Област: ${escHtml(s.area || '—')}</div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Доставчик</span><input value="${v(n, 'provider')}" onchange="c40Set('${code}','c40s${n}-provider',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Облачно / локално</span><select onchange="c40Set('${code}','c40s${n}-cloud',this.value)">${c40Opts(ans['c40s' + n + '-cloud'], ['Облачно', 'Локално', 'Хибридно'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">За финансово отчитане?</span><select onchange="c40Set('${code}','c40s${n}-finrep',this.value)">${c40Opts(ans['c40s' + n + '-finrep'], s.finrep || ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Интерфейс с други системи?</span><select onchange="c40Set('${code}','c40s${n}-iface',this.value)">${c40Opts(ans['c40s' + n + '-iface'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Собственик на системата</span><input value="${v(n, 'owner')}" onchange="c40Set('${code}','c40s${n}-owner',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Критичност за одита</span><select onchange="c40Set('${code}','c40s${n}-crit',this.value)">${c40Opts(ans['c40s' + n + '-crit'], ['Ниска', 'Средна', 'Висока'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Данни, които обработва</span><input value="${v(n, 'data')}" placeholder="${escHtml(s.dataHint || '')}" onchange="c40Set('${code}','c40s${n}-data',this.value)"></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><input value="${v(n, 'note')}" onchange="c40Set('${code}','c40s${n}-note',this.value)"></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c40UserCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = det.c40.userRows || 5;
+  const v = (n, k) => escHtml(ans['c40u' + n + '-' + k] || '');
+  let cards = '';
+  for (let n = 1; n <= rows; n++) {
+    cards += `<div class="b40-card" id="c40u-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>Потребител / роля</b></div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Система</span><input value="${v(n, 'sys')}" onchange="c40Set('${code}','c40u${n}-sys',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Потребител / роля</span><input value="${v(n, 'role')}" onchange="c40Set('${code}','c40u${n}-role',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Длъжност</span><input value="${v(n, 'pos')}" onchange="c40Set('${code}','c40u${n}-pos',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Тип достъп</span><select onchange="c40Set('${code}','c40u${n}-access',this.value)">${c40Opts(ans['c40u' + n + '-access'], ['Четене', 'Въвеждане', 'Одобрение', 'Администратор'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Администраторски права?</span><select onchange="c40Set('${code}','c40u${n}-admin',this.value)">${c40Opts(ans['c40u' + n + '-admin'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Достъпът одобрен ли е?</span><select onchange="c40Set('${code}','c40u${n}-approved',this.value)">${c40Opts(ans['c40u' + n + '-approved'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Съответства на длъжността?</span><select onchange="c40Set('${code}','c40u${n}-matches',this.value)">${c40Opts(ans['c40u' + n + '-matches'], ['Да', 'Не', 'Частично'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Несъвместими права?</span><select onchange="c40Set('${code}','c40u${n}-incompat',this.value)">${c40Opts(ans['c40u' + n + '-incompat'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Последна активност / преглед</span><input value="${v(n, 'activity')}" onchange="c40Set('${code}','c40u${n}-activity',this.value)"></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><input value="${v(n, 'note')}" onchange="c40Set('${code}','c40u${n}-note',this.value)"></div>
+    </div>`;
+  }
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c40ItgcCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c40g' + n + '-' + k] || '');
+  const cards = (det.c40.itgc || []).map((g, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c40g-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(g.area)}</b></div>
+      <div class="b40-card-desc"><b>Контрол:</b> ${escHtml(g.control)}${g.goal ? ' · <b>Цел:</b> ' + escHtml(g.goal) : ''}</div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Честота</span><select onchange="c40Set('${code}','c40g${n}-freq',this.value)">${c40Opts(ans['c40g' + n + '-freq'], ['Постоянно', 'При всяка заявка', 'При промяна', 'Дневно', 'Седмично', 'Месечно', 'Тримесечно', 'Годишно', 'При инцидент'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ръчен / автоматизиран</span><select onchange="c40Set('${code}','c40g${n}-manual',this.value)">${c40Opts(ans['c40g' + n + '-manual'], ['Ръчен', 'Автоматизиран', 'Смесен'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Собственик на контрола</span><input value="${v(n, 'owner')}" onchange="c40Set('${code}','c40g${n}-owner',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Оценка на дизайна</span><select onchange="c40Set('${code}','c40g${n}-design',this.value)">${c40Opts(ans['c40g' + n + '-design'], ['Подходящ', 'Частичен', 'Неподходящ'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Оценка на внедряване</span><select onchange="c40Set('${code}','c40g${n}-impl',this.value)">${c40Opts(ans['c40g' + n + '-impl'], ['Внедрен', 'Частично', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Следва ли тест на контрол?</span><select onchange="c40Set('${code}','c40g${n}-test',this.value)">${c40Opts(ans['c40g' + n + '-test'], ['Да', 'Не'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Документация / доказателство</span><input value="${v(n, 'doc')}" placeholder="${escHtml(g.docHint || '')}" onchange="c40Set('${code}','c40g${n}-doc',this.value)"></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c40AutoCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c40a' + n + '-' + k] || '');
+  const cards = (det.c40.autos || []).map((a, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c40a-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(a.control)}</b></div>
+      <div class="b40-card-desc"><b>Система:</b> ${escHtml(a.system)} · <b>Процес:</b> ${escHtml(a.process)}${a.goal ? ' · <b>Цел:</b> ' + escHtml(a.goal) : ''}${a.assertions ? ' · <b>Твърдения:</b> ' + escHtml(a.assertions) : ''}</div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Зависим от ITGC?</span><select onchange="c40Set('${code}','c40a${n}-itgc',this.value)">${c40Opts(ans['c40a' + n + '-itgc'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ще се тества ли?</span><select onchange="c40Set('${code}','c40a${n}-test',this.value)">${c40Opts(ans['c40a' + n + '-test'], a.testOpts || ['Да', 'Не'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки</span><input value="${v(n, 'note')}" onchange="c40Set('${code}','c40a${n}-note',this.value)"></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c40ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code), rows = det.c40.rows || [];
+  const ne = (r) => (ans['c40r' + r + '-ans'] || '').trim().length > 0;
+  const cnt = (fn) => rows.filter(t => fn(c40RowFlags(ans, t.n))).length;
+  const out = [];
+  const anyFinrep = (det.c40.systems || []).some((s, i) => ans['c40s' + (i + 1) + '-finrep'] === 'Да');
+  out.push(anyFinrep ? { cls: 'ok', text: 'Има поне една система, релевантна за финансовото отчитане.' } : { cls: 'bad', text: 'Липсва система, маркирана като релевантна за финансовото отчитане — критично.' });
+  const rd = cnt(f => f.relNoDesign); out.push(rd ? { cls: 'bad', text: 'Релевантен контрол без оценка на дизайн (' + rd + ').' } : { cls: 'ok', text: 'Релевантните контроли имат оценка на дизайна.' });
+  const ri = cnt(f => f.relNoImpl); out.push(ri ? { cls: 'bad', text: 'Релевантен контрол без оценка на внедряване (' + ri + ').' } : { cls: 'ok', text: 'Релевантните контроли имат оценка на внедряването.' });
+  const dl = cnt(f => f.defNoLevel); out.push(dl ? { cls: 'bad', text: 'Идентифицирана слабост без ниво на риск (' + dl + ').' } : { cls: 'ok', text: 'Слабостите имат ниво на риск.' });
+  const hi = cnt(f => f.highNoInfl); out.push(hi ? { cls: 'bad', text: 'Висок IT риск без одиторски отговор (' + hi + ').' } : { cls: 'ok', text: 'Високите IT рискове имат одиторски отговор.' });
+  out.push(ne(17) ? { cls: 'ok', text: 'Backup процедурите са разгледани (ред 17).' } : { cls: 'warn', text: 'Backup процедурите не са разгледани (ред 17) — висок риск.' });
+  out.push((ne(17) && !ne(18)) ? { cls: 'warn', text: 'Има backup, но липсва тест за възстановяване (ред 18).' } : { cls: 'ok', text: 'Възстановяването от backup е разгледано.' });
+  out.push(ne(9) ? { cls: 'ok', text: 'Администраторските права са разгледани (ред 9).' } : { cls: 'warn', text: 'Администраторските права не са разгледани (ред 9).' });
+  out.push(ans[12] ? { cls: 'ok', text: 'Оценено е дали ITGC са достатъчни за разчитане на системни справки (въпрос 12).' } : { cls: 'warn', text: 'Липсва оценка дали ITGC са достатъчни за разчитане на системни справки (въпрос 12).' });
+  const allKey = [1, 5, 14, 17, 30].every(r => ne(r));
+  out.push(allKey ? { cls: 'ok', text: 'Ключовите IT области са оценени — готов за приключване.' } : { cls: 'warn', text: 'Има неоценени ключови IT области — тестът е „В процес".' });
+  return out;
+}
+function c40ChecksInner(code) {
+  return c40ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testItPanel(code) {
+  const det = testDet(code);
+  if (!det.c40) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">IT среда и общи ИТ контроли</div><div style="padding:12px 14px">${c40MainCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Регистър на използваните IT системи</div><div style="padding:12px 14px">${c40SystemCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Потребители и права на достъп</div><div style="padding:12px 14px">${c40UserCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Общи IT контроли (ITGC)</div><div style="padding:12px 14px">${c40ItgcCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизирани контроли</div><div style="padding:12px 14px">${c40AutoCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c40-checks" class="b50-checks">${c40ChecksInner(code)}</div></div>`;
+}
+function c40Set(code, key, value) { setAnswer(code, key, value); c40Recalc(code); }
+function c40Recalc(code) {
+  const det = testDet(code); if (!det.c40) return;
+  const ans = testAnswers[code] || {};
+  (det.c40.rows || []).forEach(t => { const r = t.n, f = c40RowFlags(ans, r); const fe = document.getElementById('c40c-r' + r + '-flag'); if (fe) fe.innerHTML = c40FlagHtml(f); const card = document.getElementById('c40c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.relNoDesign || f.relNoImpl || f.defNoLevel || f.highNoInfl ? ' flagged err' : ''); });
+  const ce = document.getElementById('c40-checks'); if (ce) ce.innerHTML = c40ChecksInner(code);
+}
+function c40WpHtml(code, secN) {
+  const det = testDet(code); if (!det.c40) return '';
+  const ans = testAnswers[code] || {};
+  const mRows = (det.c40.rows || []).map(t => { const r = t.n, g = (k) => escHtml(ans['c40r' + r + '-' + k] || '—'); return `<tr><td>${r}</td><td>${escHtml(t.area)}</td><td>${g('ans')}</td><td>${g('rel')}</td><td>${g('des')}</td><td>${g('imp')}</td><td>${g('def')}</td><td>${g('lvl')}</td><td>${g('infl')}</td></tr>`; }).join('');
+  const sRows = (det.c40.systems || []).map((s, i) => { const n = i + 1, g = (k) => escHtml(ans['c40s' + n + '-' + k] || '—'); return `<tr><td>${escHtml(s.name)}</td><td>${g('provider')}</td><td>${g('cloud')}</td><td>${g('finrep')}</td><td>${g('iface')}</td><td>${g('owner')}</td><td>${g('crit')}</td></tr>`; }).join('');
+  const gRows = (det.c40.itgc || []).map((x, i) => { const n = i + 1, g = (k) => escHtml(ans['c40g' + n + '-' + k] || '—'); return `<tr><td>${escHtml(x.area)}</td><td>${escHtml(x.control)}</td><td>${g('freq')}</td><td>${g('manual')}</td><td>${g('design')}</td><td>${g('impl')}</td><td>${g('test')}</td></tr>`; }).join('');
+  const aRows = (det.c40.autos || []).map((x, i) => { const n = i + 1, g = (k) => escHtml(ans['c40a' + n + '-' + k] || '—'); return `<tr><td>${escHtml(x.control)}</td><td>${escHtml(x.process)}</td><td>${escHtml(x.assertions || '—')}</td><td>${g('itgc')}</td><td>${g('test')}</td></tr>`; }).join('');
+  const checks = c40ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>IT среда и общи ИТ контроли (ITGC)</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Разбиране на IT средата</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Област</th><th>Документирано</th><th>Релев.</th><th>Дизайн</th><th>Внедрен</th><th>Слабост</th><th>Ниво</th><th>Влияние</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Регистър на IT системите</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Система</th><th>Доставчик</th><th>Разполагане</th><th>За ГФО</th><th>Интерфейс</th><th>Собственик</th><th>Критичност</th></tr></thead><tbody>${sRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Общи IT контроли (ITGC)</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Област</th><th>Контрол</th><th>Честота</th><th>Вид</th><th>Дизайн</th><th>Внедряване</th><th>Тест</th></tr></thead><tbody>${gRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматизирани контроли</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Контрол</th><th>Процес</th><th>Твърдения</th><th>Завис. ITGC</th><th>Тест</th></tr></thead><tbody>${aRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -6458,6 +6643,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testUnderstandingPanel(code)}
       ${testFrameworkPanel(code)}
       ${testControlPanel(code)}
+      ${testItPanel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -6482,6 +6668,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).understanding) c10Recalc(code);
   if (testDet(code).c20) c20Recalc(code);
   if (testDet(code).c30) c30Recalc(code);
+  if (testDet(code).c40) c40Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -7545,12 +7732,13 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
   const c20Html = aiDet.c20 ? c20WpHtml(code, secC20) : '';
   const c30Html = aiDet.c30 ? c30WpHtml(code, secC30) : '';
+  const c40Html = aiDet.c40 ? c40WpHtml(code, secC40) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -7577,6 +7765,7 @@ function testWpSections(code) {
       ${c10Html}
       ${c20Html}
       ${c30Html}
+      ${c40Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
