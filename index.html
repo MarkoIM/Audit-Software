@@ -3796,10 +3796,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260630220347"></script>
-<script src="pd-spec.js?v=20260630220347"></script>
-<script src="pd-details.js?v=20260630220347"></script>
-<script src="test-details.js?v=20260630220347"></script>
+<script src="questions.js?v=20260701203644"></script>
+<script src="pd-spec.js?v=20260701203644"></script>
+<script src="pd-details.js?v=20260701203644"></script>
+<script src="test-details.js?v=20260701203644"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -6274,6 +6274,142 @@ function c20WpHtml(code, secN) {
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
 }
 
+// ── C-30 „Компоненти на вътрешния контрол" — основна таблица + обобщение по компоненти + контроли по процеси ──
+function c30RowFlags(ans, r) {
+  const rel = ans['c30r' + r + '-rel'] || '', des = ans['c30r' + r + '-des'] || '', imp = ans['c30r' + r + '-imp'] || '', def = ans['c30r' + r + '-def'] || '', lvl = ans['c30r' + r + '-lvl'] || '', infl = (ans['c30r' + r + '-infl'] || '').trim();
+  return { relNoDesign: rel === 'Да' && !des, relNoImpl: rel === 'Да' && !imp, defNoLevel: def === 'Да' && !lvl, highNoInfl: lvl === 'Висок' && !infl };
+}
+function c30FlagHtml(f) {
+  const a = [];
+  if (f.highNoInfl) a.push('<span class="b40-flag bad">Висок риск без одиторски отговор</span>');
+  if (f.defNoLevel) a.push('<span class="b40-flag bad">Недостатък без ниво на риск</span>');
+  if (f.relNoDesign) a.push('<span class="b40-flag bad">Релевантен контрол без оценка на дизайн</span>');
+  if (f.relNoImpl) a.push('<span class="b40-flag bad">Релевантен контрол без оценка на внедряване</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c30MainCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['c30r' + r + '-' + k] || '');
+  const o = (cur, opts) => '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join('');
+  const cards = (det.c30.rows || []).map(t => {
+    const r = t.n, f = c30RowFlags(ans, r);
+    const rel = t.relevant || ['Да', 'Не'], di = t.designed || ['Да', 'Не', 'Частично'], lv = t.level || ['Нисък', 'Среден', 'Висок'];
+    const cls = 'b40-card' + (f.relNoDesign || f.relNoImpl || f.defNoLevel || f.highNoInfl ? ' flagged err' : '');
+    return `<div class="${cls}" id="c30c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.comp)}</b></div>
+      <div class="b50-q">${escHtml(t.q)}</div>
+      <div class="b40-card-desc"><b>Документирай:</b> ${escHtml(t.doc)}</div>
+      <div class="b40-f span"><span class="b40-fl">Документирана информация</span><textarea rows="2" oninput="c30Set('${code}','c30r${r}-ans',this.value)">${v(r, 'ans')}</textarea></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Източник на информация</span><input value="${v(r, 'src')}" placeholder="${escHtml(t.src || '')}" onchange="c30Set('${code}','c30r${r}-src',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Релевантен за одита?</span><select onchange="c30Set('${code}','c30r${r}-rel',this.value)">${o(ans['c30r' + r + '-rel'], rel)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Проектиран подходящо?</span><select onchange="c30Set('${code}','c30r${r}-des',this.value)">${o(ans['c30r' + r + '-des'], di)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Внедрен?</span><select onchange="c30Set('${code}','c30r${r}-imp',this.value)">${o(ans['c30r' + r + '-imp'], di)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Идентифициран недостатък?</span><select onchange="c30Set('${code}','c30r${r}-def',this.value)">${o(ans['c30r' + r + '-def'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c30Set('${code}','c30r${r}-lvl',this.value)">${o(ans['c30r' + r + '-lvl'], lv)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c30Set('${code}','c30r${r}-infl',this.value)"></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c30Set('${code}','c30r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
+      <div class="b40-calc"><span id="c30c-r${r}-flag">${c30FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c30CompCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c30k' + n + '-' + k] || '');
+  const o = (cur, opts) => '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join('');
+  const cards = (det.c30.components || []).map((nm, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c30k-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(nm)}</b></div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Обща оценка на дизайна</span><select onchange="c30Set('${code}','c30k${n}-design',this.value)">${o(ans['c30k' + n + '-design'], ['Подходящ', 'Частично подходящ', 'Неподходящ'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Обща оценка на внедряването</span><select onchange="c30Set('${code}','c30k${n}-impl',this.value)">${o(ans['c30k' + n + '-impl'], ['Внедрен', 'Частично внедрен', 'Не е внедрен'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Съществени слабости?</span><select onchange="c30Set('${code}','c30k${n}-weak',this.value)">${o(ans['c30k' + n + '-weak'], ['Да', 'Не'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Потенциално влияние върху ГФО</span><textarea rows="2" oninput="c30Set('${code}','c30k${n}-impact',this.value)">${v(n, 'impact')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходим одиторски отговор</span><textarea rows="2" oninput="c30Set('${code}','c30k${n}-resp',this.value)">${v(n, 'resp')}</textarea></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c30ProcCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c30p' + n + '-' + k] || '');
+  const o = (cur, opts) => '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join('');
+  const cards = (det.c30.processes || []).map((p, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c30p-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(p.process)}</b></div>
+      <div class="b40-card-desc"><b>Ключов контрол:</b> ${escHtml(p.control)}${p.next ? ' · <b>Следващ тест:</b> ' + escHtml(p.next) : ''}</div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Вид контрол</span><select onchange="c30Set('${code}','c30p${n}-type',this.value)">${o(ans['c30p' + n + '-type'], ['Одобрение', 'Съгласуване', 'Преглед', 'Физически контрол', 'Друг'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Честота</span><select onchange="c30Set('${code}','c30p${n}-freq',this.value)">${o(ans['c30p' + n + '-freq'], ['При всяка операция', 'Месечно', 'Годишно', 'Друга'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ръчен / автоматизиран</span><select onchange="c30Set('${code}','c30p${n}-manual',this.value)">${o(ans['c30p' + n + '-manual'], ['Ръчен', 'Автоматизиран', 'Смесен'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Превантивен / разкриващ</span><select onchange="c30Set('${code}','c30p${n}-prev',this.value)">${o(ans['c30p' + n + '-prev'], ['Превантивен', 'Разкриващ'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Релевантен за одита?</span><select onchange="c30Set('${code}','c30p${n}-rel',this.value)">${o(ans['c30p' + n + '-rel'], ['Да', 'Не', 'Неприложимо'])}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Засегнати твърдения</span><input value="${v(n, 'assert')}" placeholder="${escHtml(p.assertHint || '')}" onchange="c30Set('${code}','c30p${n}-assert',this.value)"></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c30ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code), rows = det.c30.rows || [];
+  const ne = (r) => (ans['c30r' + r + '-ans'] || '').trim().length > 0;
+  const compHas = (name) => rows.filter(t => t.comp === name).some(t => ne(t.n));
+  const cnt = (fn) => rows.filter(t => fn(c30RowFlags(ans, t.n))).length;
+  const out = [];
+  out.push(compHas('Контролна среда') ? { cls: 'ok', text: 'Контролната среда е оценена.' } : { cls: 'warn', text: 'Контролната среда не е оценена.' });
+  out.push(compHas('Информационна система и комуникация') ? { cls: 'ok', text: 'Информационната система е оценена.' } : { cls: 'bad', text: 'Липсва оценка на информационната система — критично.' });
+  const rd = cnt(f => f.relNoDesign); out.push(rd ? { cls: 'bad', text: 'Релевантен контрол без оценка на дизайн (' + rd + ').' } : { cls: 'ok', text: 'Релевантните контроли имат оценка на дизайна.' });
+  const ri = cnt(f => f.relNoImpl); out.push(ri ? { cls: 'bad', text: 'Релевантен контрол без оценка на внедряване (' + ri + ').' } : { cls: 'ok', text: 'Релевантните контроли имат оценка на внедряването.' });
+  const dl = cnt(f => f.defNoLevel); out.push(dl ? { cls: 'bad', text: 'Идентифициран недостатък без ниво на риск (' + dl + ').' } : { cls: 'ok', text: 'Недостатъците имат ниво на риск.' });
+  const hi = cnt(f => f.highNoInfl); out.push(hi ? { cls: 'bad', text: 'Висок риск без одиторски отговор (' + hi + ').' } : { cls: 'ok', text: 'Високите рискове имат одиторски отговор.' });
+  out.push(ne(23) ? { cls: 'ok', text: 'Контролът върху журналните записвания е разгледан (ред 23).' } : { cls: 'warn', text: 'Контролът върху журналните записвания не е разгледан (ред 23).' });
+  out.push(ne(16) ? { cls: 'ok', text: 'Контролът върху приходите е разгледан (ред 16).' } : { cls: 'warn', text: 'Контролът върху приходите не е разгледан (ред 16).' });
+  out.push(ans[12] ? { cls: 'ok', text: 'Направена е преценка за разчитане на контроли (контролен въпрос 12).' } : { cls: 'warn', text: 'Липсва преценка дали ще се разчита на контроли (контролен въпрос 12).' });
+  const five = ['Контролна среда', 'Процес за оценка на риска', 'Мониторинг на вътрешния контрол', 'Информационна система и комуникация', 'Контролни дейности'];
+  out.push(five.every(c => compHas(c)) ? { cls: 'ok', text: 'Петте компонента са оценени — готов за приключване.' } : { cls: 'warn', text: 'Не всички компоненти са оценени — тестът е „В процес".' });
+  return out;
+}
+function c30ChecksInner(code) {
+  return c30ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testControlPanel(code) {
+  const det = testDet(code);
+  if (!det.c30) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Компоненти на вътрешния контрол</div><div style="padding:12px 14px">${c30MainCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение по компоненти</div><div style="padding:12px 14px">${c30CompCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Релевантни контроли по процеси</div><div style="padding:12px 14px">${c30ProcCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c30-checks" class="b50-checks">${c30ChecksInner(code)}</div></div>`;
+}
+function c30Set(code, key, value) { setAnswer(code, key, value); c30Recalc(code); }
+function c30Recalc(code) {
+  const det = testDet(code); if (!det.c30) return;
+  const ans = testAnswers[code] || {};
+  (det.c30.rows || []).forEach(t => { const r = t.n, f = c30RowFlags(ans, r); const fe = document.getElementById('c30c-r' + r + '-flag'); if (fe) fe.innerHTML = c30FlagHtml(f); const card = document.getElementById('c30c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.relNoDesign || f.relNoImpl || f.defNoLevel || f.highNoInfl ? ' flagged err' : ''); });
+  const ce = document.getElementById('c30-checks'); if (ce) ce.innerHTML = c30ChecksInner(code);
+}
+function c30WpHtml(code, secN) {
+  const det = testDet(code); if (!det.c30) return '';
+  const ans = testAnswers[code] || {};
+  const mRows = (det.c30.rows || []).map(t => { const r = t.n, g = (k) => escHtml(ans['c30r' + r + '-' + k] || '—'); return `<tr><td>${r}</td><td>${escHtml(t.comp)}</td><td>${g('ans')}</td><td>${g('rel')}</td><td>${g('des')}</td><td>${g('imp')}</td><td>${g('def')}</td><td>${g('lvl')}</td><td>${g('infl')}</td></tr>`; }).join('');
+  const kRows = (det.c30.components || []).map((nm, i) => { const n = i + 1, g = (k) => escHtml(ans['c30k' + n + '-' + k] || '—'); return `<tr><td>${escHtml(nm)}</td><td>${g('design')}</td><td>${g('impl')}</td><td>${g('weak')}</td><td>${g('impact')}</td><td>${g('resp')}</td></tr>`; }).join('');
+  const pRows = (det.c30.processes || []).map((p, i) => { const n = i + 1, g = (k) => escHtml(ans['c30p' + n + '-' + k] || '—'); return `<tr><td>${escHtml(p.process)}</td><td>${escHtml(p.control)}</td><td>${g('type')}</td><td>${g('freq')}</td><td>${g('rel')}</td><td>${g('assert')}</td><td>${escHtml(p.next || '—')}</td></tr>`; }).join('');
+  const checks = c30ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Компоненти на вътрешния контрол</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Разбиране на компонентите</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Компонент</th><th>Документирано</th><th>Релев.</th><th>Дизайн</th><th>Внедрен</th><th>Недост.</th><th>Ниво</th><th>Влияние</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение по компоненти</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Компонент</th><th>Дизайн</th><th>Внедряване</th><th>Слабости</th><th>Влияние върху ГФО</th><th>Одиторски отговор</th></tr></thead><tbody>${kRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Релевантни контроли по процеси</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Процес</th><th>Ключов контрол</th><th>Вид</th><th>Честота</th><th>Релев.</th><th>Твърдения</th><th>Следващ тест</th></tr></thead><tbody>${pRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -6321,6 +6457,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testDiscussionPanel(code)}
       ${testUnderstandingPanel(code)}
       ${testFrameworkPanel(code)}
+      ${testControlPanel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -6344,6 +6481,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).discussion) b50Recalc(code);
   if (testDet(code).understanding) c10Recalc(code);
   if (testDet(code).c20) c20Recalc(code);
+  if (testDet(code).c30) c30Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -7407,11 +7545,12 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
   const c20Html = aiDet.c20 ? c20WpHtml(code, secC20) : '';
+  const c30Html = aiDet.c30 ? c30WpHtml(code, secC30) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -7437,6 +7576,7 @@ function testWpSections(code) {
       ${b50Html}
       ${c10Html}
       ${c20Html}
+      ${c30Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
