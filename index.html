@@ -3796,10 +3796,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260702111919"></script>
-<script src="pd-spec.js?v=20260702111919"></script>
-<script src="pd-details.js?v=20260702111919"></script>
-<script src="test-details.js?v=20260702111919"></script>
+<script src="questions.js?v=20260702114559"></script>
+<script src="pd-spec.js?v=20260702114559"></script>
+<script src="pd-details.js?v=20260702114559"></script>
+<script src="test-details.js?v=20260702114559"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5326,10 +5326,11 @@ function testQHasUpload(code, n) { return testQUploads(code).indexOf(+n) !== -1;
 function testEffectiveDef(code) {
   const base = (window.testQuestions && testQuestions[code]) || {};
   const det = testDet(code);
-  if (!det.title && !det.questions) return base;
+  if (!det.title && !det.questions && !det.mode) return base;
   const def = Object.assign({}, base);
   if (det.title) def.test = det.title;
   if (det.questions) def.questions = det.questions;
+  if (det.mode) def.mode = det.mode;
   return def;
 }
 // Дали главен въпрос позволява качване на доказателство (флаг upload или конфигурация uploads).
@@ -6741,6 +6742,155 @@ function c50WpHtml(code, secN) {
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
 }
 
+// ── C-60 „Walkthrough на значимите процеси/цикли" — основна таблица + детайлен walkthrough + стъпки в процеса ──
+function c60Opts(cur, opts) { return '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join(''); }
+function c60RowFlags(ans, r) {
+  const impl = ans['c60r' + r + '-impl'] || '', dev = ans['c60r' + r + '-dev'] || '', lvl = ans['c60r' + r + '-lvl'] || '', infl = (ans['c60r' + r + '-infl'] || '').trim(), op = (ans['c60r' + r + '-op'] || '').trim();
+  return { noOp: !op, notImpl: impl === 'Не', devNoLevel: dev === 'Да' && !lvl, highNoInfl: lvl === 'Висок' && !infl };
+}
+function c60FlagHtml(f) {
+  const a = [];
+  if (f.highNoInfl) a.push('<span class="b40-flag bad">Висок риск без одиторски отговор</span>');
+  if (f.devNoLevel) a.push('<span class="b40-flag bad">Отклонение без оценка на риска</span>');
+  if (f.notImpl) a.push('<span class="b40-flag bad">Контролите не са внедрени</span>');
+  if (f.noOp) a.push('<span class="b40-flag warn">Липсва избрана операция</span>');
+  return a.join('<br>') || '<span class="b40-flag ok">—</span>';
+}
+function c60MainCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (r, k) => escHtml(ans['c60r' + r + '-' + k] || '');
+  const cards = (det.c60.rows || []).map(t => {
+    const r = t.n, f = c60RowFlags(ans, r);
+    const impl = t.implOpts || ['Да', 'Не', 'Частично'], lv = t.levelOpts || ['Нисък', 'Среден', 'Висок'];
+    const cls = 'b40-card' + (f.notImpl || f.devNoLevel || f.highNoInfl ? ' flagged err' : (f.noOp ? ' flagged' : ''));
+    return `<div class="${cls}" id="c60c-r${r}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.process)}</b></div>
+      <div class="b40-card-desc"><b>Начална точка:</b> ${escHtml(t.start)} · <b>Крайна точка (ГФО):</b> ${escHtml(t.end)}</div>
+      <div class="b40-card-desc"><b>Ключови контроли:</b> ${escHtml(t.controls)}</div>
+      <div class="b40-card-desc"><b>Основни документи:</b> ${escHtml(t.docs)}</div>
+      <div class="b40-f span"><span class="b40-fl">Избрана операция за walkthrough</span><input value="${v(r, 'op')}" placeholder="Номер на фактура/договор/платежно…" onchange="c60Set('${code}','c60r${r}-op',this.value)"></div>
+      <div class="b40-fields" style="margin-top:10px">
+        <div class="b40-f"><span class="b40-fl">Контролите внедрени ли са?</span><select onchange="c60Set('${code}','c60r${r}-impl',this.value)">${c60Opts(ans['c60r' + r + '-impl'], impl)}</select></div>
+        <div class="b40-f"><span class="b40-fl">Установени отклонения?</span><select onchange="c60Set('${code}','c60r${r}-dev',this.value)">${c60Opts(ans['c60r' + r + '-dev'], ['Да', 'Не'])}</select></div>
+        <div class="b40-f"><span class="b40-fl">Ниво на риск</span><select onchange="c60Set('${code}','c60r${r}-lvl',this.value)">${c60Opts(ans['c60r' + r + '-lvl'], lv)}</select></div>
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c60Set('${code}','c60r${r}-infl',this.value)"></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c60Set('${code}','c60r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
+      <div class="b40-calc"><span id="c60c-r${r}-flag">${c60FlagHtml(f)}</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c60DetailCard(code) {
+  const ans = testAnswers[code] || {};
+  const v = (k) => escHtml(ans['c60d-' + k] || '');
+  const sel = (k, opts) => `<select onchange="c60Set('${code}','c60d-${k}',this.value)">${c60Opts(ans['c60d-' + k], opts)}</select>`;
+  const inp = (k, ph) => `<input value="${v(k)}"${ph ? ' placeholder="' + escHtml(ph) + '"' : ''} onchange="c60Set('${code}','c60d-${k}',this.value)">`;
+  const dt = (k) => `<input type="date" value="${v(k)}" onchange="c60Set('${code}','c60d-${k}',this.value)">`;
+  const fld = (label, ctrl) => `<div class="b40-f"><span class="b40-fl">${label}</span>${ctrl}</div>`;
+  const fullTa = (label, k) => `<div class="b40-f span" style="margin-top:10px"><span class="b40-fl">${label}</span><textarea rows="2" oninput="c60Set('${code}','c60d-${k}',this.value)">${v(k)}</textarea></div>`;
+  return `<div class="b40-card">
+    <div class="b40-fields">
+      ${fld('Процес / цикъл', sel('process', ['Приходи', 'Покупки', 'Плащания', 'Заплати', 'ДМА', 'Запаси', 'Заеми', 'Данъци', 'Свързани лица', 'Журнални записвания', 'Финансово приключване', 'Друго']))}
+      ${fld('Избрана операция', inp('op', 'Номер на фактура/договор/платежно'))}
+      ${fld('Причина за избор', sel('reason', ['Значимост', 'Риск', 'Необичайна операция', 'Представителна операция']))}
+      ${fld('Дата на операцията', dt('date'))}
+      ${fld('Стойност на операцията', inp('value'))}
+      ${fld('Отговорно лице от клиента', inp('client'))}
+      ${fld('Одитор, извършил walkthrough', inp('auditor'))}
+      ${fld('Дата на walkthrough', dt('wdate'))}
+      ${fld('Има ли ръчно прехвърляне на данни?', sel('manual', ['Да', 'Не']))}
+      ${fld('Контролите наблюдавани ли са?', sel('observed', ['Да', 'Не', 'Частично']))}
+      ${fld('Има ли доказателства за контрола?', sel('evidence', ['Да', 'Не', 'Частично']))}
+      ${fld('Установени отклонения', sel('dev', ['Да', 'Не']))}
+      ${fld('Влияние върху риска', sel('impact', ['Няма', 'Ниско', 'Средно', 'Високо']))}
+      ${fld('Необходима последваща процедура', sel('followup', ['Да', 'Не']))}
+    </div>
+    ${fullTa('Начална точка', 'start')}
+    ${fullTa('Крайна точка', 'end')}
+    ${fullTa('Използвани документи', 'docs')}
+    ${fullTa('Системи, използвани в процеса', 'systems')}
+    ${fullTa('Идентифицирани контроли', 'controls')}
+    ${fullTa('Описание на отклоненията', 'devdesc')}
+    ${fullTa('Заключение по walkthrough', 'concl')}
+  </div>`;
+}
+function c60StepCards(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (n, k) => escHtml(ans['c60p' + n + '-' + k] || '');
+  const cards = (det.c60.steps || []).map((s, i) => {
+    const n = i + 1;
+    return `<div class="b40-card" id="c60p-r${n}-card">
+      <div class="b40-card-h"><span class="b40-card-n">${n}</span><b>${escHtml(s.step)}</b></div>
+      <div class="b40-card-desc">${escHtml(s.desc)}</div>
+      <div class="b40-fields" style="margin-top:8px">
+        <div class="b40-f"><span class="b40-fl">Отговорно лице</span><input value="${v(n, 'person')}" onchange="c60Set('${code}','c60p${n}-person',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Документ / системен запис</span><input value="${v(n, 'doc')}" onchange="c60Set('${code}','c60p${n}-doc',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Контрол в тази стъпка</span><input value="${v(n, 'control')}" onchange="c60Set('${code}','c60p${n}-control',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Доказателство</span><input value="${v(n, 'evid')}" onchange="c60Set('${code}','c60p${n}-evid',this.value)"></div>
+        <div class="b40-f"><span class="b40-fl">Резултат</span><select onchange="c60Set('${code}','c60p${n}-result',this.value)">${c60Opts(ans['c60p' + n + '-result'], ['Без отклонение', 'Отклонение'])}</select></div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="b40-cards">${cards}</div>`;
+}
+function c60ScopeHtml(code) {
+  const det = testDet(code), rows = (det.c60.scope || []);
+  const body = rows.map((s, i) => `<tr><td class="role">${i + 1}</td><td>${escHtml(s.process)}</td><td>${escHtml(s.minimal)}</td><td>${escHtml(s.docs)}</td><td>${escHtml(s.assertions)}</td></tr>`).join('');
+  return `<details style="padding:12px 14px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--p-accent)">Значими процеси и минимален обхват (указания)</summary>
+    <div style="margin-top:8px;overflow-x:auto"><table class="b50-att"><thead><tr><th>№</th><th>Процес / цикъл</th><th>Препоръчителен минимален walkthrough</th><th>Обичайни документи</th><th>Засегнати твърдения</th></tr></thead><tbody>${body}</tbody></table></div></details>`;
+}
+function c60ComputeChecks(code) {
+  const ans = testAnswers[code] || {}, det = testDet(code), rows = det.c60.rows || [];
+  const cnt = (fn) => rows.filter(t => fn(t.n)).length;
+  const out = [];
+  const noWt = cnt(r => c60RowFlags(ans, r).noOp); out.push(noWt ? { cls: 'warn', text: 'Значим процес без избран walkthrough (' + noWt + ').' } : { cls: 'ok', text: 'Всеки значим процес има избрана операция за walkthrough.' });
+  const dnl = cnt(r => c60RowFlags(ans, r).devNoLevel); out.push(dnl ? { cls: 'bad', text: 'Установено отклонение без оценка на риска (' + dnl + ').' } : { cls: 'ok', text: 'Отклоненията имат оценка на риска.' });
+  const hi = cnt(r => c60RowFlags(ans, r).highNoInfl); out.push(hi ? { cls: 'bad', text: 'Висок риск без одиторски отговор (' + hi + ').' } : { cls: 'ok', text: 'Високите рискове имат одиторски отговор.' });
+  const ni = cnt(r => c60RowFlags(ans, r).notImpl); out.push(ni ? { cls: 'bad', text: 'Процес с невнедрени контроли (' + ni + ').' } : { cls: 'ok', text: 'Няма процеси с невнедрени контроли.' });
+  const devNoDesc = (ans['c60d-dev'] === 'Да' && !(ans['c60d-devdesc'] || '').trim());
+  out.push(devNoDesc ? { cls: 'bad', text: 'Отклонение в детайлния walkthrough без описание.' } : { cls: 'ok', text: 'Отклоненията в детайлния walkthrough са описани.' });
+  out.push(ans[10] === 'Да' ? { cls: 'bad', text: 'Установено е прекъсване в одитната следа (въпрос 10) — висок риск.' } : { cls: 'ok', text: 'Няма установено прекъсване в одитната следа.' });
+  const allWt = rows.length > 0 && rows.every(t => (ans['c60r' + t.n + '-op'] || '').trim());
+  out.push(allWt ? { cls: 'ok', text: 'Всички значими процеси са проследени — готов за приключване.' } : { cls: 'warn', text: 'Има процеси без walkthrough — тестът е „В процес".' });
+  return out;
+}
+function c60ChecksInner(code) {
+  return c60ComputeChecks(code).map(c => `<div class="b50-chk ${c.cls}"><span class="ic">${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'}</span><span>${escHtml(c.text)}</span></div>`).join('');
+}
+function testWalkthroughPanel(code) {
+  const det = testDet(code);
+  if (!det.c60) return '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Значими процеси / цикли — walkthrough</div><div style="padding:12px 14px">${c60MainCards(code)}</div>${c60ScopeHtml(code)}</div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Детайлен walkthrough на една операция</div><div style="padding:12px 14px">${c60DetailCard(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Стъпки в процеса</div><div style="padding:12px 14px">${c60StepCards(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматични проверки</div><div id="c60-checks" class="b50-checks">${c60ChecksInner(code)}</div></div>`;
+}
+function c60Set(code, key, value) { setAnswer(code, key, value); c60Recalc(code); }
+function c60Recalc(code) {
+  const det = testDet(code); if (!det.c60) return;
+  const ans = testAnswers[code] || {};
+  (det.c60.rows || []).forEach(t => { const r = t.n, f = c60RowFlags(ans, r); const fe = document.getElementById('c60c-r' + r + '-flag'); if (fe) fe.innerHTML = c60FlagHtml(f); const card = document.getElementById('c60c-r' + r + '-card'); if (card) card.className = 'b40-card' + (f.notImpl || f.devNoLevel || f.highNoInfl ? ' flagged err' : (f.noOp ? ' flagged' : '')); });
+  const ce = document.getElementById('c60-checks'); if (ce) ce.innerHTML = c60ChecksInner(code);
+}
+function c60WpHtml(code, secN) {
+  const det = testDet(code); if (!det.c60) return '';
+  const ans = testAnswers[code] || {};
+  const mRows = (det.c60.rows || []).map(t => { const r = t.n, g = (k) => escHtml(ans['c60r' + r + '-' + k] || '—'); return `<tr><td>${r}</td><td>${escHtml(t.process)}</td><td>${g('op')}</td><td>${g('impl')}</td><td>${g('dev')}</td><td>${g('lvl')}</td><td>${g('infl')}</td></tr>`; }).join('');
+  const sRows = (det.c60.steps || []).map((s, i) => { const n = i + 1, g = (k) => escHtml(ans['c60p' + n + '-' + k] || '—'); return `<tr><td>${escHtml(s.step)}</td><td>${g('person')}</td><td>${g('control')}</td><td>${g('evid')}</td><td>${g('result')}</td></tr>`; }).join('');
+  const dv = (k) => escHtml(ans['c60d-' + k] || '—');
+  const checks = c60ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Walkthrough на значимите процеси/цикли</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Значими процеси / цикли</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Процес</th><th>Избрана операция</th><th>Внедрени</th><th>Отклонения</th><th>Ниво</th><th>Влияние</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Детайлен walkthrough</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody><tr><td>Процес</td><td class="c">${dv('process')}</td></tr><tr><td>Операция</td><td class="c">${dv('op')}</td></tr><tr><td>Отклонения</td><td class="c">${dv('dev')}</td></tr><tr><td>Заключение</td><td class="c">${dv('concl')}</td></tr></tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Стъпки в процеса</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Стъпка</th><th>Отговорен</th><th>Контрол</th><th>Доказателство</th><th>Резултат</th></tr></thead><tbody>${sRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Автоматични проверки</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -6791,6 +6941,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testControlPanel(code)}
       ${testItPanel(code)}
       ${testDesignPanel(code)}
+      ${testWalkthroughPanel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -6817,6 +6968,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).c30) c30Recalc(code);
   if (testDet(code).c40) c40Recalc(code);
   if (testDet(code).c50) c50Recalc(code);
+  if (testDet(code).c60) c60Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -7196,7 +7348,10 @@ document.addEventListener('keydown', e => {
 function entStatusLabel(s) { return ({ done: 'Завършен', active: 'В процес', pending: 'Не започнат' })[s || 'pending']; }
 function entWdType(code) {
   if (window.pdSpec && pdSpec[code]) return 'Документи';
-  const d = window.testQuestions && testQuestions[code]; return d ? (d.mode === 'ai' ? 'AI' : 'Описателен') : '—';
+  const det = (typeof testDet === 'function') ? testDet(code) : null;
+  const d = window.testQuestions && testQuestions[code];
+  const mode = (det && det.mode) ? det.mode : (d ? d.mode : null);
+  return mode ? (mode === 'ai' ? 'AI' : 'Описателен') : '—';
 }
 function entWdProgress(code) {
   if (window.pdSpec && pdSpec[code]) {
@@ -7880,7 +8035,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -7888,6 +8043,7 @@ function testWpSections(code) {
   const c30Html = aiDet.c30 ? c30WpHtml(code, secC30) : '';
   const c40Html = aiDet.c40 ? c40WpHtml(code, secC40) : '';
   const c50Html = aiDet.c50 ? c50WpHtml(code, secC50) : '';
+  const c60Html = aiDet.c60 ? c60WpHtml(code, secC60) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -7916,6 +8072,7 @@ function testWpSections(code) {
       ${c30Html}
       ${c40Html}
       ${c50Html}
+      ${c60Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
