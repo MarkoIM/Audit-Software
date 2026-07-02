@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260702165910"></script>
-<script src="pd-spec.js?v=20260702165910"></script>
-<script src="pd-details.js?v=20260702165910"></script>
-<script src="test-details.js?v=20260702165910"></script>
+<script src="questions.js?v=20260702204319"></script>
+<script src="pd-spec.js?v=20260702204319"></script>
+<script src="pd-details.js?v=20260702204319"></script>
+<script src="test-details.js?v=20260702204319"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -6771,7 +6771,35 @@ function c50WpHtml(code, secN) {
 }
 
 // ── C-60 „Walkthrough на значимите процеси/цикли" — основна таблица + детайлен walkthrough + стъпки в процеса ──
-function c60Opts(cur, opts) { return '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${x}</option>`).join(''); }
+function c60Opts(cur, opts) { return '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${escHtml(x)}</option>`).join(''); }
+// Разделя запетая-разделен списък от документи/точки/контроли в опции за падащото меню.
+function c60SplitOpts(str) { return String(str || '').split(',').map(s => s.trim()).filter(Boolean); }
+const C60_OTHER = 'Друг (посочете)';
+// Клетка с падащо меню (описаните елементи + „Друг (посочете)") и свободно поле, което се показва при избор на „Друг".
+function c60FieldCell(code, n, field, label, optionsStr) {
+  const ans = testAnswers[code] || {};
+  const cur = ans['c60r' + n + '-' + field] || '';
+  const custom = ans['c60r' + n + '-' + field + 'x'] || '';
+  const opts = c60SplitOpts(optionsStr).concat([C60_OTHER]);
+  const show = cur === C60_OTHER;
+  return `<div class="b40-f">
+    <span class="b40-fl">${label}</span>
+    <select onchange="c60FieldSel('${code}',${n},'${field}',this.value)">${c60Opts(cur, opts)}</select>
+    <input id="c60r${n}-${field}x" value="${escHtml(custom)}" placeholder="Посочете документ…" style="margin-top:6px;display:${show ? 'block' : 'none'}" oninput="c60Set('${code}','c60r${n}-${field}x',this.value)">
+  </div>`;
+}
+function c60FieldSel(code, n, field, value) {
+  setAnswer(code, 'c60r' + n + '-' + field, value);
+  const el = document.getElementById('c60r' + n + '-' + field + 'x');
+  if (el) el.style.display = (value === C60_OTHER) ? 'block' : 'none';
+  c60Recalc(code);
+}
+// Разрешава избраната стойност (при „Друг" връща свободния текст).
+function c60FieldVal(ans, n, field) {
+  const v = ans['c60r' + n + '-' + field] || '';
+  if (v === C60_OTHER) return (ans['c60r' + n + '-' + field + 'x'] || '').trim() || 'Друг документ';
+  return v;
+}
 function c60RowFlags(ans, r) {
   const impl = ans['c60r' + r + '-impl'] || '', dev = ans['c60r' + r + '-dev'] || '', lvl = ans['c60r' + r + '-lvl'] || '', infl = (ans['c60r' + r + '-infl'] || '').trim(), op = (ans['c60r' + r + '-op'] || '').trim();
   return { noOp: !op, notImpl: impl === 'Не', devNoLevel: dev === 'Да' && !lvl, highNoInfl: lvl === 'Висок' && !infl };
@@ -6793,10 +6821,14 @@ function c60MainCards(code) {
     const cls = 'b40-card' + (f.notImpl || f.devNoLevel || f.highNoInfl ? ' flagged err' : (f.noOp ? ' flagged' : ''));
     return `<div class="${cls}" id="c60c-r${r}-card">
       <div class="b40-card-h"><span class="b40-card-n">${r}</span><b>${escHtml(t.process)}</b></div>
-      <div class="b40-card-desc"><b>Начална точка:</b> ${escHtml(t.start)} · <b>Крайна точка (ГФО):</b> ${escHtml(t.end)}</div>
-      <div class="b40-card-desc"><b>Ключови контроли:</b> ${escHtml(t.controls)}</div>
-      <div class="b40-card-desc"><b>Основни документи:</b> ${escHtml(t.docs)}</div>
-      <div class="b40-f span"><span class="b40-fl">Избрана операция за walkthrough</span><input value="${v(r, 'op')}" placeholder="Номер на фактура/договор/платежно…" onchange="c60Set('${code}','c60r${r}-op',this.value)"></div>
+      <div class="b40-card-desc" style="margin-bottom:8px">Изберете елементите, наблюдавани при проследяването на избраната операция (или добавете свой чрез „${C60_OTHER}"):</div>
+      <div class="b40-fields">
+        ${c60FieldCell(code, r, 'start', 'Начална точка', t.start)}
+        ${c60FieldCell(code, r, 'end', 'Крайна точка (ГФО)', t.end)}
+        ${c60FieldCell(code, r, 'ctrl', 'Ключови контроли', t.controls)}
+        ${c60FieldCell(code, r, 'docs', 'Основни документи', t.docs)}
+      </div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Избрана операция за walkthrough</span><input value="${v(r, 'op')}" placeholder="Номер на фактура/договор/платежно…" onchange="c60Set('${code}','c60r${r}-op',this.value)"></div>
       <div class="b40-fields" style="margin-top:10px">
         <div class="b40-f"><span class="b40-fl">Контролите внедрени ли са?</span><select onchange="c60Set('${code}','c60r${r}-impl',this.value)">${c60Opts(ans['c60r' + r + '-impl'], impl)}</select></div>
         <div class="b40-f"><span class="b40-fl">Установени отклонения?</span><select onchange="c60Set('${code}','c60r${r}-dev',this.value)">${c60Opts(ans['c60r' + r + '-dev'], ['Да', 'Не'])}</select></div>
@@ -6804,6 +6836,7 @@ function c60MainCards(code) {
       </div>
       <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Влияние върху одиторския подход</span><input value="${v(r, 'infl')}" onchange="c60Set('${code}','c60r${r}-infl',this.value)"></div>
       <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><textarea rows="2" oninput="c60Set('${code}','c60r${r}-note',this.value)">${v(r, 'note')}</textarea></div>
+      <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Документи по процеса</span><div id="tup-${code}-c60r${r}">${testUploadWidget2(code, 'c60r' + r)}</div></div>
       <div class="b40-calc"><span id="c60c-r${r}-flag">${c60FlagHtml(f)}</span></div>
     </div>`;
   }).join('');
@@ -6905,12 +6938,16 @@ function c60WpHtml(code, secN) {
   const det = testDet(code); if (!det.c60) return '';
   const ans = testAnswers[code] || {};
   const mRows = (det.c60.rows || []).map(t => { const r = t.n, g = (k) => escHtml(ans['c60r' + r + '-' + k] || '—'); return `<tr><td>${r}</td><td>${escHtml(t.process)}</td><td>${g('op')}</td><td>${g('impl')}</td><td>${g('dev')}</td><td>${g('lvl')}</td><td>${g('infl')}</td></tr>`; }).join('');
+  const rv = (r, field) => { const val = c60FieldVal(ans, r, field); return escHtml(val || '—'); };
+  const tRows = (det.c60.rows || []).map(t => { const r = t.n, fc = testFiles(code, 'c60r' + r).length; return `<tr><td>${r}</td><td>${escHtml(t.process)}</td><td>${rv(r, 'start')}</td><td>${rv(r, 'docs')}</td><td>${rv(r, 'ctrl')}</td><td>${rv(r, 'end')}</td><td class="c">${fc || '—'}</td></tr>`; }).join('');
   const sRows = (det.c60.steps || []).map((s, i) => { const n = i + 1, g = (k) => escHtml(ans['c60p' + n + '-' + k] || '—'); return `<tr><td>${escHtml(s.step)}</td><td>${g('person')}</td><td>${g('control')}</td><td>${g('evid')}</td><td>${g('result')}</td></tr>`; }).join('');
   const dv = (k) => escHtml(ans['c60d-' + k] || '—');
   const checks = c60ComputeChecks(code).map(c => `<li>${c.cls === 'ok' ? '✓' : c.cls === 'warn' ? '⚠' : '✕'} ${escHtml(c.text)}</li>`).join('');
   return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Walkthrough на значимите процеси/цикли</h3>
     <div class="wp-text" style="font-weight:700;margin-bottom:4px">Значими процеси / цикли</div>
     <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Процес</th><th>Избрана операция</th><th>Внедрени</th><th>Отклонения</th><th>Ниво</th><th>Влияние</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Проследяване (walkthrough трасе)</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Процес</th><th>Начална точка</th><th>Основни документи</th><th>Ключови контроли</th><th>Крайна точка (ГФО)</th><th>Файлове</th></tr></thead><tbody>${tRows}</tbody></table>
     <div class="wp-text" style="font-weight:700;margin-bottom:4px">Детайлен walkthrough</div>
     <table class="wp-std" style="margin-bottom:10px"><tbody><tr><td>Процес</td><td class="c">${dv('process')}</td></tr><tr><td>Операция</td><td class="c">${dv('op')}</td></tr><tr><td>Отклонения</td><td class="c">${dv('dev')}</td></tr><tr><td>Заключение</td><td class="c">${dv('concl')}</td></tr></tbody></table>
     <div class="wp-text" style="font-weight:700;margin-bottom:4px">Стъпки в процеса</div>
