@@ -629,6 +629,34 @@
   .b40-si b { color: var(--p-text1); font-weight: 700; }
   .b40-si.alert b { color: #d92d20; }
   @media (max-width: 640px) { .b40-sum-grid { grid-template-columns: 1fr; } }
+  /* D-10 Същественост — обобщение + калкулатор */
+  .d10-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+  .d10-stat { background: var(--p-surface2); border: 1px solid var(--p-border); border-radius: 10px; padding: 11px 13px; }
+  .d10-stat .k { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--p-text3); margin-bottom: 5px; }
+  .d10-stat .v { font-size: 15px; font-weight: 800; color: var(--p-text1); letter-spacing: -.2px; line-height: 1.25; }
+  .d10-stat.accent { background: var(--p-accent); border-color: transparent; }
+  .d10-stat.accent .k { color: rgba(255,255,255,.82); }
+  .d10-stat.accent .v { color: #fff; }
+  .d10-stat.warnv .v { color: var(--p-amber); }
+  .d10-stat.badv .v { color: #d92d20; }
+  .d10-tbl { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 680px; }
+  .d10-tbl th, .d10-tbl td { border: 1px solid var(--p-border); padding: 6px 8px; text-align: left; vertical-align: middle; }
+  .d10-tbl th { background: var(--p-surface2); font-size: 10px; font-weight: 700; color: var(--p-text2); text-transform: uppercase; letter-spacing: .3px; }
+  .d10-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .d10-tbl td.base { font-weight: 600; color: var(--p-text1); }
+  .d10-tbl tr.sel { background: color-mix(in srgb, var(--p-accent) 10%, transparent); }
+  .d10-tbl tr.sel td.base { color: var(--p-accent); }
+  .d10-tbl input.pct { width: 66px; border: 1px solid var(--p-border); border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 12px; text-align: right; background: var(--p-surface); color: var(--p-text1); outline: none; }
+  .d10-tbl input.pct.oor { border-color: #d92d20; color: #d92d20; }
+  .d10-tbl .yes { color: var(--p-green); font-weight: 700; }
+  .d10-tbl .no { color: var(--p-text3); font-weight: 700; }
+  .d10-lvl { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: .3px; }
+  .d10-lvl.info { background: var(--p-surface2); color: var(--p-text3); }
+  .d10-lvl.warn { background: var(--p-amber-bg); color: var(--p-amber); }
+  .d10-lvl.rev { background: var(--p-amber-bg); color: var(--p-amber); }
+  .d10-lvl.fix { background: #fef0c7; color: #b54708; }
+  .d10-lvl.high { background: #fee4e2; color: #d92d20; }
+  .d10-lvl.crit { background: #fee4e2; color: #d92d20; }
   .pd-slot { border: 1px solid var(--p-border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: var(--p-surface); }
   .pd-slot:last-child { margin-bottom: 0; }
   .pd-slot.filled { border-color: var(--p-border-strong); }
@@ -3796,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260702114559"></script>
-<script src="pd-spec.js?v=20260702114559"></script>
-<script src="pd-details.js?v=20260702114559"></script>
-<script src="test-details.js?v=20260702114559"></script>
+<script src="questions.js?v=20260702145114"></script>
+<script src="pd-spec.js?v=20260702145114"></script>
+<script src="pd-details.js?v=20260702145114"></script>
+<script src="test-details.js?v=20260702145114"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -6891,6 +6919,275 @@ function c60WpHtml(code, secN) {
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.65">${checks}</ul></div>`;
 }
 
+// ── D-10 „Същественост за финансовия отчет като цяло" — детерминистичен калкулатор на съществеността ──
+// Тестът извършва автоматичен анализ (реална аритметика, не AI): извлича показатели, преизчислява базите,
+// избира най-подходящата база, изчислява съществеността и извежда предупреждения.
+function d10Num(s) {
+  if (s == null) return NaN;
+  s = ('' + s).trim().replace(/\s| /g, '');
+  if (!s) return NaN;
+  const hasDot = s.indexOf('.') >= 0, hasComma = s.indexOf(',') >= 0;
+  if (hasDot && hasComma) s = s.replace(/\./g, '').replace(',', '.');
+  else if (hasComma) s = s.replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : n;
+}
+function d10Fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  const neg = n < 0, a = Math.abs(n).toFixed(2), parts = a.split('.');
+  const int = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (neg ? '−' : '') + int + ',' + parts[1] + ' лв.';
+}
+function d10FmtPct(p) { if (p == null || isNaN(p)) return '—'; return ('' + (Math.round(p * 100) / 100)).replace('.', ',') + '%'; }
+function d10HasFile(code, key) { return testFiles(code, key).length > 0; }
+function d10Opts(cur, opts) { return '<option value=""></option>' + opts.map(x => `<option${cur === x ? ' selected' : ''}>${escHtml(x)}</option>`).join(''); }
+
+function d10Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const M = {};
+  (det.d10.metrics || []).forEach(m => {
+    M[m.key] = { name: m.name, cur: d10Num(ans['d10m-' + m.key + '-cur']), prev: d10Num(ans['d10m-' + m.key + '-prev']), src: ans['d10m-' + m.key + '-src'] || '', cmp: ans['d10m-' + m.key + '-cmp'] || '', conf: ans['d10m-' + m.key + '-conf'] || '' };
+  });
+  const val = (k) => (M[k] ? M[k].cur : NaN);
+  const pbt = val('pbt'), rev = val('rev'), assets = val('assets'), equity = val('equity'), exp = val('exp');
+  const prevPbt = M.pbt ? M.pbt.prev : NaN;
+  const profitLow = !isNaN(pbt) && pbt > 0 && !isNaN(rev) && rev > 0 && (pbt / rev < 0.03);
+  const profitUnstable = !isNaN(pbt) && pbt > 0 && !isNaN(prevPbt) && prevPbt > 0 && (Math.abs(pbt - prevPbt) / Math.abs(prevPbt) > 0.5);
+  const bases = (det.d10.bases || []).map(b => {
+    const v = val(b.metric);
+    const pr = ans['d10b-' + b.key + '-pct'];
+    const pct = (pr !== undefined && pr !== '') ? d10Num(pr) : b.def;
+    const mat = (!isNaN(v) && v > 0 && !isNaN(pct)) ? v * pct / 100 : NaN;
+    return { key: b.key, name: b.name, metric: b.metric, value: v, pct, mat, suitable: !isNaN(v) && v > 0, inRange: !isNaN(pct) && pct >= b.min && pct <= b.max, min: b.min, max: b.max, def: b.def };
+  });
+  let autoSel = '';
+  const pbtOk = !isNaN(pbt) && pbt > 0 && !profitLow && !profitUnstable;
+  if (pbtOk) autoSel = 'pbt';
+  else if (!isNaN(rev) && rev > 0) autoSel = 'rev';
+  else if (!isNaN(assets) && assets > 0) autoSel = 'assets';
+  else if (!isNaN(equity) && equity > 0) autoSel = 'equity';
+  else if (!isNaN(exp) && exp > 0) autoSel = 'exp';
+  const selKey = ans['d10-selbase'] || autoSel;
+  const sel = bases.find(b => b.key === selKey) || null;
+  const mcorr = d10Num(ans['d10-mcorr']), hasMcorr = !isNaN(mcorr);
+  const materiality = hasMcorr ? mcorr : (sel ? sel.mat : NaN);
+  const d1 = d10HasFile(code, 'd1'), d2 = d10HasFile(code, 'd2'), d3 = d10HasFile(code, 'd3'), d4 = d10HasFile(code, 'd4');
+  const hasPrev = (det.d10.metrics || []).some(m => !isNaN(M[m.key].prev));
+  const mismatch = (det.d10.metrics || []).some(m => M[m.key].cmp === 'Не');
+  const cm = val('rev'), pm = M.rev ? M.rev.prev : NaN;
+  const bigChange = !isNaN(cm) && !isNaN(pm) && pm !== 0 && Math.abs(cm - pm) / Math.abs(pm) > 0.25;
+  const unusual = ans[6] === 'Да';
+  const negEquity = !isNaN(equity) && equity < 0;
+  const pctOut = sel ? !sel.inRange : false;
+  const partnerReview = negEquity || !d1 || profitUnstable || hasMcorr || mismatch || pctOut;
+  const warns = [
+    { n: 1, name: 'Липсва проект на ГФО', hit: !d1, level: 'Критично', lc: 'crit', act: 'Изискване на документ' },
+    { n: 2, name: 'Липсва оборотна ведомост', hit: !d2, level: 'За преглед', lc: 'rev', act: 'Изискване на документ / ръчна проверка' },
+    { n: 3, name: 'Липсват сравнителни данни', hit: !d3 || !hasPrev, level: 'Предупреждение', lc: 'warn', act: 'Преглед от одитора' },
+    { n: 4, name: 'Липсва описание на дейността', hit: !d4, level: 'За допълване', lc: 'warn', act: 'Изискване на информация' },
+    { n: 5, name: 'Печалбата е отрицателна', hit: !isNaN(pbt) && pbt < 0, level: 'Предупреждение', lc: 'warn', act: 'Да се разгледа алтернативна база' },
+    { n: 6, name: 'Печалбата е ниска или нестабилна', hit: profitLow || profitUnstable, level: 'Предупреждение', lc: 'warn', act: 'Да се разгледа алтернативна база' },
+    { n: 7, name: 'Собственият капитал е отрицателен', hit: negEquity, level: 'Висок риск', lc: 'high', act: 'Партньорски преглед' },
+    { n: 8, name: 'Има значителна промяна спрямо предходен период', hit: bigChange, level: 'За преглед', lc: 'rev', act: 'Обосновка от одитора' },
+    { n: 9, name: 'Има необичайни еднократни операции', hit: unusual, level: 'За преглед', lc: 'rev', act: 'Преценка за нормализирана база' },
+    { n: 10, name: 'Има несъответствие между ГФО и оборотна ведомост', hit: mismatch, level: 'За корекция', lc: 'fix', act: 'Проверка и корекция' },
+    { n: 11, name: 'Избраният процент е извън методологията', hit: pctOut, level: 'За корекция', lc: 'fix', act: 'Задължителна обосновка' },
+    { n: 12, name: 'Необходим е партньорски преглед', hit: partnerReview, level: partnerReview ? 'Задължително' : 'Незадължително', lc: partnerReview ? 'high' : 'info', act: 'Преглед и одобрение' }
+  ];
+  const warnCount = warns.filter(w => w.hit && w.n !== 12).length;
+  const enough = d1 && !isNaN(rev) && autoSel !== '' && !!sel && !isNaN(materiality);
+  let status;
+  if (!d1 && !d2 && isNaN(rev)) status = 'Непълен';
+  else if (!enough) status = 'За допълване';
+  else if (partnerReview || warnCount > 0) status = 'За преглед';
+  else if (ans[10] === 'Да') status = 'Одобрено';
+  else status = 'Предложено';
+  return { M, bases, autoSel, selKey, sel, materiality, hasMcorr, mcorr, warns, warnCount, partnerReview, enough, status, profitLow, profitUnstable, negEquity, hasPrev, d1, d2, d3, d4, pbt, rev, assets, equity, exp };
+}
+
+function d10BasisText(c) {
+  if (!c.enough || !c.sel) return '';
+  const reasons = {
+    pbt: 'предприятието е печелившо и печалбата преди данъци е показателят, който представлява най-голям интерес за потребителите на финансовия отчет',
+    rev: 'приходите са стабилен и представителен показател за мащаба на дейността, а печалбата е ниска, нестабилна или отрицателна',
+    assets: 'дейността на предприятието е ориентирана към активите, поради което общо активи е по-представителна база от печалбата или приходите',
+    equity: 'нетните активи (собственият капитал) са водещият показател за потребителите на финансовия отчет за това предприятие',
+    exp: 'предприятието е с ограничена или нестопанска дейност, при която общите разходи са най-стабилният и представителен показател'
+  };
+  return `Като най-подходяща база е определена „${c.sel.name}", тъй като ${reasons[c.sel.key] || 'този показател е най-представителен за дейността на предприятието'}. Върху стойността на базата (${d10Fmt(c.sel.value)}) е приложен процент ${d10FmtPct(c.sel.pct)}, при което изчислената същественост за финансовия отчет като цяло е ${d10Fmt(c.sel.mat)}.`;
+}
+function d10AltText(c) {
+  if (!c.enough || !c.sel) return '';
+  const alts = c.bases.filter(b => b.key !== c.sel.key && b.suitable).map(b => `${b.name} → ${d10Fmt(b.mat)} (${d10FmtPct(b.pct)})`);
+  if (!alts.length) return 'Не са налице други подходящи бази за сравнение при наличните данни.';
+  return 'Разгледани са и следните алтернативни бази, които не са избрани като основни: ' + alts.join('; ') + '.';
+}
+function d10ConclText(c) {
+  if (!c.enough || !c.sel) {
+    const miss = [];
+    if (!c.d1) miss.push('проект на годишен финансов отчет');
+    if (!c.d2) miss.push('оборотна ведомост');
+    if (!c.d3 || !c.hasPrev) miss.push('сравнителни данни за предходен период');
+    if (!c.d4) miss.push('описание на дейността');
+    if (isNaN(c.rev)) miss.push('ключови финансови показатели');
+    return `Към момента не може да бъде формирано надеждно предложение за същественост за финансовия отчет като цяло, тъй като липсват следните необходими документи или данни: ${miss.join('; ') || 'необходими данни'}. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.`;
+  }
+  return `След предоставяне на необходимите финансови данни тестът автоматично извърши анализ на приложимите бази за същественост, извлече и преизчисли ключовите финансови показатели, сравни възможните бази и предложи същественост за финансовия отчет като цяло. Като най-подходяща база е определена „${c.sel.name}", тъй като е представителна за дейността и потребителите на финансовия отчет. Върху стойността на базата (${d10Fmt(c.sel.value)}) е приложен процент ${d10FmtPct(c.sel.pct)}, в резултат на което предложената същественост за финансовия отчет като цяло е ${d10Fmt(c.materiality)}. Разгледани са и алтернативни бази, но те не са избрани като основни. Предложението подлежи на преглед и одобрение от отговорния одитор или партньор преди използване при планиране и изпълнение на одиторските процедури.`;
+}
+
+function d10DocsCards(code) {
+  const det = testDet(code);
+  const rows = (det.d10.docs || []).map(d => {
+    const up = d10HasFile(code, 'd' + d.n);
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="margin-top:8px" id="tup-${code}-d${d.n}">${testUploadWidget2(code, 'd' + d.n)}</div></div>`;
+  }).join('');
+  return rows;
+}
+function d10MetricsTable(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const v = (k, f) => escHtml(ans['d10m-' + k + '-' + f] || '');
+  const rows = (det.d10.metrics || []).map(m => `<tr>
+    <td class="base">${escHtml(m.name)}</td>
+    <td><input inputmode="decimal" value="${v(m.key, 'cur')}" placeholder="0,00" onchange="d10Set('${code}','d10m-${m.key}-cur',this.value)"></td>
+    <td><input inputmode="decimal" value="${v(m.key, 'prev')}" placeholder="0,00" onchange="d10Set('${code}','d10m-${m.key}-prev',this.value)"></td>
+    <td><select onchange="d10Set('${code}','d10m-${m.key}-src',this.value)">${d10Opts(ans['d10m-' + m.key + '-src'], ['ГФО', 'ОВ'])}</select></td>
+    <td><select onchange="d10Set('${code}','d10m-${m.key}-cmp',this.value)">${d10Opts(ans['d10m-' + m.key + '-cmp'], ['Да', 'Не', 'Неприложимо'])}</select></td>
+    <td><select onchange="d10Set('${code}','d10m-${m.key}-conf',this.value)">${d10Opts(ans['d10m-' + m.key + '-conf'], ['Да', 'Не'])}</select></td>
+  </tr>`).join('');
+  return `<div style="overflow-x:auto"><table class="b50-att"><thead><tr><th style="min-width:190px">Показател</th><th>Текущ период</th><th>Предходен период</th><th>Източник</th><th>Сравнено с ОВ</th><th>Потвърдено</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function d10CalcInner(code, c) {
+  c = c || d10Compute(code);
+  const rows = c.bases.map(b => {
+    const isSel = c.sel && c.sel.key === b.key;
+    return `<tr class="${isSel ? 'sel' : ''}">
+      <td class="base">${escHtml(b.name)}</td>
+      <td class="num">${d10Fmt(b.value)}</td>
+      <td><input class="pct${b.inRange ? '' : ' oor'}" inputmode="decimal" value="${escHtml('' + (isNaN(b.pct) ? '' : ('' + b.pct).replace('.', ',')))}" title="Методология: ${d10FmtPct(b.min)}–${d10FmtPct(b.max)}" onchange="d10Set('${code}','d10b-${b.key}-pct',this.value)"></td>
+      <td class="num">${d10Fmt(b.mat)}</td>
+      <td class="${b.suitable ? 'yes' : 'no'}">${b.suitable ? 'Да' : 'Не'}</td>
+      <td style="text-align:center"><input type="radio" name="d10sel-${code}" ${isSel ? 'checked' : ''} onchange="d10Set('${code}','d10-selbase','${b.key}')"></td>
+      <td style="font-size:11px;color:var(--p-text3)">${d10FmtPct(b.min)}–${d10FmtPct(b.max)}${b.inRange ? '' : ' · извън диапазон'}</td>
+    </tr>`;
+  }).join('');
+  const note = c.selKey && c.selKey === c.autoSel ? '<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Базата е избрана автоматично; при нужда одиторът може да я промени с радио-бутон.</div>' : (c.selKey ? '<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Базата е избрана ръчно от одитора (различна от автоматичното предложение).</div>' : '');
+  return `<div style="overflow-x:auto"><table class="d10-tbl"><thead><tr><th>Възможна база</th><th>Стойност</th><th>Процент</th><th>Изчислена същественост</th><th>Подходяща</th><th>Избрана</th><th>Методология</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
+}
+function d10SummaryInner(code, c) {
+  c = c || d10Compute(code);
+  const fw = (testAnswers[code] || {})[1] || 'Не е идентифицирана';
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  return `<div class="d10-stats">
+    ${st(escHtml(fw), 'Счетоводна рамка')}
+    ${st(c.sel ? escHtml(c.sel.name) : '—', 'Предложена база')}
+    ${st(c.sel ? d10FmtPct(c.sel.pct) : '—', 'Приложен процент')}
+    ${st(d10Fmt(c.materiality), 'Същественост за ГФО', 'accent')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(c.partnerReview ? 'Да' : 'Не', 'Партньорски преглед', c.partnerReview ? 'badv' : '')}
+    ${st(escHtml(c.status), 'Статус')}
+  </div>`;
+}
+function d10PropHead(code, c) {
+  c = c || d10Compute(code);
+  return `<div class="b40-sum-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="b40-si"><span>Избрана база</span><b>${c.sel ? escHtml(c.sel.name) : '—'}</b></div>
+    <div class="b40-si"><span>Стойност на базата</span><b>${c.sel ? d10Fmt(c.sel.value) : '—'}</b></div>
+    <div class="b40-si"><span>Приложен процент</span><b>${c.sel ? d10FmtPct(c.sel.pct) : '—'}</b></div>
+    <div class="b40-si${c.hasMcorr ? ' alert' : ''}"><span>Същественост за ГФО като цяло</span><b>${d10Fmt(c.materiality)}</b></div>
+  </div>
+  ${c.hasMcorr ? `<div class="b40-flag warn" style="margin:0 16px 4px">Приложена е ръчна корекция на съществеността (${d10Fmt(c.mcorr)}) — изисква обосновка и партньорски преглед.</div>` : ''}`;
+}
+// Финалното предложение: изчисляема глава (пре-рендира се при recalc) + статични редактируеми полета (не се пипат при въвеждане).
+function d10ProposalInner(code, c) {
+  c = c || d10Compute(code);
+  const ans = testAnswers[code] || {};
+  const basis = escHtml(ans['d10-basis'] || ''), alts = escHtml(ans['d10-alts'] || ''), mcorrWhy = escHtml(ans['d10-mcorrwhy'] || '');
+  const mcorr = escHtml(ans['d10-mcorr'] || ''), acc = ans['d10-accept'] || '';
+  return `<div id="d10-prop-head">${d10PropHead(code, c)}</div>
+  <div style="padding:0 16px 14px">
+    <div class="b40-f span" style="margin-top:6px"><span class="b40-fl">Основание за избраната база</span><textarea rows="3" oninput="d10SetText('${code}','d10-basis',this.value)" placeholder="Автоматично генерирано след „Извърши автоматичен анализ" — редактируемо">${basis}</textarea></div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Разгледани алтернативни бази</span><textarea rows="2" oninput="d10SetText('${code}','d10-alts',this.value)" placeholder="Автоматично генерирано — редактируемо">${alts}</textarea></div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема предложението</span><select onchange="d10Set('${code}','d10-accept',this.value)">${d10Opts(acc, ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Ръчно коригирана същественост</span><input inputmode="decimal" value="${mcorr}" placeholder="само при промяна" onchange="d10Set('${code}','d10-mcorr',this.value)"></div>
+    </div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Обосновка за ръчна корекция</span><textarea rows="2" oninput="d10SetText('${code}','d10-mcorrwhy',this.value)" placeholder="попълва се само при ръчна корекция">${mcorrWhy}</textarea></div>
+  </div>`;
+}
+function d10WarnsInner(code, c) {
+  c = c || d10Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : '⚠');
+    const state = w.n === 12 ? '' : (w.hit ? '' : ' — няма');
+    return `<div class="b50-chk ${cls}"><span class="ic">${ic}</span><span>${escHtml(w.name)}${state} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function testMaterialityPanel(code) {
+  const det = testDet(code);
+  if (!det.d10) return '';
+  const c = d10Compute(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d10-summary">${d10SummaryInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Документи</div><div style="padding:12px 14px">${d10DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d10Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d10Analyze('${code}')">Обнови анализа</button></div></div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Извлечени финансови показатели</div><div style="padding:12px 14px">${d10MetricsTable(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на съществеността</div><div style="padding:12px 14px" id="d10-calc">${d10CalcInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за същественост</div><div id="d10-proposal">${d10ProposalInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="d10-warns" class="b50-checks">${d10WarnsInner(code, c)}</div></div>`;
+}
+function d10SetText(code, key, value) { setAnswer(code, key, value); }
+function d10Set(code, key, value) { setAnswer(code, key, value); d10Recalc(code); }
+function d10Recalc(code) {
+  const det = testDet(code); if (!det || !det.d10) return;
+  const c = d10Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set('d10-summary', d10SummaryInner(code, c));
+  set('d10-calc', d10CalcInner(code, c));
+  set('d10-prop-head', d10PropHead(code, c));
+  set('d10-warns', d10WarnsInner(code, c));
+}
+function d10Analyze(code) {
+  const c = d10Compute(code);
+  const ans = testAnswers[code] || {};
+  const fill = (k, v) => { if (v && !((ans[k] || '').trim())) setAnswer(code, k, v); };
+  fill('d10-basis', d10BasisText(c));
+  fill('d10-alts', d10AltText(c));
+  const conclEl = document.getElementById(code + '-concl');
+  const curConcl = ((testNotes[code] || {}).concl || '').trim();
+  if (!curConcl) { const t = d10ConclText(c); setConcl(code, t); if (conclEl) conclEl.value = t; }
+  d10Recalc(code);
+}
+function d10WpHtml(code, secN) {
+  const det = testDet(code); if (!det.d10) return '';
+  const c = d10Compute(code), ans = testAnswers[code] || {};
+  const mRows = (det.d10.metrics || []).map(m => { const x = c.M[m.key]; return `<tr><td>${escHtml(m.name)}</td><td class="c">${d10Fmt(x.cur)}</td><td class="c">${d10Fmt(x.prev)}</td><td class="c">${escHtml(x.src || '—')}</td><td class="c">${escHtml(x.cmp || '—')}</td></tr>`; }).join('');
+  const bRows = c.bases.map(b => `<tr${c.sel && c.sel.key === b.key ? ' style="font-weight:700"' : ''}><td>${escHtml(b.name)}</td><td class="c">${d10Fmt(b.value)}</td><td class="c">${d10FmtPct(b.pct)}</td><td class="c">${d10Fmt(b.mat)}</td><td class="c">${b.suitable ? 'Да' : 'Не'}</td><td class="c">${c.sel && c.sel.key === b.key ? 'Да' : 'Не'}</td></tr>`).join('');
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  const dRows = (det.d10.docs || []).map(d => `<tr><td>${d.n}</td><td>${escHtml(d.name)}</td><td class="c">${d10HasFile(code, 'd' + d.n) ? 'Качен' : 'Липсва'}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Същественост за финансовия отчет като цяло</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Приложена счетоводна рамка</td><td class="c">${escHtml(ans[1] || '—')}</td></tr>
+      <tr><td>Избрана база</td><td class="c">${c.sel ? escHtml(c.sel.name) : '—'}</td></tr>
+      <tr><td>Стойност на базата</td><td class="c">${c.sel ? d10Fmt(c.sel.value) : '—'}</td></tr>
+      <tr><td>Приложен процент</td><td class="c">${c.sel ? d10FmtPct(c.sel.pct) : '—'}</td></tr>
+      <tr><td>Същественост за финансовия отчет като цяло</td><td class="c"><b>${d10Fmt(c.materiality)}</b></td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Необходим партньорски преглед</td><td class="c">${c.partnerReview ? 'Да' : 'Не'}</td></tr>
+      <tr><td>Одиторът приема предложението</td><td class="c">${escHtml(ans['d10-accept'] || '—')}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Документи</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Документ</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Извлечени финансови показатели</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Показател</th><th>Текущ</th><th>Предходен</th><th>Източник</th><th>Сравнено с ОВ</th></tr></thead><tbody>${mRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Изчисление на съществеността</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>База</th><th>Стойност</th><th>Процент</th><th>Същественост</th><th>Подходяща</th><th>Избрана</th></tr></thead><tbody>${bRows}</tbody></table>
+    ${(ans['d10-basis'] || '').trim() ? `<div class="wp-text"><b>Основание за избраната база:</b> ${escHtml(ans['d10-basis'])}</div>` : ''}
+    ${(ans['d10-alts'] || '').trim() ? `<div class="wp-text" style="margin-top:4px"><b>Алтернативни бази:</b> ${escHtml(ans['d10-alts'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Предупреждения и проверки</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -6942,6 +7239,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testItPanel(code)}
       ${testDesignPanel(code)}
       ${testWalkthroughPanel(code)}
+      ${testMaterialityPanel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -6969,6 +7267,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).c40) c40Recalc(code);
   if (testDet(code).c50) c50Recalc(code);
   if (testDet(code).c60) c60Recalc(code);
+  if (testDet(code).d10) d10Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -7097,6 +7396,7 @@ function setAnswer(code, n, value, btnEl) {
   persistAnswers();
   const def = testEffectiveDef(code);
   if (def.mode === 'ai') updatePrompt(code); else updateConclusion(code);
+  if (typeof d10Recalc === 'function' && testDet(code) && testDet(code).d10) d10Recalc(code);
   qProgress(code);
 }
 
@@ -8035,7 +8335,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -8044,6 +8344,7 @@ function testWpSections(code) {
   const c40Html = aiDet.c40 ? c40WpHtml(code, secC40) : '';
   const c50Html = aiDet.c50 ? c50WpHtml(code, secC50) : '';
   const c60Html = aiDet.c60 ? c60WpHtml(code, secC60) : '';
+  const d10Html = aiDet.d10 ? d10WpHtml(code, secD10) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -8073,6 +8374,7 @@ function testWpSections(code) {
       ${c40Html}
       ${c50Html}
       ${c60Html}
+      ${d10Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
