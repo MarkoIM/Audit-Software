@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260702162110"></script>
-<script src="pd-spec.js?v=20260702162110"></script>
-<script src="pd-details.js?v=20260702162110"></script>
-<script src="test-details.js?v=20260702162110"></script>
+<script src="questions.js?v=20260702165910"></script>
+<script src="pd-spec.js?v=20260702165910"></script>
+<script src="pd-details.js?v=20260702165910"></script>
+<script src="test-details.js?v=20260702165910"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -7487,6 +7487,324 @@ function d20WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ── D-30 „Праг за ясно незначителни неточности" — детерминистичен калкулатор (обща същественост × процент 3–10%) ──
+// Преизползва d10Num/d10Fmt/d10FmtPct/d10Opts. Автоматично изтегля съществеността за ГФО (D-10) и за изпълнение (D-20).
+function d30FactorInfl(n, res) {
+  if (!res) return '';
+  const up = 'Увеличава', dn = 'Намалява', no = 'Без влияние';
+  switch (n) {
+    case 1: return res === 'Висок' ? dn : (res === 'Нисък' ? up : no);
+    case 2: return res === 'Да' ? dn : no;
+    case 3: return res === 'Да' ? dn : no;
+    case 4: return res === 'Добра' ? up : dn;
+    case 5: return res === 'Без съществени отклонения' ? up : dn;
+    case 6: return res === 'Ниски' ? up : (res === 'Средни' ? no : dn);
+    case 7: return res === 'Висока' ? dn : (res === 'Ниска' ? up : no);
+    case 8: return res === 'Висока' ? dn : (res === 'Ниска' ? up : no);
+    case 9: return res === 'Да' ? dn : no;
+    case 10: return res === 'Да' ? dn : no;
+    default: return '';
+  }
+}
+function d30Variants() {
+  return [
+    { key: 'cons', name: 'Консервативен подход', pct: 3, note: 'Висок риск, риск от измама, контролни слабости или чувствителни потребители' },
+    { key: 'std', name: 'Стандартен подход', pct: 5, note: 'Среден или нормален риск' },
+    { key: 'ext', name: 'Разширен подход', pct: 7, note: 'Нисък риск и липса на значими отклонения' },
+    { key: 'max', name: 'Максимален подход', pct: 10, note: 'Само при много нисък риск и стабилна контролна среда' },
+    { key: 'man', name: 'Ръчно определен подход', pct: null, note: 'Изисква задължителна обосновка' }
+  ];
+}
+function d30Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const omManual = d10Num(ans['d30-om']);
+  let omAuto = NaN, pmAuto = NaN;
+  try { if (window.testDetails && testDetails['D-10'] && testDetails['D-10'].d10 && typeof d10Compute === 'function') { const dc = d10Compute('D-10'); if (dc && !isNaN(dc.materiality)) omAuto = dc.materiality; } } catch (e) {}
+  try { if (window.testDetails && testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const pc = d20Compute('D-20'); if (pc && !isNaN(pc.pm)) pmAuto = pc.pm; } } catch (e) {}
+  const hasManualOm = !isNaN(omManual);
+  const om = hasManualOm ? omManual : omAuto;
+  const omSource = hasManualOm ? 'Ръчно въведена' : (!isNaN(omAuto) ? 'Предходен тест (D-10)' : '—');
+  const pmManual = d10Num(ans['d30-pm']);
+  const hasManualPm = !isNaN(pmManual);
+  const pmv = hasManualPm ? pmManual : pmAuto;
+  const pmSource = hasManualPm ? 'Ръчно въведена' : (!isNaN(pmAuto) ? 'Предходен тест (D-20)' : '—');
+  const risk = ans['d30p-risk'] || '';
+  const sigRisks = ans['d30p-sigrisk'] === 'Да';
+  const fraud = ans['d30p-fraud'] === 'Да';
+  const ctrlWeak = ans['d30p-ctrlweak'] === 'Да';
+  const priorMis = ans['d30p-priormis'] === 'Да';
+  const expDev = ans['d30p-expdev'] || '';
+  const sensitiveHigh = ans['d30f7-res'] === 'Висока';
+  const regulatoryHigh = ans['d30f8-res'] === 'Висока';
+  const firstYear = ans['d30f9-res'] === 'Да';
+  const consNeeded = ans['d30f10-res'] === 'Да';
+  const ctrlEnvGood = ans['d30f4-res'] === 'Добра';
+  const conservative = risk === 'Високо' || fraud || ctrlWeak || priorMis || expDev === 'Високи' || sensitiveHigh || regulatoryHigh || firstYear || consNeeded;
+  let autoKey = '';
+  if (!risk) autoKey = '';
+  else if (conservative) autoKey = 'cons';
+  else if (risk === 'Средно' || sigRisks || expDev === 'Средни') autoKey = 'std';
+  else if (risk === 'Ниско' && ctrlEnvGood && expDev === 'Ниски' && !sigRisks) autoKey = 'max';
+  else if (risk === 'Ниско') autoKey = 'ext';
+  else autoKey = 'std';
+  const selKey = ans['d30-selapproach'] || autoKey;
+  const manualPct = d10Num(ans['d30-manualpct']);
+  const variants = d30Variants().map(v => {
+    const pct = v.key === 'man' ? manualPct : v.pct;
+    const thr = (!isNaN(om) && !isNaN(pct)) ? om * pct / 100 : NaN;
+    return { key: v.key, name: v.name, pct, thr, note: v.note, suitable: v.key === autoKey };
+  });
+  const sel = variants.find(v => v.key === selKey) || null;
+  const selPct = sel ? sel.pct : NaN;
+  const mcorr = d10Num(ans['d30-mcorr']), hasMcorr = !isNaN(mcorr);
+  const thr = hasMcorr ? mcorr : (sel ? sel.thr : NaN);
+  const isManual = selKey === 'man';
+  const warns = [
+    { n: 1, name: 'Липсва същественост за ГФО като цяло', hit: isNaN(om), level: 'Критично', lc: 'crit', act: 'Първо да се приключи тестът за същественост за ГФО като цяло' },
+    { n: 2, name: 'Липсва същественост за изпълнение', hit: isNaN(pmv), level: 'За допълване', lc: 'warn', act: 'Да се приключи или актуализира тестът за същественост за изпълнение' },
+    { n: 3, name: 'Липсва оценка на риска', hit: !risk, level: 'За допълване', lc: 'warn', act: 'Да се приключи или актуализира оценката на риска' },
+    { n: 4, name: 'Има висок риск на ангажимента', hit: risk === 'Високо', level: 'Висок риск', lc: 'high', act: 'Да се приложи по-консервативен процент' },
+    { n: 5, name: 'Има значими рискове', hit: sigRisks, level: 'За преглед', lc: 'rev', act: 'Да се прецени по-нисък праг' },
+    { n: 6, name: 'Има риск от измама', hit: fraud, level: 'Висок риск', lc: 'high', act: 'Да се приложи по-нисък праг' },
+    { n: 7, name: 'Има контролни слабости', hit: ctrlWeak, level: 'За преглед', lc: 'rev', act: 'Да се прецени по-нисък праг' },
+    { n: 8, name: 'Има некоригирани отклонения от предходен период', hit: priorMis, level: 'За преглед', lc: 'rev', act: 'Да се прецени по-нисък праг' },
+    { n: 9, name: 'Очакваните отклонения са високи', hit: expDev === 'Високи', level: 'За преглед', lc: 'rev', act: 'Да се приложи по-консервативен праг' },
+    { n: 10, name: 'Избраният процент е над 5%', hit: !isNaN(selPct) && selPct > 5, level: 'За преглед', lc: 'rev', act: 'Изисква се обосновка' },
+    { n: 11, name: 'Избраният процент е над 10%', hit: !isNaN(selPct) && selPct > 10, level: 'За корекция', lc: 'fix', act: 'Обичайно не се допуска без изрично одобрение' },
+    { n: 12, name: 'Има ръчна корекция', hit: hasMcorr || isManual, level: 'За преглед', lc: 'rev', act: 'Задължителна обосновка' },
+    { n: 13, name: 'Необходим е партньорски преглед', hit: false, level: '', lc: 'info', act: 'Преглед и одобрение' }
+  ];
+  const partnerReview = risk === 'Високо' || fraud || sigRisks || ctrlWeak || expDev === 'Високи' || hasMcorr || (!isNaN(selPct) && selPct > 5) || isManual;
+  warns[12].hit = partnerReview; warns[12].level = partnerReview ? 'Задължително' : 'Незадължително'; warns[12].lc = partnerReview ? 'high' : 'info';
+  const warnCount = warns.filter(w => w.hit && w.n !== 13).length;
+  const enough = !isNaN(om) && !!risk && !!selKey && !isNaN(thr);
+  let status;
+  if (isNaN(om)) status = 'Непълен';
+  else if (!enough) status = 'За допълване';
+  else if (partnerReview || warnCount > 0) status = 'За преглед';
+  else if (ans[7] === 'Да' || ans['d30-accept'] === 'Да') status = 'Одобрено';
+  else status = 'Предложено';
+  return { om, omSource, pmv, pmSource, hasManualOm, hasManualPm, risk, sigRisks, fraud, ctrlWeak, priorMis, expDev, sensitiveHigh, regulatoryHigh, firstYear, consNeeded, ctrlEnvGood, autoKey, selKey, variants, sel, selPct, thr, mcorr, hasMcorr, isManual, warns, warnCount, partnerReview, enough, status };
+}
+
+function d30BasisText(c) {
+  if (!c.enough || !c.sel) return '';
+  const r = {
+    cons: 'ангажиментът е с повишен риск (висок риск, риск от измама, контролни слабости, чувствителни потребители, регулаторна значимост или първа година одит), което налага по-нисък праг',
+    std: 'ангажиментът е със среден или нормален риск',
+    ext: 'ангажиментът е с нисък риск, стабилна дейност и липса на значими отклонения',
+    max: 'ангажиментът е с много нисък риск, стабилна дейност, добра контролна среда и липса на съществени отклонения в предходни периоди',
+    man: 'е приложен ръчно определен процент по професионална преценка на одитора'
+  };
+  return `Избран е ${c.sel.name.toLowerCase()} (${d10FmtPct(c.selPct)} от съществеността за финансовия отчет като цяло), тъй като ${r[c.sel.key] || 'това е преценено за подходящо'}. Изчисленият праг за ясно незначителни неточности е ${d10Fmt(c.sel.thr)}.`;
+}
+function d30FactorsText(c) {
+  if (!c.enough) return '';
+  const f = [];
+  if (c.risk) f.push('ниво на риск: ' + c.risk.toLowerCase());
+  if (c.sigRisks) f.push('идентифицирани значими рискове');
+  if (c.fraud) f.push('риск от измама');
+  if (c.ctrlWeak) f.push('контролни слабости');
+  if (c.priorMis) f.push('некоригирани отклонения от предходен период');
+  if (c.expDev) f.push('очаквани отклонения: ' + c.expDev.toLowerCase());
+  if (c.sensitiveHigh) f.push('висока чувствителност на потребителите');
+  if (c.regulatoryHigh) f.push('регулаторна или публична значимост');
+  if (c.firstYear) f.push('първа година одит');
+  return 'Основни фактори, повлияли избора на процента: ' + (f.join('; ') || 'няма съществени рискови фактори') + '.';
+}
+function d30ConclText(c) {
+  if (!c.enough || !c.sel) {
+    const miss = [];
+    if (isNaN(c.om)) miss.push('одобрена същественост за финансовия отчет като цяло (тест D-10)');
+    if (isNaN(c.pmv)) miss.push('одобрена същественост за изпълнение (тест D-20)');
+    if (!c.risk) miss.push('оценка на риска на ангажимента');
+    return `Към момента не може да бъде формирано надеждно предложение за праг за ясно незначителни неточности, тъй като липсват следните необходими документи или данни: ${miss.join('; ') || 'необходими данни'}. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.`;
+  }
+  return `След предоставяне на необходимите данни тестът автоматично извърши анализ на съществеността за финансовия отчет като цяло, съществеността за изпълнение, оценените рискове, контролната среда и очакваните отклонения. На база извършения анализ е предложен праг за ясно незначителни неточности в размер на ${d10Fmt(c.thr)}, представляващ ${d10FmtPct(c.selPct)} от съществеността за финансовия отчет като цяло (${d10Fmt(c.om)}). Прагът ще се използва при натрупване и оценка на установените отклонения, като отклонения под този праг обичайно няма да се натрупват, освен когато по своя характер или обстоятелства са релевантни за одиторската оценка. Предложението подлежи на преглед и одобрение от отговорния одитор или партньор.`;
+}
+
+function d30DocsCards(code) {
+  const det = testDet(code);
+  return (det.d30.data || []).map(d => {
+    const up = d10HasFile(code, 'g' + d.n);
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${up ? 'Налична' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">Източник: ${escHtml(d.src)}</div><div style="margin-top:8px" id="tup-${code}-g${d.n}">${testUploadWidget2(code, 'g' + d.n)}</div></div>`;
+  }).join('');
+}
+function d30ParamsTable(code, c) {
+  c = c || d30Compute(code);
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const omRow = `<tr>
+    <td class="base">Същественост за финансовия отчет като цяло</td>
+    <td><input inputmode="decimal" value="${escHtml(ans['d30-om'] || '')}" placeholder="${!isNaN(c.om) && !c.hasManualOm ? 'авто: ' + d10Fmt(c.om) : '0,00'}" onchange="d30Set('${code}','d30-om',this.value)"></td>
+    <td style="font-size:11px;color:var(--p-text3)">${escHtml(c.omSource)}</td>
+    <td><select onchange="d30Set('${code}','d30-omconf',this.value)">${d10Opts(ans['d30-omconf'], ['Да', 'Не'])}</select></td>
+  </tr>`;
+  const pmRow = `<tr>
+    <td class="base">Същественост за изпълнение</td>
+    <td><input inputmode="decimal" value="${escHtml(ans['d30-pm'] || '')}" placeholder="${!isNaN(c.pmv) && !c.hasManualPm ? 'авто: ' + d10Fmt(c.pmv) : '0,00'}" onchange="d30Set('${code}','d30-pm',this.value)"></td>
+    <td style="font-size:11px;color:var(--p-text3)">${escHtml(c.pmSource)}</td>
+    <td><select onchange="d30Set('${code}','d30-pmconf',this.value)">${d10Opts(ans['d30-pmconf'], ['Да', 'Не'])}</select></td>
+  </tr>`;
+  const pRows = (det.d30.params || []).map(p => `<tr>
+    <td class="base">${escHtml(p.name)}</td>
+    <td><select onchange="d30Set('${code}','d30p-${p.key}',this.value)">${d10Opts(ans['d30p-' + p.key], p.opts)}</select></td>
+    <td style="font-size:11px;color:var(--p-text3)">Оценка на риска</td>
+    <td><select onchange="d30Set('${code}','d30p-${p.key}-c',this.value)">${d10Opts(ans['d30p-' + p.key + '-c'], ['Да', 'Не'])}</select></td>
+  </tr>`).join('');
+  return `<div style="overflow-x:auto"><table class="b50-att"><thead><tr><th style="min-width:230px">Показател</th><th>Стойност</th><th>Източник</th><th>Потвърдено</th></tr></thead><tbody>${omRow}${pmRow}${pRows}</tbody></table></div>`;
+}
+function d30FactorsTable(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = (det.d30.factors || []).map(f => {
+    const res = ans['d30f' + f.n + '-res'] || '';
+    const infl = d30FactorInfl(f.n, res);
+    const inflCls = infl === 'Намалява' ? 'no' : (infl === 'Увеличава' ? 'yes' : '');
+    return `<tr>
+      <td class="base">${f.n}. ${escHtml(f.name)}</td>
+      <td><select onchange="d30Set('${code}','d30f${f.n}-res',this.value)">${d10Opts(res, f.opts)}</select></td>
+      <td class="${inflCls}">${infl || '—'}</td>
+      <td><input value="${escHtml(ans['d30f' + f.n + '-note'] || '')}" onchange="d30SetText('${code}','d30f${f.n}-note',this.value)"></td>
+    </tr>`;
+  }).join('');
+  return `<div style="overflow-x:auto"><table class="d10-tbl"><thead><tr><th>Фактор</th><th>Резултат</th><th>Влияние върху прага</th><th>Коментар</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function d30CalcInner(code, c) {
+  c = c || d30Compute(code);
+  const ans = testAnswers[code] || {};
+  const rows = c.variants.map(v => {
+    const isSel = c.sel && c.sel.key === v.key;
+    const pctCell = v.key === 'man'
+      ? `<input class="pct" inputmode="decimal" value="${escHtml(ans['d30-manualpct'] || '')}" placeholder="%" onchange="d30Set('${code}','d30-manualpct',this.value)">`
+      : d10FmtPct(v.pct);
+    return `<tr class="${isSel ? 'sel' : ''}">
+      <td class="base">${escHtml(v.name)}</td>
+      <td class="num">${d10Fmt(c.om)}</td>
+      <td>${pctCell}</td>
+      <td class="num">${d10Fmt(v.thr)}</td>
+      <td class="${v.suitable ? 'yes' : 'no'}">${v.suitable ? 'Да' : 'Не'}</td>
+      <td style="text-align:center"><input type="radio" name="d30sel-${code}" ${isSel ? 'checked' : ''} onchange="d30Set('${code}','d30-selapproach','${v.key}')"></td>
+      <td style="font-size:11px;color:var(--p-text3)">${escHtml(v.note)}</td>
+    </tr>`;
+  }).join('');
+  const note = c.selKey && c.selKey === c.autoKey ? '<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Подходът е избран автоматично според оценката на риска; при нужда одиторът може да го промени. Базата за изчисление е съществеността за финансовия отчет като цяло.</div>' : (c.selKey ? '<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Подходът е избран ръчно от одитора (различен от автоматичното предложение).</div>' : '');
+  return `<div style="overflow-x:auto"><table class="d10-tbl"><thead><tr><th>Вариант</th><th>База (ГФО)</th><th>Процент</th><th>Изчислен праг</th><th>Подходящ</th><th>Избран</th><th>Коментар</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
+}
+function d30SummaryInner(code, c) {
+  c = c || d30Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  return `<div class="d10-stats">
+    ${st(d10Fmt(c.om), 'Същественост за ГФО')}
+    ${st(d10Fmt(c.pmv), 'Същественост за изпълнение')}
+    ${st(c.sel ? d10FmtPct(c.selPct) : '—', 'Предложен процент')}
+    ${st(d10Fmt(c.thr), 'Праг за незначителни', 'accent')}
+    ${st(escHtml(c.risk || '—'), 'Ниво на риск', c.risk === 'Високо' ? 'badv' : (c.risk === 'Средно' ? 'warnv' : ''))}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(c.partnerReview ? 'Да' : 'Не', 'Партньорски преглед', c.partnerReview ? 'badv' : '')}
+    ${st(escHtml(c.status), 'Статус')}
+  </div>`;
+}
+function d30PropHead(code, c) {
+  c = c || d30Compute(code);
+  return `<div class="b40-sum-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="b40-si"><span>Избрана база за изчисление</span><b>Същественост за ГФО като цяло</b></div>
+    <div class="b40-si"><span>Стойност на базата</span><b>${d10Fmt(c.om)}</b></div>
+    <div class="b40-si"><span>Избран подход</span><b>${c.sel ? escHtml(c.sel.name) : '—'}</b></div>
+    <div class="b40-si"><span>Предложен процент</span><b>${c.sel ? d10FmtPct(c.selPct) : '—'}</b></div>
+    <div class="b40-si${c.hasMcorr ? ' alert' : ''}" style="grid-column:1/-1"><span>Праг за ясно незначителни неточности</span><b>${d10Fmt(c.thr)}</b></div>
+  </div>
+  ${c.hasMcorr ? `<div class="b40-flag warn" style="margin:0 16px 4px">Приложена е ръчна корекция (${d10Fmt(c.mcorr)}) — изисква обосновка и партньорски преглед.</div>` : ''}`;
+}
+function d30ProposalInner(code, c) {
+  c = c || d30Compute(code);
+  const ans = testAnswers[code] || {};
+  const basis = escHtml(ans['d30-basis'] || ''), factors = escHtml(ans['d30-factors'] || ''), mcorrWhy = escHtml(ans['d30-mcorrwhy'] || '');
+  const mcorr = escHtml(ans['d30-mcorr'] || ''), acc = ans['d30-accept'] || '';
+  return `<div id="d30-prop-head">${d30PropHead(code, c)}</div>
+  <div style="padding:0 16px 14px">
+    <div class="b40-f span" style="margin-top:6px"><span class="b40-fl">Основание за избрания процент</span><textarea rows="3" oninput="d30SetText('${code}','d30-basis',this.value)" placeholder="Автоматично генерирано след „Извърши автоматичен анализ" — редактируемо">${basis}</textarea></div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Основни фактори, повлияли избора</span><textarea rows="2" oninput="d30SetText('${code}','d30-factors',this.value)" placeholder="Автоматично генерирано — редактируемо">${factors}</textarea></div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема предложението</span><select onchange="d30Set('${code}','d30-accept',this.value)">${d10Opts(acc, ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Ръчно коригиран праг</span><input inputmode="decimal" value="${mcorr}" placeholder="само при промяна" onchange="d30Set('${code}','d30-mcorr',this.value)"></div>
+    </div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Обосновка за ръчна корекция</span><textarea rows="2" oninput="d30SetText('${code}','d30-mcorrwhy',this.value)" placeholder="попълва се само при ръчна корекция">${mcorrWhy}</textarea></div>
+  </div>`;
+}
+function d30WarnsInner(code, c) {
+  c = c || d30Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : '⚠');
+    const state = w.n === 13 ? '' : (w.hit ? '' : ' — няма');
+    return `<div class="b50-chk ${cls}"><span class="ic">${ic}</span><span>${escHtml(w.name)}${state} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function testTrivialPanel(code) {
+  const det = testDet(code);
+  if (!det.d30) return '';
+  const c = d30Compute(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими данни и документи</div><div style="padding:12px 14px">${d30DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d30ParamsTable(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на прага</div><div style="padding:12px 14px">${d30FactorsTable(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на прага за ясно незначителни неточности</div><div style="padding:12px 14px" id="d30-calc">${d30CalcInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за праг</div><div id="d30-proposal">${d30ProposalInner(code, c)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="d30-warns" class="b50-checks">${d30WarnsInner(code, c)}</div></div>`;
+}
+function d30SetText(code, key, value) { setAnswer(code, key, value); }
+function d30Set(code, key, value) { setAnswer(code, key, value); d30Recalc(code); }
+function d30Recalc(code) {
+  const det = testDet(code); if (!det || !det.d30) return;
+  const c = d30Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set('d30-summary', d30SummaryInner(code, c));
+  set('d30-calc', d30CalcInner(code, c));
+  set('d30-prop-head', d30PropHead(code, c));
+  set('d30-warns', d30WarnsInner(code, c));
+}
+function d30Analyze(code) {
+  const c = d30Compute(code);
+  const ans = testAnswers[code] || {};
+  const fill = (k, v) => { if (v && !((ans[k] || '').trim())) setAnswer(code, k, v); };
+  fill('d30-basis', d30BasisText(c));
+  fill('d30-factors', d30FactorsText(c));
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const t = d30ConclText(c); setConcl(code, t); if (conclEl) conclEl.value = t; }
+  d30Recalc(code);
+}
+function d30WpHtml(code, secN) {
+  const det = testDet(code); if (!det.d30) return '';
+  const c = d30Compute(code), ans = testAnswers[code] || {};
+  const pRows = (det.d30.params || []).map(p => `<tr><td>${escHtml(p.name)}</td><td class="c">${escHtml(ans['d30p-' + p.key] || '—')}</td></tr>`).join('');
+  const fRows = (det.d30.factors || []).map(f => { const res = ans['d30f' + f.n + '-res'] || '—'; return `<tr><td>${escHtml(f.name)}</td><td class="c">${escHtml(res)}</td><td class="c">${escHtml(d30FactorInfl(f.n, ans['d30f' + f.n + '-res']) || '—')}</td></tr>`; }).join('');
+  const vRows = c.variants.map(v => `<tr${c.sel && c.sel.key === v.key ? ' style="font-weight:700"' : ''}><td>${escHtml(v.name)}</td><td class="c">${d10FmtPct(v.pct)}</td><td class="c">${d10Fmt(v.thr)}</td><td class="c">${c.sel && c.sel.key === v.key ? 'Да' : 'Не'}</td></tr>`).join('');
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Праг за ясно незначителни неточности</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Същественост за ГФО като цяло</td><td class="c">${d10Fmt(c.om)}</td></tr>
+      <tr><td>Същественост за изпълнение</td><td class="c">${d10Fmt(c.pmv)}</td></tr>
+      <tr><td>Избрана база за прага</td><td class="c">Същественост за ГФО като цяло</td></tr>
+      <tr><td>Избран подход</td><td class="c">${c.sel ? escHtml(c.sel.name) : '—'}</td></tr>
+      <tr><td>Предложен процент</td><td class="c">${c.sel ? d10FmtPct(c.selPct) : '—'}</td></tr>
+      <tr><td>Праг за ясно незначителни неточности</td><td class="c"><b>${d10Fmt(c.thr)}</b></td></tr>
+      <tr><td>Оценено ниво на риск</td><td class="c">${escHtml(c.risk || '—')}</td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Необходим партньорски преглед</td><td class="c">${c.partnerReview ? 'Да' : 'Не'}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Входни параметри</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>${pRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Оценка на факторите</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Фактор</th><th>Резултат</th><th>Влияние</th></tr></thead><tbody>${fRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Изчисление на прага</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Вариант</th><th>Процент</th><th>Изчислен праг</th><th>Избран</th></tr></thead><tbody>${vRows}</tbody></table>
+    ${(ans['d30-basis'] || '').trim() ? `<div class="wp-text"><b>Основание за избрания процент:</b> ${escHtml(ans['d30-basis'])}</div>` : ''}
+    ${(ans['d30-factors'] || '').trim() ? `<div class="wp-text" style="margin-top:4px"><b>Основни фактори:</b> ${escHtml(ans['d30-factors'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Предупреждения и проверки</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -7540,6 +7858,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testWalkthroughPanel(code)}
       ${testMaterialityPanel(code)}
       ${testPerfMatPanel(code)}
+      ${testTrivialPanel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -7569,6 +7888,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).c60) c60Recalc(code);
   if (testDet(code).d10) d10Recalc(code);
   if (testDet(code).d20) d20Recalc(code);
+  if (testDet(code).d30) d30Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -7699,6 +8019,7 @@ function setAnswer(code, n, value, btnEl) {
   if (def.mode === 'ai') updatePrompt(code); else updateConclusion(code);
   if (typeof d10Recalc === 'function' && testDet(code) && testDet(code).d10) d10Recalc(code);
   if (typeof d20Recalc === 'function' && testDet(code) && testDet(code).d20) d20Recalc(code);
+  if (typeof d30Recalc === 'function' && testDet(code) && testDet(code).d30) d30Recalc(code);
   qProgress(code);
 }
 
@@ -8637,7 +8958,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -8648,6 +8969,7 @@ function testWpSections(code) {
   const c60Html = aiDet.c60 ? c60WpHtml(code, secC60) : '';
   const d10Html = aiDet.d10 ? d10WpHtml(code, secD10) : '';
   const d20Html = aiDet.d20 ? d20WpHtml(code, secD20) : '';
+  const d30Html = aiDet.d30 ? d30WpHtml(code, secD30) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -8679,6 +9001,7 @@ function testWpSections(code) {
       ${c60Html}
       ${d10Html}
       ${d20Html}
+      ${d30Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
