@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260702211013"></script>
-<script src="pd-spec.js?v=20260702211013"></script>
-<script src="pd-details.js?v=20260702211013"></script>
-<script src="test-details.js?v=20260702211013"></script>
+<script src="questions.js?v=20260702212656"></script>
+<script src="pd-spec.js?v=20260702212656"></script>
+<script src="pd-details.js?v=20260702212656"></script>
+<script src="test-details.js?v=20260702212656"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4209,7 +4209,6 @@ const auditPhases = [
         { code:'D-10', name:'Същественост за ФО като цяло', mos:'ISA 320', ai:['analytics'], status:'done' },
         { code:'D-20', name:'Същественост за изпълнение', mos:'ISA 320', ai:[], status:'done' },
         { code:'D-30', name:'Праг за ясно незначителни неточности', mos:'ISA 320, 450', ai:[], status:'done' },
-        { code:'D-40', name:'Преразглеждане на същественост', mos:'ISA 320', ai:[], status:'done' },
       ]},
       { code:'E', name:'Оценка на риска и одиторски подход', mos:'ISA 315; 330', status:'active', wds:[
         { code:'E-10', name:'Регистър на рисковете от съществени неточности', mos:'ISA 315', ai:['classify','analytics','qa'], status:'done' },
@@ -8489,11 +8488,12 @@ function entShowSection(code) {
 }
 
 function entShowWd(code) {
-  entMainTop();
   let phaseN = 0, sectionCode = null, sectionName = '', wd = null;
   if (code.startsWith('ПД')) { wd = permanentFile.find(d => d.code === code); sectionCode = 'ПД'; sectionName = 'Постоянно досие'; }
   else { for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionCode = s.code; sectionName = s.name; wd = s.wds.find(w => w.code === code); break; } } }
-  const name = wd ? wd.name : code;
+  if (!wd) return;   // премахнат/несъществуващ работен документ — не се отваря (напр. изтрит тест)
+  entMainTop();
+  const name = wd.name;
   const wdBtn = document.querySelector(`#ent-tree .ent-wd[data-code="${code}"]`);
   if (wdBtn) { const se = wdBtn.closest('.ent-sec'); if (se) entOpenSec(se); else entOpenPhase(wdBtn.closest('.ent-phase')); }
   entSetActive(wdBtn);
