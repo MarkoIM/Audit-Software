@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809144819"></script>
-<script src="pd-spec.js?v=20260809144819"></script>
-<script src="pd-details.js?v=20260809144819"></script>
-<script src="test-details.js?v=20260809144819"></script>
+<script src="questions.js?v=20260809151010"></script>
+<script src="pd-spec.js?v=20260809151010"></script>
+<script src="pd-details.js?v=20260809151010"></script>
+<script src="test-details.js?v=20260809151010"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5422,7 +5422,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00) return '';   // G-00 има собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.g00 || det.g05) return '';   // G-00/G-05 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -8295,6 +8295,249 @@ function g00WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ── G-05 „Нематериални активи – програма за одит и одиторски подход" — описателен тест с решения + програма ──
+// Поток: одиторът попълва 6-те решения → „Генерирай подход и програма" (гейтван) → авто-предложение + програма.
+// Фиксиран промпт + динамичен блок „Избрани параметри" (6-те решения). Excel = визуален бутон (без backend).
+function g05Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gp = (k) => ans['g05p-' + k] || '';
+  const approach = gp('approach'), risk = gp('risk'), reliance = gp('reliance'), scope = gp('scope'), sample = gp('sample'), expert = gp('expert');
+  const allAnswered = !!(approach && risk && reliance && scope && sample && expert);
+  const highRisk = risk === 'Висок' || risk === 'Значим', significant = risk === 'Значим';
+  const relOn = reliance === 'Да' || reliance === 'Частично';
+  const coePlan = ans['g05-coeplan'] === 'Да';
+  const partner = ans['g05-partner'] === 'Да';
+  const sampleParamsMissing = sample === 'Да' && !((ans['g05-samplepop'] || '').trim() && (ans['g05-samplemethod'] || '').trim() && (ans['g05-samplesize'] || '').trim());
+  const expertMissing = expert === 'Да' && !((ans['g05-expertarea'] || '').trim());
+  const g00linked = (typeof aiTestHasData === 'function' && aiTestHasData('G-00')) || ans['g05in1-ok'] === 'Да';
+  const conclSet = ((testNotes[code] || {}).concl || '').trim().length > 0;
+  const warns = [
+    { n: 1, name: 'Липсва избран подход за раздела', hit: !approach, level: 'Критично', lc: 'crit', act: 'Одиторът трябва да избере подход.' },
+    { n: 2, name: 'Липсва оценен риск', hit: !risk, level: 'Критично', lc: 'crit', act: 'Да се попълни оценката на риска по раздела.' },
+    { n: 3, name: 'Подход „Само контроли" без разчитане на контроли', hit: approach === 'Само контроли' && reliance !== 'Да', level: 'За корекция', lc: 'fix', act: 'Да се промени подходът или да се документира разчитане на контроли.' },
+    { n: 4, name: 'Висок или значим риск със стандартен обхват', hit: highRisk && scope === 'Стандартен', level: 'За преглед', lc: 'rev', act: 'Да се обоснове стандартният обхват или да се разшири.' },
+    { n: 5, name: 'Разчитане на контроли без тест на оперативна ефективност', hit: relOn && !coePlan, level: 'За корекция', lc: 'fix', act: 'Да се планира тест на контроли или да не се разчита на контроли.' },
+    { n: 6, name: 'Извадка = Да, но липсват параметри на извадката', hit: sampleParamsMissing, level: 'За допълване', lc: 'warn', act: 'Да се определят съвкупност, метод и размер на извадката.' },
+    { n: 7, name: 'Експерт = Да, но липсва област на експерта', hit: expertMissing, level: 'За допълване', lc: 'warn', act: 'Да се посочи вид експерт и причина.' },
+    { n: 8, name: 'Значим риск без партньорски преглед', hit: significant && !partner, level: 'За преглед', lc: 'rev', act: 'Да се маркира за партньорски преглед.' },
+    { n: 9, name: 'Няма връзка към G-00 или водещ лист', hit: !g00linked, level: 'За допълване', lc: 'warn', act: 'Да се свърже с водещ лист G-00.' },
+    { n: 10, name: 'Няма финално заключение', hit: allAnswered && !conclSet, level: 'За допълване', lc: 'warn', act: 'Да се генерира или попълни заключение.' }
+  ];
+  const warnCount = warns.filter(w => w.hit).length;
+  const fix = warns.some(w => w.hit && w.level === 'За корекция');
+  const rev = warns.some(w => w.hit && w.level === 'За преглед');
+  const add = warns.some(w => w.hit && w.level === 'За допълване');
+  const canGen = allAnswered;
+  const accepted = ans['g05-accept'] === 'Да';
+  let status;
+  if (!allAnswered) status = 'Непълен';
+  else if (fix) status = 'За корекция';
+  else if (rev) status = 'За преглед';
+  else if (add) status = 'За допълване';
+  else status = accepted ? 'Завършен' : 'Завършен с бележка';
+  return { approach, risk, reliance, scope, sample, expert, allAnswered, highRisk, significant, relOn, coePlan, partner, sampleParamsMissing, expertMissing, g00linked, conclSet, warns, warnCount, fix, rev, add, canGen, accepted, status };
+}
+function g05ParamsBlock(c) {
+  const v = (x) => x || '—';
+  return 'ИЗБРАНИ ПАРАМЕТРИ:\n- Подход за раздела: ' + v(c.approach) + '\n- Оценен риск: ' + v(c.risk) + '\n- Разчитане на контроли: ' + v(c.reliance) + '\n- Обхват на процедурите: ' + v(c.scope) + '\n- Включва извадка: ' + v(c.sample) + '\n- Нужен експерт/специалист: ' + v(c.expert);
+}
+function g05ApproachText(c) {
+  if (!c.allAnswered) return '';
+  let base;
+  if (c.risk === 'Значим') base = 'целеви или разширен подход с фокус върху придобивания, амортизация, обезценка, права и оповестявания; задължително обосноваване на процедурите и партньорски преглед';
+  else if (c.risk === 'Висок') base = 'разширен или целеви обхват с фокус върху придобивания, амортизация, обезценка, права и оповестявания';
+  else if (c.risk === 'Среден') base = 'комбиниран подход или подход по същество с разширени процедури според преценката на екипа';
+  else base = 'подход „По същество" със стандартен обхват';
+  const rel = c.reliance === 'Да' ? ' Планира се разчитане на контроли — изисква връзка към тестове на контроли и оценка на оперативната ефективност.' : (c.reliance === 'Частично' ? ' Планира се частично разчитане на контроли.' : ' Не се планира разчитане на контроли.');
+  return 'Предложен одиторски отговор: ' + base + '.' + rel;
+}
+function g05ConclText(code, c) {
+  if (!c.allAnswered) {
+    const miss = [];
+    if (!c.approach) miss.push('подход за раздела'); if (!c.risk) miss.push('оценен риск'); if (!c.reliance) miss.push('разчитане на контроли');
+    if (!c.scope) miss.push('обхват на процедурите'); if (!c.sample) miss.push('включва извадка'); if (!c.expert) miss.push('нужен експерт/специалист');
+    return 'Към момента не може да бъде формиран надежден одиторски подход за раздел „Нематериални активи", тъй като липсват следните задължителни параметри или данни: ' + (miss.join('; ') || 'необходими данни') + '. След попълване на липсващата информация тестът следва да бъде актуализиран.';
+  }
+  return 'На база попълнените параметри по теста е предложен ' + c.approach.toLowerCase() + ' за раздел „Нематериални активи". Оцененият риск по раздела е ' + c.risk.toLowerCase() + ', а обхватът на процедурите е определен като ' + c.scope.toLowerCase() + '. Решението относно разчитането на контроли е „' + c.reliance + '". Предложената програма включва процедури за съпоставяне на водещия лист, проверка на състава и движението на НМА, придобивания, амортизация, полезен живот, обезценка, класификация и оповестяване. Предложението подлежи на преглед и одобрение от отговорния одитор или партньор преди изпълнение на процедурите.';
+}
+function g05SummaryInner(code, c) {
+  c = c || g05Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  return `<div class="d10-stats">
+    ${st(escHtml(c.approach || '—'), 'Подход')}
+    ${st(escHtml(c.risk || '—'), 'Оценен риск', c.significant ? 'badv' : (c.risk === 'Висок' ? 'warnv' : ''))}
+    ${st(escHtml(c.scope || '—'), 'Обхват')}
+    ${st(escHtml(c.reliance || '—'), 'Разчитане на контроли')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(escHtml(c.status), 'Статус', c.status === 'За корекция' ? 'badv' : (c.status === 'За преглед' ? 'warnv' : ''))}
+  </div>`;
+}
+function g05DecisionsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const cells = (det.g05.params || []).map(p => `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}</span><select onchange="g05SetParam('${code}','${p.key}',this.value)">${d10Opts(ans['g05p-' + p.key], p.opts)}</select></div>`).join('');
+  const cond = [];
+  if (c.relOn) cond.push(`<div class="b40-f"><span class="b40-fl">Планиран тест на оперативната ефективност на контролите?</span><select onchange="g05Set('${code}','g05-coeplan',this.value)">${d10Opts(ans['g05-coeplan'], ['Да', 'Не'])}</select></div>`);
+  if (c.sample === 'Да') {
+    cond.push(`<div class="b40-f"><span class="b40-fl">Извадка: съвкупност</span><input value="${escHtml(ans['g05-samplepop'] || '')}" oninput="g05Set('${code}','g05-samplepop',this.value)"></div>`);
+    cond.push(`<div class="b40-f"><span class="b40-fl">Извадка: метод</span><input value="${escHtml(ans['g05-samplemethod'] || '')}" oninput="g05Set('${code}','g05-samplemethod',this.value)"></div>`);
+    cond.push(`<div class="b40-f"><span class="b40-fl">Извадка: размер</span><input value="${escHtml(ans['g05-samplesize'] || '')}" oninput="g05Set('${code}','g05-samplesize',this.value)"></div>`);
+  }
+  if (c.expert === 'Да') {
+    cond.push(`<div class="b40-f"><span class="b40-fl">Област на експерта</span><input value="${escHtml(ans['g05-expertarea'] || '')}" placeholder="оценител, IT, правен, актюер…" oninput="g05Set('${code}','g05-expertarea',this.value)"></div>`);
+    cond.push(`<div class="b40-f"><span class="b40-fl">Причина за експерт</span><input value="${escHtml(ans['g05-expertreason'] || '')}" oninput="g05SetText('${code}','g05-expertreason',this.value)"></div>`);
+  }
+  if (c.significant) cond.push(`<div class="b40-f"><span class="b40-fl">Планиран партньорски преглед?</span><select onchange="g05Set('${code}','g05-partner',this.value)">${d10Opts(ans['g05-partner'], ['Да', 'Не'])}</select></div>`);
+  const condHtml = cond.length ? `<div class="b40-fields" style="margin-top:12px">${cond.join('')}</div>` : '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Решения по подхода</div><div style="padding:12px 14px">
+    <div class="b40-fields">${cells}</div>
+    ${condHtml}
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Шестте решения са задължителни и определят одиторския подход, програмата и проверките.</div>
+  </div></div>`;
+}
+function g05InputsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const g00Auto = (typeof aiTestHasData === 'function' && aiTestHasData('G-00'));
+  const rows = (det.g05.inputs || []).map((it, idx) => {
+    const n = idx + 1, cur = ans['g05in' + n + '-ok'] || (n === 1 && g00Auto ? 'Да' : '');
+    return `<tr><td class="role">${n}</td><td>${escHtml(it.name)}</td><td style="font-size:11px;color:var(--p-text3)">${escHtml(it.src)}</td><td><select onchange="g05Set('${code}','g05in${n}-ok',this.value)">${d10Opts(cur, ['Да', 'Не', 'Неприложимо'])}</select></td><td><input value="${escHtml(ans['g05in' + n + '-note'] || '')}" placeholder="връзка / бележка" onchange="g05SetText('${code}','g05in${n}-note',this.value)"></td></tr>`;
+  }).join('');
+  const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g05Generate('${code}')">Генерирай подход и програма</button>`;
+  const gen = ans['g05-generated'] === '1';
+  const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g05Generate('${code}')">Обнови</button>` : '';
+  const xlsBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g05ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>` : '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Препоръчителни входни данни</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:760px"><thead><tr><th>№</th><th>Данни / документ</th><th>Източник</th><th>Налично</th><th>Връзка / бележка</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">${c.canGen ? 'Готово за генериране на подхода и програмата.' : 'Попълнете 6-те решения по подхода, за да активирате бутона.'}</div>
+    <div id="g05-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
+  </div></div>`;
+}
+function g05PromptCard(code, c) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:12px 14px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">Тестът генерира предложение по фиксирана методология. Долу можете да прегледате инструкцията и текущо избраните параметри.</div>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap"><div id="g05-aiparams" style="font-weight:700;color:var(--p-text1)">${escHtml(g05ParamsBlock(c))}</div>
+<div style="border-top:1px dashed var(--p-border);margin:8px 0"></div>${escHtml(det.aiPrompt || '')}</div>
+    </details>
+  </div></div>`;
+}
+function g05MatrixCard() {
+  const rows = [
+    ['Риск = Нисък и няма разчитане на контроли', 'Подход „По същество" със стандартен обхват.'],
+    ['Риск = Среден и контролите са частично релевантни', 'Комбиниран подход или по същество с разширени процедури.'],
+    ['Риск = Висок', 'Разширен или целеви обхват; фокус върху придобивания, амортизация, обезценка, права и оповестявания.'],
+    ['Риск = Значим', 'Целеви или разширен подход; задължително обосноваване и партньорски преглед.'],
+    ['Разчитане на контроли = Да', 'Изисква връзка към тестове на контроли и оценка на оперативната ефективност.'],
+    ['Подход = Само контроли', 'Позволява се само при доказано разчитане на контроли; иначе грешка.'],
+    ['Включва извадка = Да', 'Изисква съвкупност, метод и размер по ISA 530.'],
+    ['Нужен експерт = Да', 'Изисква описание на областта на експерта и причината.']
+  ].map(r => `<tr><td>${escHtml(r[0])}</td><td>${escHtml(r[1])}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Матрица за логика на подхода (справка)</div><div style="padding:12px 14px"><details><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--p-accent)">Покажи матрицата</summary><div style="overflow-x:auto;margin-top:8px"><table class="b50-att"><thead><tr><th>Условие</th><th>Автоматично предложение / проверка</th></tr></thead><tbody>${rows}</tbody></table></div></details></div></div>`;
+}
+function g05ApproachCard(code, c) {
+  const ans = testAnswers[code] || {};
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на избрания подход</div><div style="padding:12px 14px">
+    <div class="b40-f span"><span class="b40-fl">Автоматично предложен одиторски отговор</span><textarea rows="3" oninput="g05SetText('${code}','g05-approachtext',this.value)" placeholder="Генерира се при „Генерирай подход и програма" — редактируемо">${escHtml(ans['g05-approachtext'] || '')}</textarea></div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Необходими последващи процедури</span><textarea rows="2" oninput="g05SetText('${code}','g05-followproc',this.value)" placeholder="връзки към тестове G-10, G-20 и др.">${escHtml(ans['g05-followproc'] || '')}</textarea></div>
+  </div></div>`;
+}
+function g05ProgramCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const rows = (det.g05.program || []).map((p, idx) => {
+    const n = idx + 1;
+    return `<tr><td class="role">${n}</td><td>${escHtml(p.proc)}</td><td>${escHtml(p.assertions)}</td><td>${escHtml(p.scope)}</td><td style="font-size:11px;color:var(--p-text3)">${escHtml(p.src)}</td><td><input value="${escHtml(ans['g05pr' + n + '-ref'] || '')}" onchange="g05SetText('${code}','g05pr${n}-ref',this.value)"></td><td><select onchange="g05SetText('${code}','g05pr${n}-status',this.value)">${d10Opts(ans['g05pr' + n + '-status'], ['Планирана', 'Изпълнена'])}</select></td></tr>`;
+  }).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Програма за одит (автоматично предложение)</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:940px"><thead><tr><th>№</th><th style="min-width:240px">Процедура</th><th>Твърдения</th><th>Обхват</th><th>Източник / доказателство</th><th>Препратка</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Програмата е предложение спрямо избрания риск, подход и обхват. Процедурите могат да се коригират от одитора.</div>
+  </div></div>`;
+}
+function g05ChecksInner(code, c) {
+  c = c || g05Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : '⚠');
+    return `<div class="b50-chk ${cls}" style="padding:6px 14px"><span class="ic">${ic}</span><span>${escHtml(w.name)}${w.hit ? '' : ' — няма'} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function g05ChecksCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Проверки и предупреждения</div><div id="g05-checks" class="b50-checks">${g05ChecksInner(code, c)}</div></div>`;
+}
+function g05ConclCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (k, type) => `<input${type ? ' type="' + type + '"' : ''} value="${escHtml(ans[k] || '')}" onchange="g05SetText('${code}','${k}',this.value)">`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Заключение по раздела</div><div style="padding:12px 14px">
+    <div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема заключението</span><select onchange="g05Set('${code}','g05-accept',this.value)">${d10Opts(ans['g05-accept'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Изготвил</span>${it('g05-by')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата</span>${it('g05-date', 'date')}</div>
+      <div class="b40-f"><span class="b40-fl">Прегледал</span>${it('g05-rev')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата на преглед</span>${it('g05-revdate', 'date')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Финалният текст на заключението се попълва в полето „Заключение" под въпросите; черновата се генерира при „Генерирай подход и програма".</div>
+  </div></div>`;
+}
+function g05PanelInner(code) {
+  const ans = testAnswers[code] || {}, c = g05Compute(code), gen = ans['g05-generated'] === '1';
+  const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g05-summary">${g05SummaryInner(code, c)}</div></div>`;
+  const body = gen
+    ? (g05ApproachCard(code, c) + g05MatrixCard() + g05ProgramCard(code, c) + g05ChecksCard(code, c) + g05ConclCard(code, c))
+    : `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Подход и програма</div><div style="padding:16px;color:var(--p-text3);font-size:13px;line-height:1.6">Попълнете 6-те решения по подхода и натиснете <b>„Генерирай подход и програма"</b>. Тогава ще се създадат автоматично предложеният одиторски отговор, програмата за одит, проверките и заключението.</div></div>`;
+  return summary + g05DecisionsCard(code, c) + g05InputsCard(code, c) + g05PromptCard(code, c) + body;
+}
+function testG05Panel(code) {
+  const det = testDet(code);
+  if (!det.g05) return '';
+  return `<div id="g05-panel">${g05PanelInner(code)}</div>`;
+}
+function g05Rerender(code) { const el = document.getElementById('g05-panel'); if (el) el.innerHTML = g05PanelInner(code); }
+function g05SetParam(code, key, value) { setAnswer(code, 'g05p-' + key, value); g05Rerender(code); }
+function g05Set(code, key, value) { setAnswer(code, key, value); g05Recalc(code); }
+function g05SetText(code, key, value) { setAnswer(code, key, value); }
+function g05Recalc(code) {
+  const det = testDet(code); if (!det || !det.g05) return;
+  const c = g05Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set('g05-summary', g05SummaryInner(code, c));
+  set('g05-checks', g05ChecksInner(code, c));
+  set('g05-aiparams', escHtml(g05ParamsBlock(c)));
+}
+function g05Generate(code) {
+  const c = g05Compute(code); if (!c.canGen) return;
+  setAnswer(code, 'g05-generated', '1');
+  const ans = testAnswers[code] || {};
+  if (!((ans['g05-approachtext'] || '').trim())) setAnswer(code, 'g05-approachtext', g05ApproachText(c));
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const tx = g05ConclText(code, c); setConcl(code, tx); if (conclEl) conclEl.value = tx; }
+  g05Rerender(code);
+}
+function g05ExcelInfo(code) { const el = document.getElementById('g05-excel-note'); if (el) el.textContent = 'Експортът в Excel (.xlsx) — с обобщение на подхода, програмата за одит и проверките — ще бъде добавен в следваща версия.'; }
+function g05WpHtml(code, secN) {
+  const det = testDet(code); if (!det.g05) return '';
+  const c = g05Compute(code), ans = testAnswers[code] || {};
+  const pRows = (det.g05.program || []).map((p, idx) => { const n = idx + 1; return `<tr><td>${n}</td><td>${escHtml(p.proc)}</td><td>${escHtml(p.assertions)}</td><td>${escHtml(p.scope)}</td><td class="c">${escHtml(ans['g05pr' + n + '-status'] || 'Планирана')}</td></tr>`; }).join('');
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Нематериални активи – програма за одит и одиторски подход</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение на избрания подход</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Подход за раздела</td><td class="c">${escHtml(c.approach || '—')}</td></tr>
+      <tr><td>Оценен риск</td><td class="c">${escHtml(c.risk || '—')}</td></tr>
+      <tr><td>Разчитане на контроли</td><td class="c">${escHtml(c.reliance || '—')}</td></tr>
+      <tr><td>Обхват на процедурите</td><td class="c">${escHtml(c.scope || '—')}</td></tr>
+      <tr><td>Включва извадка</td><td class="c">${escHtml(c.sample || '—')}</td></tr>
+      <tr><td>Нужен експерт/специалист</td><td class="c">${escHtml(c.expert || '—')}</td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    ${(ans['g05-approachtext'] || '').trim() ? `<div class="wp-text"><b>Предложен одиторски отговор:</b> ${escHtml(ans['g05-approachtext'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Програма за одит</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Процедура</th><th>Твърдения</th><th>Обхват</th><th>Статус</th></tr></thead><tbody>${pRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Проверки и предупреждения</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -8350,6 +8593,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testPerfMatPanel(code)}
       ${testTrivialPanel(code)}
       ${testG00Panel(code)}
+      ${testG05Panel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -8381,6 +8625,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).d20) d20Recalc(code);
   if (testDet(code).d30) d30Recalc(code);
   if (testDet(code).g00) g00Recalc(code);
+  if (testDet(code).g05) g05Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -8513,6 +8758,7 @@ function setAnswer(code, n, value, btnEl) {
   if (typeof d20Recalc === 'function' && testDet(code) && testDet(code).d20) d20Recalc(code);
   if (typeof d30Recalc === 'function' && testDet(code) && testDet(code).d30) d30Recalc(code);
   if (typeof g00Recalc === 'function' && testDet(code) && testDet(code).g00) g00Recalc(code);
+  if (typeof g05Recalc === 'function' && testDet(code) && testDet(code).g05) g05Recalc(code);
   qProgress(code);
 }
 
@@ -9452,7 +9698,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -9465,6 +9711,7 @@ function testWpSections(code) {
   const d20Html = aiDet.d20 ? d20WpHtml(code, secD20) : '';
   const d30Html = aiDet.d30 ? d30WpHtml(code, secD30) : '';
   const g00Html = aiDet.g00 ? g00WpHtml(code, secG00) : '';
+  const g05Html = aiDet.g05 ? g05WpHtml(code, secG05) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -9498,6 +9745,7 @@ function testWpSections(code) {
       ${d20Html}
       ${d30Html}
       ${g00Html}
+      ${g05Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
