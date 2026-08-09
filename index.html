@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809155950"></script>
-<script src="pd-spec.js?v=20260809155950"></script>
-<script src="pd-details.js?v=20260809155950"></script>
-<script src="test-details.js?v=20260809155950"></script>
+<script src="questions.js?v=20260809163812"></script>
+<script src="pd-spec.js?v=20260809163812"></script>
+<script src="pd-details.js?v=20260809163812"></script>
+<script src="test-details.js?v=20260809163812"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8117,10 +8117,10 @@ function g00DocsCard(code, c) {
     const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'По избор');
     return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g00UploadWidget(code, key)}</div></div>`;
   }).join('');
-  const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g00Generate('${code}')">Генерирай водещ лист</button>`;
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="g00Generate('${code}')">Генерирай водещ лист</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  const hint = c.canGen ? 'Готово за генериране на водещия лист.' : 'Изберете 4-те параметъра и качете документа за избрания източник, за да активирате бутона.';
+  const hint = 'AI ще изготви водещия лист с наличната информация; всяко поле може да се редактира или коригира от одитора.';
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="g00-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
@@ -8222,9 +8222,7 @@ function g00ConclCard(code, c) {
 function g00PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g00Compute(code), gen = ans['g00-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g00-summary">${g00SummaryInner(code, c)}</div></div>`;
-  const body = gen
-    ? (g00LeadCard(code, c) + g00RefsCard(code, c) + g00ChecksCard(code, c) + g00ConclCard(code, c))
-    : `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Водещ лист</div><div style="padding:16px;color:var(--p-text3);font-size:13px;line-height:1.6">Изберете параметрите на теста и качете необходимите документи, след което натиснете <b>„Генерирай водещ лист"</b>. Тогава ще се създадат водещият лист, препратките, проверките и заключението.</div></div>`;
+  const body = g00LeadCard(code, c) + g00RefsCard(code, c) + g00ChecksCard(code, c) + g00ConclCard(code, c);
   return summary + g00ParamsCard(code, c) + g00DocsCard(code, c) + g00PromptCard(code, c) + body;
 }
 function testG00Panel(code) {
@@ -8258,7 +8256,7 @@ function g00Recalc(code) {
   t('g00-tot-cur', g00Fmt(c.totCur)); t('g00-tot-prev', c.cmpOn ? g00Fmt(c.totPrev) : '—'); t('g00-tot-chg', c.cmpOn ? g00Fmt(c.totChg) : '—'); t('g00-tot-pct', c.cmpOn ? g00Pct(c.totPct) : '—'); t('g00-tot-deb', g00Fmt(c.totDeb)); t('g00-tot-cred', g00Fmt(c.totCred));
 }
 function g00Generate(code) {
-  const c = g00Compute(code); if (!c.canGen) return;
+  const c = g00Compute(code);
   setAnswer(code, 'g00-generated', '1');
   const ans = testAnswers[code] || {};
   if (c.enough && !((ans['g00-signif'] || '').trim())) setAnswer(code, 'g00-signif', g00SignifText(c));
@@ -8401,14 +8399,14 @@ function g05InputsCard(code, c) {
     const n = idx + 1, cur = ans['g05in' + n + '-ok'] || (n === 1 && g00Auto ? 'Да' : '');
     return `<tr><td class="role">${n}</td><td>${escHtml(it.name)}</td><td style="font-size:11px;color:var(--p-text3)">${escHtml(it.src)}</td><td><select onchange="g05Set('${code}','g05in${n}-ok',this.value)">${d10Opts(cur, ['Да', 'Не', 'Неприложимо'])}</select></td><td><input value="${escHtml(ans['g05in' + n + '-note'] || '')}" placeholder="връзка / бележка" onchange="g05SetText('${code}','g05in${n}-note',this.value)"></td></tr>`;
   }).join('');
-  const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g05Generate('${code}')">Генерирай подход и програма</button>`;
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="g05Generate('${code}')">Генерирай подход и програма</button>`;
   const gen = ans['g05-generated'] === '1';
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g05Generate('${code}')">Обнови</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g05ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Препоръчителни входни данни</div><div style="padding:12px 14px">
     <div style="overflow-x:auto"><table class="b50-att" style="min-width:760px"><thead><tr><th>№</th><th>Данни / документ</th><th>Източник</th><th>Налично</th><th>Връзка / бележка</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
-    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">${c.canGen ? 'Готово за генериране на подхода и програмата.' : 'Попълнете 6-те решения по подхода, за да активирате бутона.'}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще изготви подхода и програмата с наличната информация; всяко поле може да се редактира от одитора.</div>
     <div id="g05-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
   </div></div>`;
 }
@@ -8482,9 +8480,7 @@ function g05ConclCard(code, c) {
 function g05PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g05Compute(code), gen = ans['g05-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g05-summary">${g05SummaryInner(code, c)}</div></div>`;
-  const body = gen
-    ? (g05ApproachCard(code, c) + g05MatrixCard() + g05ProgramCard(code, c) + g05ChecksCard(code, c) + g05ConclCard(code, c))
-    : `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Подход и програма</div><div style="padding:16px;color:var(--p-text3);font-size:13px;line-height:1.6">Попълнете 6-те решения по подхода и натиснете <b>„Генерирай подход и програма"</b>. Тогава ще се създадат автоматично предложеният одиторски отговор, програмата за одит, проверките и заключението.</div></div>`;
+  const body = g05ApproachCard(code, c) + g05MatrixCard() + g05ProgramCard(code, c) + g05ChecksCard(code, c) + g05ConclCard(code, c);
   return summary + g05DecisionsCard(code, c) + g05InputsCard(code, c) + g05PromptCard(code, c) + body;
 }
 function testG05Panel(code) {
@@ -8505,7 +8501,7 @@ function g05Recalc(code) {
   set('g05-aiparams', escHtml(g05ParamsBlock(c)));
 }
 function g05Generate(code) {
-  const c = g05Compute(code); if (!c.canGen) return;
+  const c = g05Compute(code);
   setAnswer(code, 'g05-generated', '1');
   const ans = testAnswers[code] || {};
   if (!((ans['g05-approachtext'] || '').trim())) setAnswer(code, 'g05-approachtext', g05ApproachText(c));
@@ -8680,13 +8676,13 @@ function g10DocsCard(code, c) {
     const key = 'g10d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
     return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g10Upload(code, key)}</div></div>`;
   }).join('');
-  const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g10Generate('${code}')">Изпълни автоматичен тест</button>`;
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="g10Generate('${code}')">Изпълни автоматичен тест</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g10Generate('${code}')">Обнови резултата</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
-    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">${c.canGen ? 'Готово за изпълнение на теста.' : 'Изберете 5-те параметъра и качете основния счетоводен регистър (популация), за да активирате бутона.'}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
     <div id="g10-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
   </div></div>`;
 }
@@ -8798,9 +8794,7 @@ function g10ConclCard(code, c) {
 function g10PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g10Compute(code), gen = ans['g10-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g10-summary">${g10SummaryInner(code, c)}</div></div>`;
-  const body = gen
-    ? (g10PopCard(code, c) + g10ItemsCard(code, c) + g10ExcCard(code, c) + g10ChecksCard(code, c) + g10ConclCard(code, c))
-    : `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Резултати</div><div style="padding:16px;color:var(--p-text3);font-size:13px;line-height:1.6">Изберете 5-те параметъра и качете основния счетоводен регистър, след което натиснете <b>„Изпълни автоматичен тест"</b>. Тогава ще се създадат популацията, тестваните позиции, изключенията, проверките и заключението.</div></div>`;
+  const body = g10PopCard(code, c) + g10ItemsCard(code, c) + g10ExcCard(code, c) + g10ChecksCard(code, c) + g10ConclCard(code, c);
   return summary + g10ParamsCard(code, c) + g10DocsCard(code, c) + g10PromptCard(code, c) + body;
 }
 function testG10Panel(code) {
@@ -8839,7 +8833,7 @@ function g10Recalc(code) {
   t('g10-tot-open', g00Fmt(c.totOpen)); t('g10-tot-deb', g00Fmt(c.totDeb)); t('g10-tot-cred', g00Fmt(c.totCred)); t('g10-tot-close', g00Fmt(c.totClose)); t('g10-tot-amort', g00Fmt(c.totAmort)); t('g10-tot-nbv', g00Fmt(c.totNbv));
 }
 function g10Generate(code) {
-  const c = g10Compute(code); if (!c.canGen) return;
+  const c = g10Compute(code);
   setAnswer(code, 'g10-generated', '1');
   const ans = testAnswers[code] || {};
   if (!((ans['g10-scopetext'] || '').trim())) setAnswer(code, 'g10-scopetext', g10ScopeText(c));
@@ -8999,13 +8993,13 @@ function g20DocsCard(code, c) {
     const key = 'g20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
     return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g20Upload(code, key)}</div></div>`;
   }).join('');
-  const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g20Generate('${code}')">Изпълни автоматичен анализ</button>`;
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="g20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
-    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">${c.canGen ? 'Готово за изпълнение на анализа.' : 'Изберете 4-те параметъра и качете основния регистър/салда, за да активирате бутона.'}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
     <div id="g20-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
   </div></div>`;
 }
@@ -9092,9 +9086,7 @@ function g20ConclCard(code, c) {
 function g20PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g20Compute(code), gen = ans['g20-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g20-summary">${g20SummaryInner(code, c)}</div></div>`;
-  const body = gen
-    ? (g20DataCard(code, c) + g20CmpCard(code, c) + g20DevCard(code, c) + g20ChecksCard(code, c) + g20ConclCard(code, c))
-    : `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Резултати</div><div style="padding:16px;color:var(--p-text3);font-size:13px;line-height:1.6">Изберете 4-те параметъра и качете основния регистър/салда, след което натиснете <b>„Изпълни автоматичен анализ"</b>. Тогава ще се създадат данните, изграждането на очакването, отклоненията, проверките и заключението.</div></div>`;
+  const body = g20DataCard(code, c) + g20CmpCard(code, c) + g20DevCard(code, c) + g20ChecksCard(code, c) + g20ConclCard(code, c);
   return summary + g20ParamsCard(code, c) + g20DocsCard(code, c) + g20PromptCard(code, c) + body;
 }
 function testG20Panel(code) {
@@ -9126,7 +9118,7 @@ function g20Recalc(code) {
   c.cmp.forEach(r => { const de = document.getElementById('g20c-' + r.key + '-dev'); if (de) de.textContent = g00Fmt(r.dev); const pe = document.getElementById('g20c-' + r.key + '-devpct'); if (pe) pe.textContent = g00Pct(r.devpct); const oe = document.getElementById('g20c-' + r.key + '-over'); if (oe) { oe.textContent = r.over ? 'Да' : 'Не'; oe.style.color = r.over ? '#d92d20' : 'var(--p-text3)'; } });
 }
 function g20Generate(code) {
-  const c = g20Compute(code); if (!c.canGen) return;
+  const c = g20Compute(code);
   setAnswer(code, 'g20-generated', '1');
   const ans = testAnswers[code] || {};
   if (c.enough && !((ans['g20-devsummary'] || '').trim())) setAnswer(code, 'g20-devsummary', g20DevSummary(c));
