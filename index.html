@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809153547"></script>
-<script src="pd-spec.js?v=20260809153547"></script>
-<script src="pd-details.js?v=20260809153547"></script>
-<script src="test-details.js?v=20260809153547"></script>
+<script src="questions.js?v=20260809154428"></script>
+<script src="pd-spec.js?v=20260809154428"></script>
+<script src="pd-details.js?v=20260809154428"></script>
+<script src="test-details.js?v=20260809154428"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8119,7 +8119,7 @@ function g00DocsCard(code, c) {
   }).join('');
   const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g00Generate('${code}')">Генерирай водещ лист</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g00Generate('${code}')">Обнови анализа</button>` : '';
-  const xlsBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   const hint = c.canGen ? 'Готово за генериране на водещия лист.' : 'Изберете 4-те параметъра и качете документа за избрания източник, за да активирате бутона.';
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="g00-docs">
     ${slots}
@@ -8404,7 +8404,7 @@ function g05InputsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g05Generate('${code}')">Генерирай подход и програма</button>`;
   const gen = ans['g05-generated'] === '1';
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g05Generate('${code}')">Обнови</button>` : '';
-  const xlsBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g05ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g05ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Препоръчителни входни данни</div><div style="padding:12px 14px">
     <div style="overflow-x:auto"><table class="b50-att" style="min-width:760px"><thead><tr><th>№</th><th>Данни / документ</th><th>Източник</th><th>Налично</th><th>Връзка / бележка</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
@@ -8682,7 +8682,7 @@ function g10DocsCard(code, c) {
   }).join('');
   const genBtn = `<button class="btn btn-primary btn-sm"${c.canGen ? '' : ' disabled style="opacity:.55;cursor:not-allowed"'} onclick="g10Generate('${code}')">Изпълни автоматичен тест</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g10Generate('${code}')">Обнови резултата</button>` : '';
-  const xlsBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
