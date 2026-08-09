@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260804210750"></script>
-<script src="pd-spec.js?v=20260804210750"></script>
-<script src="pd-details.js?v=20260804210750"></script>
-<script src="test-details.js?v=20260804210750"></script>
+<script src="questions.js?v=20260809140410"></script>
+<script src="pd-spec.js?v=20260809140410"></script>
+<script src="pd-details.js?v=20260809140410"></script>
+<script src="test-details.js?v=20260809140410"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4209,24 +4209,6 @@ const auditPhases = [
         { code:'D-10', name:'Същественост за ФО като цяло', mos:'ISA 320', ai:['analytics'], status:'done' },
         { code:'D-20', name:'Същественост за изпълнение', mos:'ISA 320', ai:[], status:'done' },
         { code:'D-30', name:'Праг за ясно незначителни неточности', mos:'ISA 320, 450', ai:[], status:'done' },
-      ]},
-      { code:'E', name:'Оценка на риска и одиторски подход', mos:'ISA 315; 330', status:'active', wds:[
-        { code:'E-10', name:'Регистър на рисковете от съществени неточности', mos:'ISA 315', ai:['classify','analytics','qa'], status:'done' },
-        { code:'E-20', name:'Значими рискове и присъщ риск', mos:'ISA 315', ai:['analytics','classify'], status:'done' },
-        { code:'E-30', name:'Връзка риск → реакция', mos:'ISA 330', ai:['classify'], status:'active' },
-        { code:'E-40', name:'Матрица на одиторския подход', mos:'ISA 330', ai:['classify'], status:'active' },
-      ]},
-      { code:'F', name:'Специфични рискови области', mos:'ISA 240, 250, 402, 510, 540, 550, 570, 610, 620', status:'active', wds:[
-        { code:'F-10', name:'Рискове от измами и обсъждане в екипа', mos:'ISA 240', ai:['qa','anomaly','classify'], status:'done' },
-        { code:'F-20', name:'Заобикаляне на контролите – тест на дневникови записи', mos:'ISA 240', ai:['anomaly','fulltest','extract'], status:'active' },
-        { code:'F-30', name:'Спазване на закони и разпоредби', mos:'ISA 250', ai:['qa'], status:'pending' },
-        { code:'F-40', name:'Свързани лица – процедури', mos:'ISA 550', ai:['extract','match'], status:'pending' },
-        { code:'F-50', name:'Действащо предприятие – планиране', mos:'ISA 570', ai:['analytics','qa'], status:'pending' },
-        { code:'F-60', name:'Счетоводни приблизителни оценки', mos:'ISA 540', ai:['analytics','review','qa'], status:'pending' },
-        { code:'F-70', name:'Начални салда (първоначален ангажимент)', mos:'ISA 510', ai:[], status:'pending' },
-        { code:'F-80', name:'Експерт на одитора', mos:'ISA 620', ai:[], status:'pending' },
-        { code:'F-90', name:'Работа на вътрешния одит', mos:'ISA 610', ai:[], status:'pending' },
-        { code:'F-100', name:'Обслужващи организации', mos:'ISA 402', ai:['qa'], status:'pending' },
       ]},
     ]
   },
