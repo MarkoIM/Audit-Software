@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809163812"></script>
-<script src="pd-spec.js?v=20260809163812"></script>
-<script src="pd-details.js?v=20260809163812"></script>
-<script src="test-details.js?v=20260809163812"></script>
+<script src="questions.js?v=20260809170633"></script>
+<script src="pd-spec.js?v=20260809170633"></script>
+<script src="pd-details.js?v=20260809170633"></script>
+<script src="test-details.js?v=20260809170633"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5422,7 +5422,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00 || det.g05 || det.g10 || det.g20) return '';   // G-00/G-05/G-10/G-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30) return '';   // G-00/G-05/G-10/G-20/G-30 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -9156,6 +9156,411 @@ function g20WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ===================== G-30: НМА – извадки и обхват на тестовете =====================
+function g30Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gp = (k) => ans['g30p-' + k] || '';
+  const method = gp('method'), base = gp('base'), size = gp('size'), output = gp('output');
+  const paramsComplete = !!(method && base && size && output);
+  // SPM ← D-20; праг за явно незначителни неточности ← D-30
+  let spm = d10Num(ans['g30-spm']);
+  if (isNaN(spm)) { try { if (testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const p = d20Compute('D-20'); if (p && !isNaN(p.pm)) spm = p.pm; } } catch (e) {} }
+  let ctt = d10Num(ans['g30-ctt']);
+  if (isNaN(ctt)) { try { if (testDetails['D-30'] && testDetails['D-30'].d30 && typeof d30Compute === 'function') { const p = d30Compute('D-30'); if (p && !isNaN(p.thr)) ctt = p.thr; } } catch (e) {} }
+  // анализ на популацията (страти)
+  const strata = (det.g30.strata || []).map((s, idx) => {
+    const n = idx + 1;
+    return { i: n, name: s.name, cnt: d10Num(ans['g30pop' + n + '-count']), val: d10Num(ans['g30pop' + n + '-value']), risk: ans['g30pop' + n + '-risk'] || '', incl: ans['g30pop' + n + '-incl'] || '', note: ans['g30pop' + n + '-note'] || '' };
+  });
+  const totCount = strata.reduce((a, s) => a + (isNaN(s.cnt) ? 0 : s.cnt), 0);
+  const totValue = strata.reduce((a, s) => a + (isNaN(s.val) ? 0 : s.val), 0);
+  strata.forEach(s => { s.pct = (totValue > 0 && !isNaN(s.val)) ? s.val / totValue * 100 : NaN; });
+  const hasPop = totCount > 0 || totValue > 0;
+  const hasHighRisk = strata.some(s => s.risk === 'Висок' && s.incl !== 'Не');
+  // съгласуване с G-00/ОВ
+  const ovtotal = d10Num(ans['g30-ovtotal']);
+  const reconOff = !isNaN(ovtotal) && totValue > 0 && Math.abs(totValue - ovtotal) > 0.5;
+  // предложен размер на извадката
+  let sizeSuggested = NaN;
+  if (hasPop) {
+    if (size === 'Малък') sizeSuggested = Math.max(1, Math.ceil(totCount * 0.10));
+    else if (size === 'Среден') sizeSuggested = Math.max(1, Math.ceil(totCount * 0.25));
+    else if (size === 'Голям') sizeSuggested = Math.max(1, Math.ceil(totCount * 0.50));
+    else if (size === 'Авто') {
+      if (!isNaN(spm) && spm > 0 && totValue > 0) sizeSuggested = Math.ceil(totValue / spm);
+      else sizeSuggested = Math.ceil(totCount * 0.25);
+      if (hasHighRisk) sizeSuggested += 2;
+      sizeSuggested = Math.max(1, sizeSuggested);
+    }
+    if (totCount > 0) sizeSuggested = Math.min(sizeSuggested, totCount);
+  }
+  // избрани позиции
+  const selN = Math.max(1, parseInt(ans['g30-seln'] || (det.g30.defSel || 3), 10) || 3);
+  const sels = [];
+  for (let i = 1; i <= selN; i++) {
+    const v = d10Num(ans['g30sel' + i + '-value']);
+    sels.push({ i, id: ans['g30sel' + i + '-id'] || '', acc: ans['g30sel' + i + '-acc'] || '', desc: ans['g30sel' + i + '-desc'] || '', date: ans['g30sel' + i + '-date'] || '', value: v, reason: ans['g30sel' + i + '-reason'] || '', link: ans['g30sel' + i + '-link'] || '', status: ans['g30sel' + i + '-status'] || '', has: (ans['g30sel' + i + '-id'] || '').trim() !== '' || (ans['g30sel' + i + '-desc'] || '').trim() !== '' || !isNaN(v) });
+  }
+  const selFilled = sels.filter(s => s.has);
+  const selCount = selFilled.length;
+  const selValue = selFilled.reduce((a, s) => a + (isNaN(s.value) ? 0 : s.value), 0);
+  const hasKeySel = selFilled.some(s => s.reason === 'Ключова');
+  // резултати и грешки
+  const resN = Math.max(1, parseInt(ans['g30-resn'] || (det.g30.defRes || 2), 10) || 2);
+  const ress = [];
+  for (let i = 1; i <= resN; i++) {
+    const rep = d10Num(ans['g30res' + i + '-rep']), aud = d10Num(ans['g30res' + i + '-aud']);
+    const err = (!isNaN(rep) && !isNaN(aud)) ? rep - aud : NaN;
+    ress.push({ i, item: ans['g30res' + i + '-item'] || '', assertion: ans['g30res' + i + '-assertion'] || '', rep, aud, err, char: ans['g30res' + i + '-char'] || '', corr: ans['g30res' + i + '-corr'] || '', proj: ans['g30res' + i + '-proj'] || '', has: (ans['g30res' + i + '-item'] || '').trim() !== '' || !isNaN(rep) || !isNaN(aud) });
+  }
+  const resFilled = ress.filter(r => r.has);
+  const errRows = ress.filter(r => !isNaN(r.err) && Math.abs(r.err) > 0.0001);
+  const errCount = errRows.length;
+  const errValue = errRows.reduce((a, r) => a + Math.abs(r.err), 0);
+  const errNoEval = errRows.some(r => !r.proj);
+  // проекция на грешката
+  const canProject = method && method !== 'Преценка';
+  let projectedError = NaN;
+  if (canProject && selValue > 0 && errValue > 0 && totValue > 0) projectedError = errValue / selValue * totValue;
+  const anomalous = ans['g30-anomalous'] === 'Да';
+  const projOverSpm = !isNaN(projectedError) && !isNaN(spm) && projectedError > spm;
+  const projOverCtt = !isNaN(projectedError) && !isNaN(ctt) && projectedError > ctt;
+  // метод ↔ базис
+  const methodBaseMismatch = method === 'MUS' && !!base && base !== 'Стойност';
+  // ръчна корекция / приемане
+  const manual = ans['g30-manual'] === 'Да';
+  const manualNote = (ans['g30-manualnote'] || '').trim() !== '';
+  const accepted = ans['g30-accept'] === 'Да';
+  const partnerReview = projOverSpm || method === 'Преценка' || manual || anomalous;
+  const warns = [
+    { n: 1, name: 'Липсва популация или регистър на НМА', hit: !hasPop, level: 'Критично', lc: 'crit', act: 'Да се изиска регистър/аналитична справка за нематериалните активи.' },
+    { n: 2, name: 'Липсва същественост за изпълнение (SPM)', hit: isNaN(spm), level: 'За допълване', lc: 'warn', act: 'Да се използва одобрена SPM (D-20) или ръчно въведена стойност.' },
+    { n: 3, name: 'Избраният метод не съответства на базиса', hit: methodBaseMismatch, level: 'За преглед', lc: 'rev', act: 'Да се провери методологията на подбор (MUS изисква стойностен базис).' },
+    { n: 4, name: 'Популацията не е съгласувана с G-00/ОВ', hit: reconOff, level: 'За корекция', lc: 'fix', act: 'Да се съгласува популацията с водещия лист/оборотната ведомост.' },
+    { n: 5, name: 'Извадката не включва ключови позиции', hit: hasHighRisk && selCount > 0 && !hasKeySel, level: 'За преглед', lc: 'rev', act: 'Да се добавят позиции над прага/с висок риск.' },
+    { n: 6, name: 'Установена грешка без оценка на ефекта', hit: errCount > 0 && errNoEval, level: 'За корекция', lc: 'fix', act: 'Да се оцени и проектира ефектът, когато е приложимо.' },
+    { n: 7, name: 'Проектираната грешка надвишава допустимата (SPM)', hit: projOverSpm, level: 'Висок риск', lc: 'high', act: 'Да се планират допълнителни процедури.' },
+    { n: 8, name: 'Има ръчна корекция на извадката без обосновка', hit: manual && !manualNote, level: 'За преглед', lc: 'rev', act: 'Да се изиска обосновка от одитора.' },
+    { n: 9, name: 'Необходим партньорски преглед', hit: partnerReview, level: partnerReview ? 'Задължително' : 'Незадължително', lc: partnerReview ? 'high' : 'info', act: 'Да се изпрати за преглед от отговорен одитор/партньор.' }
+  ];
+  const warnCount = warns.filter(w => w.hit && w.n !== 9).length;
+  const canGen = paramsComplete && hasPop;
+  const enough = paramsComplete && hasPop && selCount > 0;
+  let status;
+  if (!hasPop) status = 'Непълен';
+  else if (!paramsComplete) status = 'За допълване';
+  else if ((manual && !manualNote) || (errCount > 0 && errNoEval) || reconOff) status = 'За корекция';
+  else if (projOverSpm) status = 'За преглед';
+  else if (selCount === 0) status = 'За допълване';
+  else if (accepted) status = 'Завършен';
+  else status = 'За преглед';
+  return { method, base, size, output, paramsComplete, spm, ctt, strata, totCount, totValue, hasPop, hasHighRisk, ovtotal, reconOff, sizeSuggested, sels, selFilled, selCount, selValue, hasKeySel, ress, resFilled, errRows, errCount, errValue, errNoEval, canProject, projectedError, anomalous, projOverSpm, projOverCtt, methodBaseMismatch, manual, manualNote, accepted, partnerReview, warns, warnCount, canGen, enough, status };
+}
+function g30ParamsBlock(c) {
+  const v = (x) => x || '—';
+  return 'ИЗБРАНИ ПАРАМЕТРИ:\n- Метод: ' + v(c.method) + '\n- Базис: ' + v(c.base) + '\n- Размер: ' + v(c.size) + (isNaN(c.sizeSuggested) ? '' : ' (предложен: ' + c.sizeSuggested + ' поз.)') + '\n- Изход: ' + v(c.output) + '\n- SPM: ' + (isNaN(c.spm) ? '—' : g00Fmt(c.spm)) + '\n- Праг за явно незначителни неточности: ' + (isNaN(c.ctt) ? '—' : g00Fmt(c.ctt));
+}
+function g30ConclText(code, c) {
+  if (!c.enough) {
+    const miss = [];
+    if (!c.hasPop) miss.push('популация/регистър на нематериалните активи');
+    if (!c.paramsComplete) miss.push('всички параметри на извадката (метод, базис, размер, изход)');
+    if (c.selCount === 0) miss.push('избрани позиции за тестване');
+    return 'Към момента не може да бъде формирана надеждна извадка за раздел „Нематериални активи", тъй като липсват следните необходими документи или данни: ' + (miss.join('; ') || 'необходими данни') + '. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.';
+  }
+  return 'На база предоставените данни тестът автоматично извърши анализ на популацията за раздел „Нематериални активи" (брой позиции: ' + c.totCount + ', обща стойност: ' + g00Fmt(c.totValue) + '), приложи избрания метод на извадка („' + c.method.toLowerCase() + '", базис „' + c.base.toLowerCase() + '", размер „' + c.size.toLowerCase() + '") и предложи ' + c.selCount + ' позиции за последващо тестване. ' + (c.errCount > 0 ? 'Установени са ' + c.errCount + ' грешки на обща стойност ' + g00Fmt(c.errValue) + (isNaN(c.projectedError) ? '' : ', с проектирана грешка ' + g00Fmt(c.projectedError)) + '. ' : 'Не са установени грешки в тестваните позиции. ') + 'Резултатите следва да се използват при изпълнение на детайлните процедури по раздел G и подлежат на преглед и одобрение от одитора.';
+}
+function g30SummaryInner(code, c) {
+  c = c || g30Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  return `<div class="d10-stats">
+    ${st(escHtml(c.method || '—'), 'Метод')}
+    ${st(escHtml(c.base || '—'), 'Базис')}
+    ${st(c.totCount + ' поз. · ' + g00Fmt(c.totValue), 'Популация', c.hasPop ? 'accent' : 'warnv')}
+    ${st('' + c.selCount, 'Избрани позиции', c.selCount ? 'accent' : '')}
+    ${st(isNaN(c.projectedError) ? '—' : g00Fmt(c.projectedError), 'Проектирана грешка', c.projOverSpm ? 'badv' : '')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(escHtml(c.status), 'Статус', (c.status === 'За преглед' || c.status === 'За корекция') ? 'warnv' : '')}
+  </div>`;
+}
+function g30ParamsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const cells = (det.g30.params || []).map(p => `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}</span><select onchange="g30SetParam('${code}','${p.key}',this.value)">${d10Opts(ans['g30p-' + p.key], p.opts)}</select></div>`).join('');
+  const spmPh = !isNaN(c.spm) && !(ans['g30-spm'] || '').trim() ? 'авто от D-20: ' + g00Fmt(c.spm) : '0,00';
+  const cttPh = !isNaN(c.ctt) && !(ans['g30-ctt'] || '').trim() ? 'авто от D-30: ' + g00Fmt(c.ctt) : '0,00';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Параметри на теста</div><div style="padding:12px 14px">
+    <div class="b40-fields">${cells}</div>
+    <div class="b40-fields" style="margin-top:12px">
+      <div class="b40-f"><span class="b40-fl">Същественост за изпълнение (SPM)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30-spm'] || '')}" placeholder="${spmPh}" onchange="g30Set('${code}','g30-spm',this.value)"></div>
+      <div class="b40-f"><span class="b40-fl">Праг за явно незначителни неточности</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30-ctt'] || '')}" placeholder="${cttPh}" onchange="g30Set('${code}','g30-ctt',this.value)"></div>
+      <div class="b40-f"><span class="b40-fl">Бележки на одитора (обосновка)</span><input value="${escHtml(ans['g30-parnote'] || '')}" onchange="g30SetText('${code}','g30-parnote',this.value)"></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Четирите параметъра определят метода, базиса, размера и вида изход на извадката. SPM се тегли автоматично от D-20, а прагът за явно незначителни неточности — от D-30; и двете могат да се редактират.</div>
+  </div></div>`;
+}
+function g30Upload(code, key) {
+  const files = testFiles(code, key);
+  const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="g30RemoveFile('${code}','${key}',${i})">✕</button></div>`).join('') + '</div>' : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="g30AddFiles('${code}','${key}',this.files)"></label>${fl}`;
+}
+function g30DocsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['g30-generated'] === '1';
+  const slots = (det.g30.docs || []).map(d => {
+    const key = 'g30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g30Upload(code, key)}</div></div>`;
+  }).join('');
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="g30Generate('${code}')">Изпълни автоматичен анализ</button>`;
+  const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g30Generate('${code}')">Обнови анализа</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g30-docs">
+    ${slots}
+    <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
+    <div id="g30-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
+  </div></div>`;
+}
+function g30PromptCard(code, c) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:12px 14px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">Тестът се изпълнява по фиксирана методология. Долу можете да прегледате инструкцията и текущо избраните параметри.</div>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap"><div id="g30-aiparams" style="font-weight:700;color:var(--p-text1)">${escHtml(g30ParamsBlock(c))}</div>
+<div style="border-top:1px dashed var(--p-border);margin:8px 0"></div>${escHtml(det.aiPrompt || '')}</div>
+    </details>
+  </div></div>`;
+}
+function g30PopCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const inp = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30pop' + i + '-' + f] || '')}" onchange="g30Set('${code}','g30pop${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="g30Set('${code}','g30pop${i}-${f}',this.value)">${d10Opts(ans['g30pop' + i + '-' + f], opts)}</select>`;
+  const txt = (i, f) => `<input value="${escHtml(ans['g30pop' + i + '-' + f] || '')}" onchange="g30SetText('${code}','g30pop${i}-${f}',this.value)">`;
+  const rows = c.strata.map(s => `<tr>
+    <td class="role">${s.i}</td><td class="base">${escHtml(s.name)}</td>
+    <td>${inp(s.i, 'count')}</td><td>${inp(s.i, 'value')}</td>
+    <td style="text-align:right;white-space:nowrap" id="g30pop${s.i}-pct">${g00Pct(s.pct)}</td>
+    <td>${sel(s.i, 'risk', ['Нисък', 'Среден', 'Висок'])}</td>
+    <td>${sel(s.i, 'incl', ['Да', 'Не'])}</td>
+    <td>${txt(s.i, 'note')}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Анализ на популацията</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:920px"><thead><tr><th>№</th><th style="min-width:180px">Група / вид актив</th><th>Брой позиции</th><th>Обща стойност</th><th>% от популацията</th><th>Риск</th><th>Включване</th><th style="min-width:140px">Коментар</th></tr></thead><tbody>${rows}
+      <tr style="font-weight:700;background:var(--p-surface2)"><td></td><td>Общо</td><td style="text-align:right" id="g30pop-tc">${c.totCount}</td><td style="text-align:right" id="g30pop-tv">${g00Fmt(c.totValue)}</td><td style="text-align:right">100%</td><td colspan="3"></td></tr>
+    </tbody></table></div>
+    <div class="b40-fields" style="margin-top:12px">
+      <div class="b40-f"><span class="b40-fl">Общо салдо по G-00 / ОВ (за съгласуване)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30-ovtotal'] || '')}" placeholder="0,00" onchange="g30Set('${code}','g30-ovtotal',this.value)"></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Колоната „% от популацията" и редът „Общо" се изчисляват автоматично. Ако общото салдо по G-00/ОВ е въведено и се различава от сбора, се задейства проверка за съгласуване.</div>
+  </div></div>`;
+}
+function g30DesignCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const ta = (k, ph) => `<textarea rows="2" oninput="g30SetText('${code}','${k}',this.value)" placeholder="${escHtml(ph || '')}">${escHtml(ans[k] || '')}</textarea>`;
+  const it = (k, ph) => `<input value="${escHtml(ans[k] || '')}" placeholder="${escHtml(ph || '')}" onchange="g30SetText('${code}','${k}',this.value)">`;
+  const sel = (k, opts) => `<select onchange="g30Set('${code}','${k}',this.value)">${d10Opts(ans[k], opts)}</select>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Дизайн на извадката</div><div style="padding:12px 14px">
+    <div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Метод на подбор</span><input value="${escHtml(c.method || '—')}" readonly style="background:var(--p-surface2)"></div>
+      <div class="b40-f"><span class="b40-fl">Базис</span><input value="${escHtml(c.base || '—')}" readonly style="background:var(--p-surface2)"></div>
+      <div class="b40-f"><span class="b40-fl">Размер (избран)</span><input value="${escHtml(c.size || '—')}" readonly style="background:var(--p-surface2)"></div>
+      <div class="b40-f"><span class="b40-fl">Предложен размер (авто)</span><input value="${isNaN(c.sizeSuggested) ? '—' : c.sizeSuggested}" readonly style="background:var(--p-surface2);text-align:right" id="g30-suggsize"></div>
+      <div class="b40-f"><span class="b40-fl">Ръчно определен размер</span><input inputmode="numeric" style="text-align:right" value="${escHtml(ans['g30-sizeman'] || '')}" placeholder="по избор" onchange="g30SetText('${code}','g30-sizeman',this.value)"></div>
+      <div class="b40-f"><span class="b40-fl">Единица на извадката</span>${sel('g30-unit', ['Актив', 'Счетоводен запис', 'Движение', 'Документ', 'Парична единица (MUS)'])}</div>
+      <div class="b40-f"><span class="b40-fl">Проекция на грешки</span>${sel('g30-projflag', ['Да', 'Не', 'Неприложимо'])}</div>
+      <div class="b40-f"><span class="b40-fl">Връзка с последващи тестове</span>${it('g30-link', 'напр. G-10, G-40/G-50')}</div>
+    </div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Цел на извадката</span>${ta('g30-goal', 'Проверка на пълнота, съществуване, права, признаване, оценка, амортизация и представяне на НМА.')}</div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Критерии за ключови позиции</span>${ta('g30-crit', 'Позиции над прага, високорискови активи, нови придобивания, обезценки, необичайни корекции и отписвания.')}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Предложеният размер се изчислява автоматично спрямо размера, риска, стойността на популацията и SPM. При „Авто" се използва стойностно ориентирана оценка (популация ÷ SPM).</div>
+  </div></div>`;
+}
+function g30SelCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['g30sel' + i + '-' + f] || '')}" onchange="g30SetText('${code}','g30sel${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30sel' + i + '-' + f] || '')}" onchange="g30Set('${code}','g30sel${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="g30Set('${code}','g30sel${i}-${f}',this.value)">${d10Opts(ans['g30sel' + i + '-' + f], opts)}</select>`;
+  const rows = c.sels.map(r => `<tr>
+    <td class="role">${r.i}</td><td>${it(r.i, 'id')}</td><td>${it(r.i, 'acc')}</td><td>${it(r.i, 'desc')}</td><td>${it(r.i, 'date')}</td><td>${num(r.i, 'value')}</td>
+    <td>${sel(r.i, 'reason', ['Ключова', 'Случайна', 'Систематична', 'MUS', 'Преценка'])}</td>
+    <td>${it(r.i, 'link')}</td>
+    <td>${sel(r.i, 'status', ['За тестване', 'Тествана', 'Без изключение', 'С изключение'])}</td>
+    <td style="text-align:center">${c.sels.length > 1 ? `<button class="rm" title="Премахни" onclick="g30DelSel('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Избрани позиции</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1040px"><thead><tr><th>№</th><th style="min-width:100px">ID / инв. №</th><th style="min-width:90px">Сметка</th><th style="min-width:160px">Описание</th><th style="min-width:110px">Дата</th><th style="min-width:110px">Стойност</th><th>Причина за избор</th><th style="min-width:90px">Свързан тест</th><th>Статус</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="g30AddSel('${code}')">+ Добави позиция</button></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Избрани позиции: <b id="g30sel-cnt">${c.selCount}</b> · обща стойност: <b id="g30sel-val">${g00Fmt(c.selValue)}</b>. Позициите с причина „Ключова" покриват изискването за ключови/високорискови активи.</div>
+  </div></div>`;
+}
+function g30ResCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['g30res' + i + '-' + f] || '')}" onchange="g30SetText('${code}','g30res${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['g30res' + i + '-' + f] || '')}" onchange="g30Set('${code}','g30res${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="g30Set('${code}','g30res${i}-${f}',this.value)">${d10Opts(ans['g30res' + i + '-' + f], opts)}</select>`;
+  const rows = c.ress.map(r => `<tr${!isNaN(r.err) && Math.abs(r.err) > 0.0001 ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="role">${r.i}</td><td>${it(r.i, 'item')}</td>
+    <td>${sel(r.i, 'assertion', ['Оценка', 'Съществуване', 'Права', 'Пълнота', 'Точност', 'Представяне'])}</td>
+    <td>${num(r.i, 'rep')}</td><td>${num(r.i, 'aud')}</td>
+    <td style="text-align:right;white-space:nowrap" id="g30res${r.i}-err">${g00Fmt(r.err)}</td>
+    <td>${sel(r.i, 'char', ['Факт', 'Преценка', 'Класификация', 'Периодизация'])}</td>
+    <td>${sel(r.i, 'corr', ['Да', 'Не'])}</td>
+    <td>${sel(r.i, 'proj', ['Да', 'Не', 'Неприложимо'])}</td>
+    <td style="text-align:center">${c.ress.length > 1 ? `<button class="rm" title="Премахни" onclick="g30DelRes('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Резултати от тестването и грешки</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1040px"><thead><tr><th>№</th><th style="min-width:150px">Избрана позиция</th><th>Тест / твърдение</th><th style="min-width:110px">Отчетена</th><th style="min-width:110px">Одитирана</th><th style="min-width:100px">Грешка</th><th>Характер</th><th>Корекция</th><th>Проектира се?</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="g30AddRes('${code}')">+ Добави ред</button></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Колоната „Грешка" (= отчетена − одитирана) се изчислява автоматично. Установени грешки: <b id="g30res-cnt">${c.errCount}</b> · обща стойност: <b id="g30res-val">${g00Fmt(c.errValue)}</b>.</div>
+  </div></div>`;
+}
+function g30EvalInner(code, c) {
+  const ans = testAnswers[code] || {};
+  const cmpSpm = isNaN(c.projectedError) || isNaN(c.spm) ? '—' : (c.projOverSpm ? 'Над SPM (' + g00Fmt(c.spm) + ')' : 'В рамките на SPM (' + g00Fmt(c.spm) + ')');
+  const cmpCtt = isNaN(c.projectedError) || isNaN(c.ctt) ? '—' : (c.projOverCtt ? 'Над прага (' + g00Fmt(c.ctt) + ')' : 'Под прага (' + g00Fmt(c.ctt) + ')');
+  const rowsHtml = `
+    <div class="b40-f"><span class="b40-fl">Обща стойност на популацията</span><input value="${g00Fmt(c.totValue)}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-popval"></div>
+    <div class="b40-f"><span class="b40-fl">Брой позиции в популацията</span><input value="${c.totCount}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-popcnt"></div>
+    <div class="b40-f"><span class="b40-fl">Размер на извадката</span><input value="${c.selCount}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-samsize"></div>
+    <div class="b40-f"><span class="b40-fl">Обща стойност на извадката</span><input value="${g00Fmt(c.selValue)}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-samval"></div>
+    <div class="b40-f"><span class="b40-fl">Установени грешки в извадката</span><input value="${g00Fmt(c.errValue)}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-err"></div>
+    <div class="b40-f"><span class="b40-fl">Проектирана грешка</span><input value="${isNaN(c.projectedError) ? '—' : g00Fmt(c.projectedError)}" readonly style="background:var(--p-surface2);text-align:right" id="g30ev-proj"></div>
+    <div class="b40-f"><span class="b40-fl">Сравнение със SPM</span><input value="${escHtml(cmpSpm)}" readonly style="background:var(--p-surface2)" id="g30ev-cmpspm"></div>
+    <div class="b40-f"><span class="b40-fl">Сравнение с прага за явно незначителни</span><input value="${escHtml(cmpCtt)}" readonly style="background:var(--p-surface2)" id="g30ev-cmpctt"></div>
+    <div class="b40-f"><span class="b40-fl">Аномални грешки</span><select onchange="g30Set('${code}','g30-anomalous',this.value)">${d10Opts(ans['g30-anomalous'], ['Да', 'Не'])}</select></div>
+    <div class="b40-f"><span class="b40-fl">Необходими допълнителни процедури</span><select onchange="g30Set('${code}','g30-addproc',this.value)">${d10Opts(ans['g30-addproc'], ['Да', 'Не'])}</select></div>
+    <div class="b40-f"><span class="b40-fl">Заключение по извадката</span><select onchange="g30Set('${code}','g30-sampleconcl',this.value)">${d10Opts(ans['g30-sampleconcl'], ['Приемливо', 'За допълване', 'За корекция'])}</select></div>`;
+  return `<div class="b40-fields">${rowsHtml}</div>`;
+}
+function g30EvalCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка и проекция на грешките</div><div style="padding:12px 14px" id="g30-eval">${g30EvalInner(code, c)}
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Проектираната грешка се изчислява автоматично (грешки в извадката ÷ стойност на извадката × стойност на популацията), когато методът позволява проекция. При метод „Преценка" проекция не се извършва.</div>
+  </div></div>`;
+}
+function g30ChecksInner(code, c) {
+  c = c || g30Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : (w.lc === 'info' ? 'ℹ' : '⚠'));
+    return `<div class="b50-chk ${cls}" style="padding:6px 14px"><span class="ic">${ic}</span><span>${escHtml(w.name)}${w.hit ? '' : ' — няма'} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function g30ChecksCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="g30-checks" class="b50-checks">${g30ChecksInner(code, c)}</div></div>`;
+}
+function g30ConclCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const ta = (k, ph) => `<textarea rows="2" oninput="g30SetText('${code}','${k}',this.value)" placeholder="${escHtml(ph || '')}">${escHtml(ans[k] || '')}</textarea>`;
+  const it = (k, type) => `<input${type ? ' type="' + type + '"' : ''} value="${escHtml(ans[k] || '')}" onchange="g30SetText('${code}','${k}',this.value)">`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Заключение по раздела</div><div style="padding:12px 14px">
+    <div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Има ръчна корекция на извадката</span><select onchange="g30Set('${code}','g30-manual',this.value)">${d10Opts(ans['g30-manual'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Одиторът приема заключението</span><select onchange="g30Set('${code}','g30-accept',this.value)">${d10Opts(ans['g30-accept'], ['Да', 'Не'])}</select></div>
+    </div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Обосновка при ръчна корекция</span>${ta('g30-manualnote', 'Задължителна при ръчна корекция на метод, размер, избрани позиции или грешки')}</div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Влияние върху одиторския подход / последващи действия</span>${ta('g30-impact', 'Свободен текст')}</div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Изготвил</span>${it('g30-by')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата</span>${it('g30-date', 'date')}</div>
+      <div class="b40-f"><span class="b40-fl">Прегледал</span>${it('g30-rev')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата на преглед</span>${it('g30-revdate', 'date')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Финалният текст на заключението се попълва в полето „Заключение" под въпросите; черновата се генерира при „Изпълни автоматичен анализ".</div>
+  </div></div>`;
+}
+function g30PanelInner(code) {
+  const c = g30Compute(code);
+  const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g30-summary">${g30SummaryInner(code, c)}</div></div>`;
+  const body = g30PopCard(code, c) + g30DesignCard(code, c) + g30SelCard(code, c) + g30ResCard(code, c) + g30EvalCard(code, c) + g30ChecksCard(code, c) + g30ConclCard(code, c);
+  return summary + g30ParamsCard(code, c) + g30DocsCard(code, c) + g30PromptCard(code, c) + body;
+}
+function testG30Panel(code) {
+  const det = testDet(code);
+  if (!det.g30) return '';
+  return `<div id="g30-panel">${g30PanelInner(code)}</div>`;
+}
+function g30Rerender(code) { const el = document.getElementById('g30-panel'); if (el) el.innerHTML = g30PanelInner(code); }
+function g30SetParam(code, key, value) { setAnswer(code, 'g30p-' + key, value); g30Rerender(code); }
+function g30Set(code, key, value) { setAnswer(code, key, value); g30Recalc(code); }
+function g30SetText(code, key, value) { setAnswer(code, key, value); }
+function g30AddFiles(code, key, files) { testAddFiles(code, key, files); g30Rerender(code); }
+function g30RemoveFile(code, key, i) { testRemoveFile(code, key, i); g30Rerender(code); }
+function g30AddSel(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['g30-seln'] || (det.g30.defSel || 3), 10) || 3; setAnswer(code, 'g30-seln', String(n + 1)); g30Rerender(code); }
+function g30DelSel(code, i) {
+  const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['g30-seln'] || (det.g30.defSel || 3), 10) || 3; if (n <= 1) return;
+  const fields = ['id', 'acc', 'desc', 'date', 'value', 'reason', 'link', 'status'];
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, 'g30sel' + r + '-' + f, ans['g30sel' + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, 'g30sel' + n + '-' + f, ''));
+  setAnswer(code, 'g30-seln', String(n - 1)); g30Rerender(code);
+}
+function g30AddRes(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['g30-resn'] || (det.g30.defRes || 2), 10) || 2; setAnswer(code, 'g30-resn', String(n + 1)); g30Rerender(code); }
+function g30DelRes(code, i) {
+  const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['g30-resn'] || (det.g30.defRes || 2), 10) || 2; if (n <= 1) return;
+  const fields = ['item', 'assertion', 'rep', 'aud', 'char', 'corr', 'proj'];
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, 'g30res' + r + '-' + f, ans['g30res' + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, 'g30res' + n + '-' + f, ''));
+  setAnswer(code, 'g30-resn', String(n - 1)); g30Rerender(code);
+}
+function g30Recalc(code) {
+  const det = testDet(code); if (!det || !det.g30) return;
+  const c = g30Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const stxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('g30-summary', g30SummaryInner(code, c));
+  set('g30-checks', g30ChecksInner(code, c));
+  set('g30-aiparams', escHtml(g30ParamsBlock(c)));
+  set('g30-eval', g30EvalInner(code, c) + '<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Проектираната грешка се изчислява автоматично (грешки в извадката ÷ стойност на извадката × стойност на популацията), когато методът позволява проекция. При метод „Преценка" проекция не се извършва.</div>');
+  c.strata.forEach(s => stxt('g30pop' + s.i + '-pct', g00Pct(s.pct)));
+  stxt('g30pop-tc', String(c.totCount)); stxt('g30pop-tv', g00Fmt(c.totValue));
+  const ss = document.getElementById('g30-suggsize'); if (ss) ss.value = isNaN(c.sizeSuggested) ? '—' : c.sizeSuggested;
+  stxt('g30sel-cnt', String(c.selCount)); stxt('g30sel-val', g00Fmt(c.selValue));
+  c.ress.forEach(r => stxt('g30res' + r.i + '-err', g00Fmt(r.err)));
+  stxt('g30res-cnt', String(c.errCount)); stxt('g30res-val', g00Fmt(c.errValue));
+}
+function g30Generate(code) {
+  const c = g30Compute(code);
+  setAnswer(code, 'g30-generated', '1');
+  const ans = testAnswers[code] || {};
+  // авто-предложения при празни полета
+  if (c.method && !((ans['g30-projflag'] || '').trim())) setAnswer(code, 'g30-projflag', c.method === 'Преценка' ? 'Неприложимо' : 'Да');
+  if (c.enough && !((ans['g30-sampleconcl'] || '').trim())) setAnswer(code, 'g30-sampleconcl', c.projOverSpm ? 'За корекция' : (c.errCount > 0 ? 'За допълване' : 'Приемливо'));
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const tx = g30ConclText(code, c); setConcl(code, tx); if (conclEl) conclEl.value = tx; }
+  g30Rerender(code);
+}
+function g30ExcelInfo(code) { const el = document.getElementById('g30-excel-note'); if (el) el.textContent = 'Експортът в Excel (.xlsx) — с параметрите, анализа на популацията, избраните позиции, грешките, проекциите и заключението — ще бъде добавен в следваща версия.'; }
+function g30WpHtml(code, secN) {
+  const det = testDet(code); if (!det.g30) return '';
+  const c = g30Compute(code), ans = testAnswers[code] || {};
+  const dRows = (det.g30.docs || []).map(d => `<tr><td>${d.n}</td><td>${escHtml(d.name)}</td><td class="c">${d10HasFile(code, 'g30d' + d.n) ? 'Качен' : (d.req ? 'Липсва' : '—')}</td></tr>`).join('');
+  const pRows = c.strata.map(s => `<tr><td>${s.i}</td><td>${escHtml(s.name)}</td><td class="c">${isNaN(s.cnt) ? '—' : s.cnt}</td><td class="c">${g00Fmt(s.val)}</td><td class="c">${g00Pct(s.pct)}</td><td class="c">${escHtml(s.risk || '—')}</td><td class="c">${escHtml(s.incl || '—')}</td></tr>`).join('') + `<tr style="font-weight:700"><td></td><td>Общо</td><td class="c">${c.totCount}</td><td class="c">${g00Fmt(c.totValue)}</td><td class="c">100%</td><td colspan="2"></td></tr>`;
+  const sRows = c.sels.filter(r => r.has).map(r => `<tr><td>${r.i}</td><td>${escHtml(r.id || '—')}</td><td>${escHtml(r.desc || '—')}</td><td class="c">${g00Fmt(r.value)}</td><td class="c">${escHtml(r.reason || '—')}</td><td class="c">${escHtml(r.status || '—')}</td></tr>`).join('') || '<tr><td colspan="6">Няма избрани позиции.</td></tr>';
+  const rRows = c.ress.filter(r => r.has).map(r => `<tr><td>${r.i}</td><td>${escHtml(r.item || '—')}</td><td class="c">${escHtml(r.assertion || '—')}</td><td class="c">${g00Fmt(r.rep)}</td><td class="c">${g00Fmt(r.aud)}</td><td class="c">${g00Fmt(r.err)}</td><td class="c">${escHtml(r.proj || '—')}</td></tr>`).join('') || '<tr><td colspan="7">Няма въведени резултати от тестване.</td></tr>';
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Нематериални активи – извадки и обхват на тестовете</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Метод</td><td class="c">${escHtml(c.method || '—')}</td></tr>
+      <tr><td>Базис</td><td class="c">${escHtml(c.base || '—')}</td></tr>
+      <tr><td>Размер</td><td class="c">${escHtml(c.size || '—')}${isNaN(c.sizeSuggested) ? '' : ' (предложен: ' + c.sizeSuggested + ')'}</td></tr>
+      <tr><td>Изход</td><td class="c">${escHtml(c.output || '—')}</td></tr>
+      <tr><td>Популация</td><td class="c">${c.totCount} поз. · ${g00Fmt(c.totValue)}</td></tr>
+      <tr><td>SPM / праг за явно незначителни</td><td class="c">${isNaN(c.spm) ? '—' : g00Fmt(c.spm)} / ${isNaN(c.ctt) ? '—' : g00Fmt(c.ctt)}</td></tr>
+      <tr><td>Избрани позиции</td><td class="c">${c.selCount} · ${g00Fmt(c.selValue)}</td></tr>
+      <tr><td>Установени грешки</td><td class="c">${c.errCount} · ${g00Fmt(c.errValue)}</td></tr>
+      <tr><td>Проектирана грешка</td><td class="c">${isNaN(c.projectedError) ? '—' : g00Fmt(c.projectedError)}</td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Документи и входни данни</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Документ / данни</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Анализ на популацията</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Група</th><th>Брой</th><th>Стойност</th><th>%</th><th>Риск</th><th>Вкл.</th></tr></thead><tbody>${pRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Избрани позиции</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>ID</th><th>Описание</th><th>Стойност</th><th>Причина</th><th>Статус</th></tr></thead><tbody>${sRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Резултати от тестването и грешки</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Позиция</th><th>Твърдение</th><th>Отчетена</th><th>Одитирана</th><th>Грешка</th><th>Проекция</th></tr></thead><tbody>${rRows}</tbody></table>
+    ${(ans['g30-impact'] || '').trim() ? `<div class="wp-text"><b>Влияние върху одиторския подход:</b> ${escHtml(ans['g30-impact'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Предупреждения и проверки</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // Поле за свободен текст "Бележки на одитора" под отговора на въпрос n
 function noteField(code, n) {
   const cur = (testNotes[code] || {})[n] || '';
@@ -9214,6 +9619,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testG05Panel(code)}
       ${testG10Panel(code)}
       ${testG20Panel(code)}
+      ${testG30Panel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -9248,6 +9654,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).g05) g05Recalc(code);
   if (testDet(code).g10) g10Recalc(code);
   if (testDet(code).g20) g20Recalc(code);
+  if (testDet(code).g30) g30Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -9383,6 +9790,7 @@ function setAnswer(code, n, value, btnEl) {
   if (typeof g05Recalc === 'function' && testDet(code) && testDet(code).g05) g05Recalc(code);
   if (typeof g10Recalc === 'function' && testDet(code) && testDet(code).g10) g10Recalc(code);
   if (typeof g20Recalc === 'function' && testDet(code) && testDet(code).g20) g20Recalc(code);
+  if (typeof g30Recalc === 'function' && testDet(code) && testDet(code).g30) g30Recalc(code);
   qProgress(code);
 }
 
@@ -10322,7 +10730,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -10338,6 +10746,7 @@ function testWpSections(code) {
   const g05Html = aiDet.g05 ? g05WpHtml(code, secG05) : '';
   const g10Html = aiDet.g10 ? g10WpHtml(code, secG10) : '';
   const g20Html = aiDet.g20 ? g20WpHtml(code, secG20) : '';
+  const g30Html = aiDet.g30 ? g30WpHtml(code, secG30) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -10374,6 +10783,7 @@ function testWpSections(code) {
       ${g05Html}
       ${g10Html}
       ${g20Html}
+      ${g30Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
