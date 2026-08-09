@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809191907"></script>
-<script src="pd-spec.js?v=20260809191907"></script>
-<script src="pd-details.js?v=20260809191907"></script>
-<script src="test-details.js?v=20260809191907"></script>
+<script src="questions.js?v=20260809193609"></script>
+<script src="pd-spec.js?v=20260809193609"></script>
+<script src="pd-details.js?v=20260809193609"></script>
+<script src="test-details.js?v=20260809193609"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5422,7 +5422,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 имат собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -11681,6 +11681,376 @@ function j30WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ===================== K-00: Материални запаси – водещ лист (lead schedule) =====================
+// По подобие на J-00/I-00, но за раздел K: разгъване на движенията (начално + покупки − изписвания − брак/липси − обезценка
+// = крайно, авто) + сравнение + класификация и складова аналитичност (балансова = количество × единична цена, авто) +
+// препратки + 8 проверки (вкл. отрицателни наличности → висок риск; липса на инвентаризация/НРС). Excel = визуален бутон.
+function k00SrcKey(source) { return ({ 'Об. ведомост': 'k00d1', 'Главна книга': 'k00d2', 'Подкнига': 'k00d3', 'Excel файл': 'k00d3' })[source] || ''; }
+function k00Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gp = (k) => ans['k00p-' + k] || '';
+  const source = gp('source'), compare = gp('compare'), group = gp('group'), output = gp('output');
+  const cmpPrev = compare === 'Предх. период' || compare === 'Двете';
+  const cmpBud = compare === 'Бюджет' || compare === 'Двете';
+  const cmpOn = cmpPrev || cmpBud;
+  const nrows = Math.max(1, parseInt(ans['k00-nrows'] || (det.k00.defRows || 3), 10) || 3);
+  const rows = [];
+  for (let i = 1; i <= nrows; i++) {
+    const open = d10Num(ans['k00r' + i + '-open']), purch = d10Num(ans['k00r' + i + '-purch']), issue = d10Num(ans['k00r' + i + '-issue']);
+    const waste = d10Num(ans['k00r' + i + '-waste']), imp = d10Num(ans['k00r' + i + '-imp']);
+    const prev = d10Num(ans['k00r' + i + '-prev']), bud = d10Num(ans['k00r' + i + '-bud']);
+    const ref = (ans['k00r' + i + '-ref'] || '').trim();
+    const hasMov = [open, purch, issue, waste, imp].some(v => !isNaN(v));
+    const close = hasMov ? ((isNaN(open) ? 0 : open) + (isNaN(purch) ? 0 : purch) - (isNaN(issue) ? 0 : issue) - (isNaN(waste) ? 0 : waste) - (isNaN(imp) ? 0 : imp)) : NaN;
+    const chg = (cmpPrev && !isNaN(close) && !isNaN(prev)) ? close - prev : NaN;
+    const pct = (!isNaN(chg) && !isNaN(prev) && prev !== 0) ? chg / prev * 100 : NaN;
+    const budDev = (cmpBud && !isNaN(close) && !isNaN(bud)) ? close - bud : NaN;
+    const budPct = (!isNaN(budDev) && !isNaN(bud) && bud !== 0) ? budDev / bud * 100 : NaN;
+    const has = !isNaN(close);
+    rows.push({ i, acc: ans['k00r' + i + '-acc'] || '', name: ans['k00r' + i + '-name'] || '', open, purch, issue, waste, imp, close, prev, bud, chg, pct, budDev, budPct, ref, hasMov, has, big: !isNaN(pct) && Math.abs(pct) > 10, bigBud: !isNaN(budPct) && Math.abs(budPct) > 10, neg: !isNaN(close) && close < 0, sigMove: ((!isNaN(purch) && Math.abs(purch) > 0) || (!isNaN(issue) && Math.abs(issue) > 0)) });
+  }
+  const S = (f) => rows.reduce((a, r) => a + (isNaN(r[f]) ? 0 : r[f]), 0);
+  const totOpen = S('open'), totPurch = S('purch'), totIssue = S('issue'), totWaste = S('waste'), totImp = S('imp'), totClose = S('close');
+  const totPrev = cmpPrev ? S('prev') : NaN, totBud = cmpBud ? S('bud') : NaN;
+  const totChg = cmpPrev ? totClose - totPrev : NaN, totPct = (cmpPrev && totPrev !== 0) ? totChg / totPrev * 100 : NaN;
+  const totBudDev = cmpBud ? totClose - totBud : NaN;
+  const anyData = rows.some(r => r.has);
+  const srcKey = k00SrcKey(source), srcDocUp = srcKey ? d10HasFile(code, srcKey) : false;
+  const d1 = d10HasFile(code, 'k00d1'), d2 = d10HasFile(code, 'k00d2'), d3 = d10HasFile(code, 'k00d3'), d5 = d10HasFile(code, 'k00d5'), d6 = d10HasFile(code, 'k00d6');
+  const ovtotal = d10Num(ans['k00-ovtotal']);
+  const mismatch = !isNaN(ovtotal) && anyData && Math.abs(totClose - ovtotal) > 0.5;
+  const anyBigPrev = rows.some(r => r.big), anyBigBud = rows.some(r => r.bigBud);
+  const noRef = rows.some(r => r.has && !r.ref);
+  const negBal = rows.some(r => r.neg);
+  // класификация и складова аналитичност
+  const clsN = Math.max(1, parseInt(ans['k00-clsn'] || (det.k00.defCls || 3), 10) || 3);
+  const cls = [];
+  for (let i = 1; i <= clsN; i++) {
+    const qty = d10Num(ans['k00cls' + i + '-qty']), price = d10Num(ans['k00cls' + i + '-price']);
+    const bal = (!isNaN(qty) && !isNaN(price)) ? qty * price : NaN;
+    cls.push({ i, obj: ans['k00cls' + i + '-obj'] || '', kind: ans['k00cls' + i + '-kind'] || '', qty, price, bal, acc: ans['k00cls' + i + '-acc'] || '', risk: ans['k00cls' + i + '-risk'] || '', has: (ans['k00cls' + i + '-obj'] || '').trim() !== '' || !isNaN(bal) });
+  }
+  const clsNeg = cls.some(r => (!isNaN(r.qty) && r.qty < 0) || (!isNaN(r.bal) && r.bal < 0));
+  const negAny = negBal || clsNeg;
+  const material = ans['k00-material'] === 'Да', obsolete = ans['k00-obsolete'] === 'Да';
+  const invMissing = material && !d5, nrvMissing = obsolete && !d6;
+  const paramsComplete = !!(source && compare && group && output);
+  const accepted = ans['k00-accept'] === 'Да';
+  const enough = paramsComplete && srcDocUp && anyData;
+  const warns = [
+    { n: 1, name: 'Липсва оборотна ведомост', hit: !d1, level: 'Критично', lc: 'crit', act: 'Изискване на оборотна ведомост или ръчно въвеждане на салда.' },
+    { n: 2, name: 'Липсва главна книга или складова подкнига', hit: !d2 && !d3, level: 'За преглед', lc: 'rev', act: 'Да се изискат движения и складова аналитичност.' },
+    { n: 3, name: 'Несъответствие счетоводство – склад', hit: mismatch, level: 'За корекция', lc: 'fix', act: 'Да се документира причината и последващите процедури.' },
+    { n: 4, name: 'Отрицателни количества или стойности', hit: negAny, level: 'Висок риск', lc: 'high', act: 'Да се извърши допълнителен анализ и корекция, ако е необходимо.' },
+    { n: 5, name: 'Значително отклонение спрямо предходен период или бюджет', hit: (cmpPrev && anyBigPrev) || (cmpBud && anyBigBud), level: 'За преглед', lc: 'rev', act: 'Да се добави коментар и връзка към аналитични процедури.' },
+    { n: 6, name: 'Липсват инвентаризационни документи при съществени запаси', hit: invMissing, level: 'За преглед', lc: 'rev', act: 'Да се изискат описи или да се планират алтернативни процедури.' },
+    { n: 7, name: 'Липсва преценка за обезценка / НРС при рискови запаси', hit: nrvMissing, level: 'За преглед', lc: 'rev', act: 'Да се изиска справка за обезценка и нетна реализируема стойност.' },
+    { n: 8, name: 'Липсва препратка към подкрепящ документ', hit: noRef, level: 'Предупреждение', lc: 'warn', act: 'Да се добави препратка или бележка.' }
+  ];
+  const warnCount = warns.filter(w => w.hit).length;
+  const crit = warns.some(w => w.hit && w.level === 'Критично');
+  const canGen = paramsComplete && srcDocUp;
+  let status;
+  if (!paramsComplete || !d1) status = 'Непълен';
+  else if (!anyData) status = 'За допълване';
+  else if (mismatch) status = 'За корекция';
+  else if (negAny || (cmpPrev && anyBigPrev) || (cmpBud && anyBigBud) || invMissing || nrvMissing || (!d2 && !d3) || noRef) status = 'За преглед';
+  else status = accepted ? 'Завършен' : 'За преглед';
+  return { source, compare, group, output, cmpPrev, cmpBud, cmpOn, rows, nrows, totOpen, totPurch, totIssue, totWaste, totImp, totClose, totPrev, totBud, totChg, totPct, totBudDev, anyData, srcKey, srcDocUp, d1, d2, d3, d5, d6, ovtotal, mismatch, anyBigPrev, anyBigBud, noRef, negBal, cls, clsN, clsNeg, negAny, material, obsolete, invMissing, nrvMissing, paramsComplete, canGen, accepted, enough, warns, warnCount, crit, status };
+}
+function k00ParamsBlock(c) {
+  const v = (x) => x || '—';
+  return 'ИЗБРАНИ ПАРАМЕТРИ:\n- Източник: ' + v(c.source) + '\n- Сравнение: ' + v(c.compare) + '\n- Групиране: ' + v(c.group) + '\n- Изход: ' + v(c.output);
+}
+function k00SignifText(c) {
+  const parts = [];
+  if (c.cmpPrev) { const big = c.rows.filter(r => r.big); parts.push(big.length ? 'Спрямо предходен период: ' + big.map(r => (r.acc || ('ред ' + r.i)) + ' (' + g00Pct(r.pct) + ')').join('; ') : 'Няма значителни отклонения спрямо предходен период'); }
+  if (c.cmpBud) { const big = c.rows.filter(r => r.bigBud); parts.push(big.length ? 'Спрямо бюджет: ' + big.map(r => (r.acc || ('ред ' + r.i)) + ' (' + g00Pct(r.budPct) + ')').join('; ') : 'Няма значителни отклонения спрямо бюджет'); }
+  if (!c.cmpOn) return 'Не е избрано сравнение — не са изчислени отклонения спрямо сравнителен период.';
+  return parts.join('. ') + '.';
+}
+function k00ConclText(code, c) {
+  if (!c.enough) {
+    const miss = [];
+    if (!c.source) miss.push('избран източник');
+    if (c.source && !c.srcDocUp) miss.push('документ за избрания източник');
+    if (!c.compare || !c.group || !c.output) miss.push('всички параметри на теста');
+    if (!c.anyData) miss.push('извлечени салда и движения по материални запаси');
+    return 'Към момента не може да бъде изготвен надежден водещ лист за раздел „Материални запаси", тъй като липсват следните необходими документи или данни: ' + (miss.join('; ') || 'необходими данни') + '. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.';
+  }
+  const cmp = !c.cmpOn ? 'не е избрано' : ('спрямо ' + c.compare.toLowerCase());
+  return 'След предоставяне на необходимите счетоводни и складови данни тестът автоматично изготви водещ лист за раздел „Материални запаси". Извлечени са салдата и движенията от ' + c.source.toLowerCase() + ', данните са групирани „' + c.group.toLowerCase() + '", разгънати са движенията за периода (покупки/производство, изписвания/продажби, брак/липси и обезценка) до крайно салдо, извършено е сравнение ' + cmp + ' и са поставени препратки към подкрепящите документи. Общото крайно салдо по раздела е ' + g00Fmt(c.totClose) + '. Установените отклонения, липсващи препратки или ограничения са посочени в настоящия тест и следва да бъдат разгледани от одитора при последващите процедури по раздела.';
+}
+function k00SummaryInner(code, c) {
+  c = c || k00Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  const chg = c.cmpPrev ? (g00Fmt(c.totChg) + ' (' + g00Pct(c.totPct) + ')') : '—';
+  return `<div class="d10-stats">
+    ${st(escHtml(c.source || '—'), 'Източник')}
+    ${st(escHtml(c.compare || '—'), 'Сравнение')}
+    ${st(g00Fmt(c.totClose), 'Общо крайно салдо', 'accent')}
+    ${st(chg, 'Изменение', c.anyBigPrev ? 'warnv' : '')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(escHtml(c.status), 'Статус', c.status === 'За корекция' ? 'badv' : (c.status === 'За преглед' ? 'warnv' : ''))}
+  </div>`;
+}
+function k00ParamsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const cells = (det.k00.params || []).map(p => `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}</span><select onchange="k00SetParam('${code}','${p.key}',this.value)">${d10Opts(ans['k00p-' + p.key], p.opts)}</select></div>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Параметри на теста</div><div style="padding:12px 14px">
+    <div class="b40-fields">${cells}</div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора (обосновка на параметрите)</span><input value="${escHtml(ans['k00-parnote'] || '')}" onchange="k00SetText('${code}','k00-parnote',this.value)"></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Четирите параметъра управляват извличането, групирането, сравнението и формата на изхода. При сравнение „Двете" се показват колони и за предходен период, и за бюджет.</div>
+  </div></div>`;
+}
+function k00UploadWidget(code, key) {
+  const files = testFiles(code, key);
+  const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="k00RemoveFile('${code}','${key}',${i})">✕</button></div>`).join('') + '</div>' : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="k00AddFiles('${code}','${key}',this.files)"></label>${fl}`;
+}
+function k00DocsCard(code, c) {
+  c = c || k00Compute(code);
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gen = ans['k00-generated'] === '1';
+  const slots = (det.k00.docs || []).map(d => {
+    const key = 'k00d' + d.n, up = d10HasFile(code, key);
+    const required = d.cond === 'compare' ? c.cmpOn : d.req;
+    const isSrc = c.srcKey === key;
+    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${k00UploadWidget(code, key)}</div></div>`;
+  }).join('');
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="k00Generate('${code}')">Изпълни автоматичен анализ</button>`;
+  const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k00Generate('${code}')">Обнови анализа</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="k00-docs">
+    ${slots}
+    <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще изготви водещия лист с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
+    <div id="k00-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
+  </div></div>`;
+}
+function k00PromptCard(code, c) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:12px 14px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">Тестът се изпълнява по фиксирана методология. Долу можете да прегледате инструкцията и текущо избраните параметри.</div>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap"><div id="k00-aiparams" style="font-weight:700;color:var(--p-text1)">${escHtml(k00ParamsBlock(c))}</div>
+<div style="border-top:1px dashed var(--p-border);margin:8px 0"></div>${escHtml(det.aiPrompt || '')}</div>
+    </details>
+  </div></div>`;
+}
+function k00LeadCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const inp = (i, f, o) => `<input ${o || ''} value="${escHtml(ans['k00r' + i + '-' + f] || '')}" onchange="k00Set('${code}','k00r${i}-${f}',this.value)">`;
+  const txt = (i, f) => `<input value="${escHtml(ans['k00r' + i + '-' + f] || '')}" onchange="k00SetText('${code}','k00r${i}-${f}',this.value)">`;
+  const numo = 'inputmode="decimal" style="text-align:right"';
+  const rows = c.rows.map(r => `<tr>
+    <td class="role">${r.i}</td>
+    <td>${inp(r.i, 'acc')}</td><td>${inp(r.i, 'name')}</td>
+    <td>${inp(r.i, 'open', numo)}</td><td>${inp(r.i, 'purch', numo)}</td><td>${inp(r.i, 'issue', numo)}</td>
+    <td>${inp(r.i, 'waste', numo)}</td><td>${inp(r.i, 'imp', numo)}</td>
+    <td style="text-align:right;white-space:nowrap;font-weight:600" id="k00r${r.i}-close">${g00Fmt(r.close)}</td>
+    <td>${txt(r.i, 'ref')}</td>
+    <td style="text-align:center">${c.nrows > 1 ? `<button class="rm" title="Премахни" onclick="k00DelRow('${code}',${r.i})">✕</button>` : ''}</td>
+  </tr>`).join('');
+  const totals = `<tr style="font-weight:700;background:var(--p-surface2)"><td></td><td>Общо</td><td></td>
+    <td style="text-align:right" id="k00-tot-open">${g00Fmt(c.totOpen)}</td>
+    <td style="text-align:right" id="k00-tot-purch">${g00Fmt(c.totPurch)}</td>
+    <td style="text-align:right" id="k00-tot-issue">${g00Fmt(c.totIssue)}</td>
+    <td style="text-align:right" id="k00-tot-waste">${g00Fmt(c.totWaste)}</td>
+    <td style="text-align:right" id="k00-tot-imp">${g00Fmt(c.totImp)}</td>
+    <td style="text-align:right" id="k00-tot-close">${g00Fmt(c.totClose)}</td><td></td><td></td></tr>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Водещ лист — разгъване на движенията (автоматично генериран)</div><div style="padding:12px 14px" id="k00-lead">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1200px"><thead><tr><th>№</th><th style="min-width:110px">Сметка / вид запас</th><th style="min-width:130px">Наименование</th><th>Начално салдо</th><th>Покупки/произв.</th><th>Изписвания/прод.</th><th>Брак/липси</th><th>Обезценка</th><th>Крайно салдо</th><th style="min-width:110px">Препратка</th><th></th></tr></thead><tbody>${rows}${totals}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="k00AddRow('${code}')">+ Добави ред</button></div>
+    <div class="b40-fields" style="margin-top:12px">
+      <div class="b40-f"><span class="b40-fl">Общо салдо по избрания източник (за съпоставка)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k00-ovtotal'] || '')}" placeholder="по избор" onchange="k00Set('${code}','k00-ovtotal',this.value)"></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Крайно салдо = начално + покупки/производство − изписвания/продажби − брак/липси − обезценка. Редът „Общо" и крайните салда се изчисляват автоматично.</div>
+  </div></div>`;
+}
+function k00CmpCard(code, c) {
+  const ans = testAnswers[code] || {};
+  if (!c.cmpOn) return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Сравнение с предходен период / бюджет</div><div style="padding:12px 14px" id="k00-cmp"><div style="font-size:12px;color:var(--p-text3)">Не е избрано сравнение (параметър „Сравнение" = „Без"). Показва се само текущият водещ лист.</div></div></div>`;
+  const numo = 'inputmode="decimal" style="text-align:right"';
+  const inp = (i, f) => `<input ${numo} value="${escHtml(ans['k00r' + i + '-' + f] || '')}" onchange="k00Set('${code}','k00r${i}-${f}',this.value)">`;
+  const rows = c.rows.map(r => `<tr${(r.big || r.bigBud) ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="role">${r.i}</td><td class="base">${escHtml(r.acc || r.name || ('ред ' + r.i))}</td>
+    <td style="text-align:right;white-space:nowrap" id="k00r${r.i}-cur">${g00Fmt(r.close)}</td>
+    ${c.cmpPrev ? `<td>${inp(r.i, 'prev')}</td><td style="text-align:right;white-space:nowrap" id="k00r${r.i}-chg">${g00Fmt(r.chg)}</td><td style="text-align:right;white-space:nowrap" id="k00r${r.i}-pct">${g00Pct(r.pct)}</td>` : ''}
+    ${c.cmpBud ? `<td>${inp(r.i, 'bud')}</td><td style="text-align:right;white-space:nowrap" id="k00r${r.i}-buddev">${g00Fmt(r.budDev)}</td>` : ''}
+  </tr>`).join('');
+  const totals = `<tr style="font-weight:700;background:var(--p-surface2)"><td></td><td>Общо</td>
+    <td style="text-align:right" id="k00-tot-cur">${g00Fmt(c.totClose)}</td>
+    ${c.cmpPrev ? `<td style="text-align:right" id="k00-tot-prev">${g00Fmt(c.totPrev)}</td><td style="text-align:right" id="k00-tot-chg">${g00Fmt(c.totChg)}</td><td style="text-align:right" id="k00-tot-pct">${g00Pct(c.totPct)}</td>` : ''}
+    ${c.cmpBud ? `<td style="text-align:right" id="k00-tot-bud">${g00Fmt(c.totBud)}</td><td style="text-align:right" id="k00-tot-buddev">${g00Fmt(c.totBudDev)}</td>` : ''}
+  </tr>`;
+  const head = `<tr><th>№</th><th style="min-width:150px">Група / сметка / вид запас</th><th>Текущ период</th>${c.cmpPrev ? '<th>Предходен период</th><th>Отклонение</th><th>% откл.</th>' : ''}${c.cmpBud ? '<th>Бюджет</th><th>Откл. от бюджет</th>' : ''}</tr>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Сравнение с предходен период / бюджет</div><div style="padding:12px 14px" id="k00-cmp">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:840px"><thead>${head}</thead><tbody>${rows}${totals}</tbody></table></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">„Текущ период" се пренася автоматично от крайното салдо на водещия лист. Колоните „Отклонение", „% откл." и „Откл. от бюджет" се изчисляват автоматично.</div>
+  </div></div>`;
+}
+function k00ClsCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['k00cls' + i + '-' + f] || '')}" onchange="k00SetText('${code}','k00cls${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k00cls' + i + '-' + f] || '')}" onchange="k00Set('${code}','k00cls${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="k00Set('${code}','k00cls${i}-${f}',this.value)">${d10Opts(ans['k00cls' + i + '-' + f], opts)}</select>`;
+  const rows = c.cls.map(r => `<tr${(!isNaN(r.bal) && r.bal < 0) || (!isNaN(r.qty) && r.qty < 0) ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="role">${r.i}</td><td>${it(r.i, 'obj')}</td>
+    <td>${sel(r.i, 'kind', ['Материали', 'Стоки', 'Продукция', 'НЗП', 'Аванси', 'Други'])}</td>
+    <td>${num(r.i, 'qty')}</td><td>${num(r.i, 'price')}</td>
+    <td style="text-align:right;white-space:nowrap;font-weight:600" id="k00cls${r.i}-bal">${g00Fmt(r.bal)}</td>
+    <td>${it(r.i, 'acc')}</td>
+    <td>${sel(r.i, 'risk', ['Съществуване', 'Пълнота', 'Оценка', 'Права', 'Представяне'])}</td>
+    <td style="text-align:center">${c.cls.length > 1 ? `<button class="rm" title="Премахни" onclick="k00DelCls('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Класификация и складова аналитичност</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1000px"><thead><tr><th>№</th><th style="min-width:130px">Обект / склад / артикул</th><th>Вид запас</th><th style="min-width:90px">Количество</th><th style="min-width:100px">Единична цена</th><th style="min-width:110px">Балансова стойност</th><th style="min-width:80px">Сметка</th><th>Основен риск</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="k00AddCls('${code}')">+ Добави ред</button></div>
+    <div class="b40-fields" style="margin-top:12px">
+      <div class="b40-f"><span class="b40-fl">Материалните запаси съществени ли са?</span><select onchange="k00Set('${code}','k00-material',this.value)">${d10Opts(ans['k00-material'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Има ли залежали / обезценени запаси?</span><select onchange="k00Set('${code}','k00-obsolete',this.value)">${d10Opts(ans['k00-obsolete'], ['Да', 'Не'])}</select></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Балансова стойност (= количество × единична цена) се изчислява автоматично. При отрицателни количества/стойности се задейства предупреждение (Висок риск).</div>
+  </div></div>`;
+}
+function k00RefsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const inp = (n, f) => `<input value="${escHtml(ans['k00ref' + n + '-' + f] || '')}" onchange="k00SetText('${code}','k00ref${n}-${f}',this.value)">`;
+  const rows = (det.k00.refs || []).map((rf, idx) => {
+    const n = idx + 1, cur = ans['k00ref' + n + '-conf'] || '';
+    const opts = rf.confNA ? ['Наличен', 'Липсва', 'Неприложимо'] : ['Наличен', 'Липсва'];
+    return `<tr><td class="role">${n}</td><td>${escHtml(rf.item)}</td><td>${escHtml(rf.doc)}</td><td>${inp(n, 'ref')}</td><td>${escHtml(rf.assert)}</td><td><select onchange="k00SetText('${code}','k00ref${n}-conf',this.value)">${d10Opts(cur, opts)}</select></td><td>${inp(n, 'note')}</td></tr>`;
+  }).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Препратки към подкрепящи документи</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:920px"><thead><tr><th>№</th><th style="min-width:150px">Перо / група</th><th>Подкрепящ документ</th><th>Референция</th><th>Покрива твърдение</th><th>Статус</th><th>Бележки</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div></div>`;
+}
+function k00ChecksInner(code, c) {
+  c = c || k00Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : (w.lc === 'info' ? 'ℹ' : '⚠'));
+    return `<div class="b50-chk ${cls}" style="padding:6px 14px"><span class="ic">${ic}</span><span>${escHtml(w.name)}${w.hit ? '' : ' — няма'} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function k00ChecksCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Проверки и предупреждения</div><div id="k00-checks" class="b50-checks">${k00ChecksInner(code, c)}</div></div>`;
+}
+function k00ConclCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const ta = (k, ph) => `<textarea rows="2" oninput="k00SetText('${code}','${k}',this.value)" placeholder="${escHtml(ph || '')}">${escHtml(ans[k] || '')}</textarea>`;
+  const it = (k, type) => `<input${type ? ' type="' + type + '"' : ''} value="${escHtml(ans[k] || '')}" onchange="k00SetText('${code}','${k}',this.value)">`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Заключение по раздела</div><div style="padding:12px 14px">
+    <div class="b40-f span"><span class="b40-fl">Основни отклонения</span>${ta('k00-signif', 'Автоматично при генериране — редактируемо')}</div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Липсващи документи / ограничения</span>${ta('k00-limits', 'Свободен текст')}</div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема заключението</span><select onchange="k00Set('${code}','k00-accept',this.value)">${d10Opts(ans['k00-accept'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Изготвил</span>${it('k00-by')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата</span>${it('k00-date', 'date')}</div>
+      <div class="b40-f"><span class="b40-fl">Прегледал</span>${it('k00-rev')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата на преглед</span>${it('k00-revdate', 'date')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Финалният текст на заключението се попълва в полето „Заключение" под въпросите; черновата се генерира при „Изпълни автоматичен анализ".</div>
+  </div></div>`;
+}
+function k00PanelInner(code) {
+  const c = k00Compute(code);
+  const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="k00-summary">${k00SummaryInner(code, c)}</div></div>`;
+  const body = k00LeadCard(code, c) + k00CmpCard(code, c) + k00ClsCard(code, c) + k00RefsCard(code, c) + k00ChecksCard(code, c) + k00ConclCard(code, c);
+  return summary + k00ParamsCard(code, c) + k00DocsCard(code, c) + k00PromptCard(code, c) + body;
+}
+function testK00Panel(code) {
+  const det = testDet(code);
+  if (!det.k00) return '';
+  return `<div id="k00-panel">${k00PanelInner(code)}</div>`;
+}
+function k00Rerender(code) { const el = document.getElementById('k00-panel'); if (el) el.innerHTML = k00PanelInner(code); }
+function k00SetParam(code, key, value) { setAnswer(code, 'k00p-' + key, value); k00Rerender(code); }
+function k00Set(code, key, value) { setAnswer(code, key, value); k00Recalc(code); }
+function k00SetText(code, key, value) { setAnswer(code, key, value); }
+function k00AddFiles(code, key, files) { testAddFiles(code, key, files); k00Rerender(code); }
+function k00RemoveFile(code, key, i) { testRemoveFile(code, key, i); k00Rerender(code); }
+function k00AddRow(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k00-nrows'] || (det.k00.defRows || 3), 10) || 3; setAnswer(code, 'k00-nrows', String(n + 1)); k00Rerender(code); }
+function k00DelRow(code, i) {
+  const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k00-nrows'] || (det.k00.defRows || 3), 10) || 3; if (n <= 1) return;
+  const fields = ['acc', 'name', 'open', 'purch', 'issue', 'waste', 'imp', 'prev', 'bud', 'ref'];
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, 'k00r' + r + '-' + f, ans['k00r' + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, 'k00r' + n + '-' + f, ''));
+  setAnswer(code, 'k00-nrows', String(n - 1)); k00Rerender(code);
+}
+function k00AddCls(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k00-clsn'] || (det.k00.defCls || 3), 10) || 3; setAnswer(code, 'k00-clsn', String(n + 1)); k00Rerender(code); }
+function k00DelCls(code, i) {
+  const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k00-clsn'] || (det.k00.defCls || 3), 10) || 3; if (n <= 1) return;
+  const fields = ['obj', 'kind', 'qty', 'price', 'acc', 'risk'];
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, 'k00cls' + r + '-' + f, ans['k00cls' + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, 'k00cls' + n + '-' + f, ''));
+  setAnswer(code, 'k00-clsn', String(n - 1)); k00Rerender(code);
+}
+function k00Recalc(code) {
+  const det = testDet(code); if (!det || !det.k00) return;
+  const c = k00Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const t = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('k00-summary', k00SummaryInner(code, c));
+  set('k00-checks', k00ChecksInner(code, c));
+  set('k00-aiparams', escHtml(k00ParamsBlock(c)));
+  c.rows.forEach(r => {
+    t('k00r' + r.i + '-close', g00Fmt(r.close));
+    t('k00r' + r.i + '-cur', g00Fmt(r.close));
+    t('k00r' + r.i + '-chg', g00Fmt(r.chg));
+    t('k00r' + r.i + '-pct', g00Pct(r.pct));
+    t('k00r' + r.i + '-buddev', g00Fmt(r.budDev));
+  });
+  c.cls.forEach(r => t('k00cls' + r.i + '-bal', g00Fmt(r.bal)));
+  t('k00-tot-open', g00Fmt(c.totOpen)); t('k00-tot-purch', g00Fmt(c.totPurch)); t('k00-tot-issue', g00Fmt(c.totIssue)); t('k00-tot-waste', g00Fmt(c.totWaste)); t('k00-tot-imp', g00Fmt(c.totImp)); t('k00-tot-close', g00Fmt(c.totClose));
+  t('k00-tot-cur', g00Fmt(c.totClose)); t('k00-tot-prev', g00Fmt(c.totPrev)); t('k00-tot-chg', g00Fmt(c.totChg)); t('k00-tot-pct', g00Pct(c.totPct)); t('k00-tot-bud', g00Fmt(c.totBud)); t('k00-tot-buddev', g00Fmt(c.totBudDev));
+}
+function k00Generate(code) {
+  const c = k00Compute(code);
+  setAnswer(code, 'k00-generated', '1');
+  const ans = testAnswers[code] || {};
+  if (c.enough && !((ans['k00-signif'] || '').trim())) setAnswer(code, 'k00-signif', k00SignifText(c));
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const tx = k00ConclText(code, c); setConcl(code, tx); if (conclEl) conclEl.value = tx; }
+  k00Rerender(code);
+}
+function k00ExcelInfo(code) { const el = document.getElementById('k00-excel-note'); if (el) el.textContent = 'Експортът в Excel (.xlsx) — с разгъването на движенията (крайно салдо = SUM формула), сравнението, складовата аналитичност, препратките и проверките — ще бъде добавен в следваща версия.'; }
+function k00WpHtml(code, secN) {
+  const det = testDet(code); if (!det.k00) return '';
+  const c = k00Compute(code), ans = testAnswers[code] || {};
+  const dRows = (det.k00.docs || []).map(d => `<tr><td>${d.n}</td><td>${escHtml(d.name)}</td><td class="c">${d10HasFile(code, 'k00d' + d.n) ? 'Качен' : (d.req ? 'Липсва' : '—')}</td></tr>`).join('');
+  const lRows = c.rows.map(r => `<tr><td>${r.i}</td><td>${escHtml(r.acc || '—')}</td><td class="c">${g00Fmt(r.open)}</td><td class="c">${g00Fmt(r.purch)}</td><td class="c">${g00Fmt(r.issue)}</td><td class="c">${g00Fmt(r.waste)}</td><td class="c">${g00Fmt(r.imp)}</td><td class="c">${g00Fmt(r.close)}</td><td class="c">${escHtml(r.ref || '—')}</td></tr>`).join('');
+  const totRow = `<tr style="font-weight:700"><td></td><td>Общо</td><td class="c">${g00Fmt(c.totOpen)}</td><td class="c">${g00Fmt(c.totPurch)}</td><td class="c">${g00Fmt(c.totIssue)}</td><td class="c">${g00Fmt(c.totWaste)}</td><td class="c">${g00Fmt(c.totImp)}</td><td class="c">${g00Fmt(c.totClose)}</td><td></td></tr>`;
+  const clsRows = c.cls.filter(r => r.has).map(r => `<tr><td>${r.i}</td><td>${escHtml(r.obj || '—')}</td><td class="c">${escHtml(r.kind || '—')}</td><td class="c">${g00Fmt(r.qty)}</td><td class="c">${g00Fmt(r.bal)}</td><td class="c">${escHtml(r.risk || '—')}</td></tr>`).join('') || '<tr><td colspan="6">Няма попълнена складова аналитичност.</td></tr>';
+  const cmpRows = c.cmpOn ? c.rows.map(r => `<tr><td>${r.i}</td><td>${escHtml(r.acc || '—')}</td><td class="c">${g00Fmt(r.close)}</td>${c.cmpPrev ? `<td class="c">${g00Fmt(r.prev)}</td><td class="c">${g00Fmt(r.chg)}</td><td class="c">${g00Pct(r.pct)}</td>` : ''}${c.cmpBud ? `<td class="c">${g00Fmt(r.bud)}</td><td class="c">${g00Fmt(r.budDev)}</td>` : ''}</tr>`).join('') : '';
+  const cmpHead = `<tr><th>№</th><th>Група/сметка</th><th>Текущ</th>${c.cmpPrev ? '<th>Предходен</th><th>Откл.</th><th>% откл.</th>' : ''}${c.cmpBud ? '<th>Бюджет</th><th>Откл. бюджет</th>' : ''}</tr>`;
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Материални запаси – водещ лист (lead schedule)</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Източник</td><td class="c">${escHtml(c.source || '—')}</td></tr>
+      <tr><td>Сравнение</td><td class="c">${escHtml(c.compare || '—')}</td></tr>
+      <tr><td>Групиране</td><td class="c">${escHtml(c.group || '—')}</td></tr>
+      <tr><td>Изход</td><td class="c">${escHtml(c.output || '—')}</td></tr>
+      <tr><td>Общо крайно салдо</td><td class="c"><b>${g00Fmt(c.totClose)}</b></td></tr>
+      <tr><td>Общо изменение (спрямо предх.)</td><td class="c">${c.cmpPrev ? g00Fmt(c.totChg) + ' (' + g00Pct(c.totPct) + ')' : '—'}</td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Документи и данни</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Документ / данни</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Водещ лист — разгъване на движенията</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Сметка</th><th>Нач.</th><th>Покупки</th><th>Изписв.</th><th>Брак/липси</th><th>Обезценка</th><th>Крайно</th><th>Препратка</th></tr></thead><tbody>${lRows}${totRow}</tbody></table>
+    ${c.cmpOn ? `<div class="wp-text" style="font-weight:700;margin-bottom:4px">Сравнение с предходен период / бюджет</div><table class="wp-std" style="margin-bottom:10px"><thead>${cmpHead}</thead><tbody>${cmpRows}</tbody></table>` : ''}
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Класификация и складова аналитичност</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Обект/артикул</th><th>Вид</th><th>Количество</th><th>Балансова</th><th>Основен риск</th></tr></thead><tbody>${clsRows}</tbody></table>
+    ${(ans['k00-signif'] || '').trim() ? `<div class="wp-text"><b>Основни отклонения:</b> ${escHtml(ans['k00-signif'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Проверки и предупреждения</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // ── G-05 „Нематериални активи – програма за одит и одиторски подход" — описателен тест с решения + програма ──
 // Поток: одиторът попълва 6-те решения → „Генерирай подход и програма" (гейтван) → авто-предложение + програма.
 // Фиксиран промпт + динамичен блок „Избрани параметри" (6-те решения). Excel = визуален бутон (без backend).
@@ -13018,6 +13388,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testJ10Panel(code)}
       ${testJ20Panel(code)}
       ${testJ30Panel(code)}
+      ${testK00Panel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -13063,6 +13434,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).j10) j10Recalc(code);
   if (testDet(code).j20) j20Recalc(code);
   if (testDet(code).j30) j30Recalc(code);
+  if (testDet(code).k00) k00Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -13209,6 +13581,7 @@ function setAnswer(code, n, value, btnEl) {
   if (typeof j10Recalc === 'function' && testDet(code) && testDet(code).j10) j10Recalc(code);
   if (typeof j20Recalc === 'function' && testDet(code) && testDet(code).j20) j20Recalc(code);
   if (typeof j30Recalc === 'function' && testDet(code) && testDet(code).j30) j30Recalc(code);
+  if (typeof k00Recalc === 'function' && testDet(code) && testDet(code).k00) k00Recalc(code);
   qProgress(code);
 }
 
@@ -14148,7 +14521,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -14175,6 +14548,7 @@ function testWpSections(code) {
   const j10Html = aiDet.j10 ? j10WpHtml(code, secJ10) : '';
   const j20Html = aiDet.j20 ? j20WpHtml(code, secJ20) : '';
   const j30Html = aiDet.j30 ? j30WpHtml(code, secJ30) : '';
+  const k00Html = aiDet.k00 ? k00WpHtml(code, secK00) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -14222,6 +14596,7 @@ function testWpSections(code) {
       ${j10Html}
       ${j20Html}
       ${j30Html}
+      ${k00Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
