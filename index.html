@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260809193609"></script>
-<script src="pd-spec.js?v=20260809193609"></script>
-<script src="pd-details.js?v=20260809193609"></script>
-<script src="test-details.js?v=20260809193609"></script>
+<script src="questions.js?v=20260810103657"></script>
+<script src="pd-spec.js?v=20260810103657"></script>
+<script src="pd-details.js?v=20260810103657"></script>
+<script src="test-details.js?v=20260810103657"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5422,7 +5422,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00 имат собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00 || det.k20) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00 / K-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -12051,6 +12051,304 @@ function k00WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ===================== K-20: Материални запаси – аналитични процедури по същество =====================
+// По подобие на J-20/I-20, но за раздел K: 4 параметъра + документи + данни + изграждане на очакване (формули за
+// отклонение/%/над прага) + КОЕФИЦИЕНТИ И АНАЛИТИЧНИ ИНДИКАТОРИ (нова таблица) + отклонения за разследване +
+// специфични индикатори + проверки (8). Праг SPM ← D-20. Excel = визуален бутон.
+function k20Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gp = (k) => ans['k20p-' + k] || '';
+  const method = gp('method'), base = gp('base'), dezagr = gp('dezagr'), threshold = gp('threshold');
+  const paramsComplete = !!(method && base && dezagr && threshold);
+  let thrKind = '', thrPct = NaN, thrAbs = NaN;
+  if (threshold === '5%') { thrKind = 'pct'; thrPct = 5; }
+  else if (threshold === '10%') { thrKind = 'pct'; thrPct = 10; }
+  else if (threshold === 'SPM') { thrKind = 'abs'; thrAbs = d10Num(ans['k20-spm']); if (isNaN(thrAbs)) { try { if (testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const p = d20Compute('D-20'); if (p && !isNaN(p.pm)) thrAbs = p.pm; } } catch (e) {} } }
+  else if (threshold === 'Персонализиран') { thrKind = 'abs'; thrAbs = d10Num(ans['k20-custom']); }
+  const thrMissing = (threshold === 'SPM' || threshold === 'Персонализиран') && isNaN(thrAbs);
+  const data = (det.k20.indicators || []).map(ind => ({ key: ind.key, name: ind.name, src: ind.src, cur: d10Num(ans['k20d-' + ind.key + '-cur']), prev: d10Num(ans['k20d-' + ind.key + '-prev']), bud: d10Num(ans['k20d-' + ind.key + '-bud']) }));
+  const anyCur = data.some(r => !isNaN(r.cur)), anyPrev = data.some(r => !isNaN(r.prev)), anyBud = data.some(r => !isNaN(r.bud));
+  const cmp = (det.k20.compare || []).map(a => {
+    const exp = d10Num(ans['k20c-' + a.key + '-exp']), act = d10Num(ans['k20c-' + a.key + '-act']);
+    const dev = (!isNaN(exp) && !isNaN(act)) ? act - exp : NaN;
+    const devpct = (!isNaN(dev) && !isNaN(exp) && exp !== 0) ? dev / exp * 100 : NaN;
+    const over = thrKind === 'pct' ? (!isNaN(devpct) && Math.abs(devpct) > thrPct) : (thrKind === 'abs' ? (!isNaN(dev) && !isNaN(thrAbs) && Math.abs(dev) > thrAbs) : false);
+    return { key: a.key, name: a.name, exp, act, dev, devpct, over, has: !isNaN(exp) || !isNaN(act) };
+  });
+  const anyExp = cmp.some(r => !isNaN(r.exp)), anyAct = cmp.some(r => !isNaN(r.act));
+  const devOverCount = cmp.filter(r => r.over).length;
+  const hasCurrent = anyCur || anyAct;
+  const hasComparative = anyPrev || anyExp;
+  // коефициенти
+  const coeffs = (det.k20.coeffs || []).map(cf => ({ key: cf.key, name: cf.name, interp: cf.interp, cur: ans['k20cf-' + cf.key + '-cur'] || '', prev: ans['k20cf-' + cf.key + '-prev'] || '', proc: ans['k20cf-' + cf.key + '-proc'] || '' }));
+  // отклонения за разследване
+  const devN = Math.max(1, parseInt(ans['k20-devn'] || (det.k20.defDev || 2), 10) || 2);
+  const devs = [];
+  for (let i = 1; i <= devN; i++) devs.push({ i, item: ans['k20ex' + i + '-item'] || '', size: ans['k20ex' + i + '-size'] || '', cause: (ans['k20ex' + i + '-cause'] || '').trim(), doc: ans['k20ex' + i + '-doc'] || '', evalv: ans['k20ex' + i + '-eval'] || '', proc: ans['k20ex' + i + '-proc'] || '', has: (ans['k20ex' + i + '-item'] || '').trim() !== '' || (ans['k20ex' + i + '-size'] || '').trim() !== '' });
+  const explainedCount = devs.filter(r => r.cause || r.evalv).length;
+  const unexplained = devOverCount > 0 && explainedCount === 0;
+  const doc4Up = d10HasFile(code, 'k20d4');
+  const baseNeedsDoc = base === 'Модел' || base === 'Отрасъл';
+  const baseMissing = !!base && ((base === 'Бюджет' && !anyBud && !doc4Up) || (baseNeedsDoc && !doc4Up));
+  const mismatch = ans['k20-mismatch'] === 'Да', negative = ans['k20-negative'] === 'Да', invgrowth = ans['k20-invgrowth'] === 'Да', noimpair = ans['k20-noimpair'] === 'Да';
+  const insuffDezagr = dezagr === 'Без';
+  const accepted = ans['k20-accept'] === 'Да';
+  const partner = mismatch || noimpair || unexplained || ans['k20-manual'] === 'Да';
+  const warns = [
+    { n: 1, name: 'Липсва база за изграждане на очакване', hit: baseMissing, level: 'Критично', lc: 'crit', act: 'Да се изискат данни или да се избере друга база.' },
+    { n: 2, name: 'Отклонение над избрания праг', hit: devOverCount > 0, level: 'За преглед', lc: 'rev', act: 'Да се изиска обяснение и подкрепящи документи.' },
+    { n: 3, name: 'Несъответствие между счетоводство и склад', hit: mismatch, level: 'Висок риск', lc: 'high', act: 'Да се извърши допълнителна съпоставка.' },
+    { n: 4, name: 'Отрицателни наличности или стойности', hit: negative, level: 'За корекция', lc: 'fix', act: 'Да се анализира причината и счетоводното третиране.' },
+    { n: 5, name: 'Значително увеличение на запасите', hit: invgrowth, level: 'За преглед', lc: 'rev', act: 'Да се анализира оборотът и залежалостта.' },
+    { n: 6, name: 'Липса на обезценка при индикатори за залежалост', hit: noimpair, level: 'Висок риск', lc: 'high', act: 'Да се планират тестове за НРС/обезценка.' },
+    { n: 7, name: 'Недостатъчно дезагрегиране', hit: insuffDezagr, level: 'Предупреждение', lc: 'warn', act: 'Да се избере анализ по продукт, обект или месец.' },
+    { n: 8, name: 'Необходим партньорски преглед', hit: partner, level: partner ? 'Задължително' : 'Незадължително', lc: partner ? 'high' : 'info', act: 'Преглед и одобрение при висок риск или необяснени отклонения.' }
+  ];
+  const warnCount = warns.filter(w => w.hit && w.n !== 8).length;
+  const canGen = paramsComplete && hasCurrent;
+  const enough = paramsComplete && hasCurrent && cmp.some(r => !isNaN(r.exp) && !isNaN(r.act));
+  let status;
+  if (!paramsComplete || !hasCurrent || baseMissing) status = 'Непълен';
+  else if (mismatch || negative) status = 'За корекция';
+  else if ((devOverCount > 0 && unexplained) || invgrowth || noimpair) status = 'За преглед';
+  else if (devOverCount > 0) status = 'Завършен с бележка';
+  else status = 'Завършен';
+  return { method, base, dezagr, threshold, paramsComplete, thrKind, thrPct, thrAbs, thrMissing, data, cmp, coeffs, devs, anyCur, anyPrev, anyBud, anyExp, anyAct, devOverCount, hasCurrent, hasComparative, explainedCount, unexplained, baseMissing, mismatch, negative, invgrowth, noimpair, insuffDezagr, warns, warnCount, canGen, accepted, enough, partner, status };
+}
+function k20ParamsBlock(c) {
+  const v = (x) => x || '—';
+  return 'ИЗБРАНИ ПАРАМЕТРИ:\n- Метод: ' + v(c.method) + '\n- База: ' + v(c.base) + '\n- Дезагрегиране: ' + v(c.dezagr) + '\n- Праг отклонение: ' + v(c.threshold) + (c.thrKind === 'abs' && !isNaN(c.thrAbs) ? ' (' + g00Fmt(c.thrAbs) + ')' : '');
+}
+function k20DevSummary(c) {
+  if (!c.enough) return '';
+  const over = c.cmp.filter(r => r.over);
+  if (!over.length) return 'Няма отклонения над избрания праг спрямо изграденото очакване.';
+  return 'Отклонения над прага: ' + over.map(r => r.name + ' (' + g00Fmt(r.dev) + ', ' + g00Pct(r.devpct) + ')').join('; ') + '.';
+}
+function k20ConclText(code, c) {
+  if (!c.enough) {
+    const miss = [];
+    if (!c.paramsComplete) miss.push('всички параметри на теста');
+    if (!c.hasCurrent) miss.push('отчетени стойности за текущ период');
+    if (!c.cmp.some(r => !isNaN(r.exp) && !isNaN(r.act))) miss.push('очаквани и отчетени стойности за сравнение');
+    return 'Към момента не може да бъде изградено надеждно очакване за раздел „Материални запаси", тъй като липсват следните необходими документи или данни: ' + (miss.join('; ') || 'необходими данни') + '. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.';
+  }
+  return 'След предоставяне на необходимите счетоводни, складови и сравнителни данни тестът автоматично изгради очакване за раздел „Материални запаси" (метод „' + c.method.toLowerCase() + '", база „' + c.base.toLowerCase() + '"), извърши съпоставка с отчетените стойности и изчисли отклоненията. Идентифицирани са ' + c.devOverCount + ' отклонения над определения праг (' + c.threshold + '), които са документирани за последващо разглеждане. Установените отклонения, предупреждения и ограничения следва да бъдат разгледани от одитора при определяне на последващите процедури по раздела.';
+}
+function k20SummaryInner(code, c) {
+  c = c || k20Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  const thr = (c.threshold || '—') + (c.thrKind === 'abs' && !isNaN(c.thrAbs) ? ' (' + g00Fmt(c.thrAbs) + ')' : '');
+  return `<div class="d10-stats">
+    ${st(escHtml(c.method || '—'), 'Метод')}
+    ${st(escHtml(c.base || '—'), 'База')}
+    ${st('' + c.devOverCount, 'Отклонения над прага', c.devOverCount ? 'warnv' : 'accent')}
+    ${st(escHtml(thr), 'Праг')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(escHtml(c.status), 'Статус', c.status === 'За корекция' ? 'badv' : (c.status === 'За преглед' ? 'warnv' : ''))}
+  </div>`;
+}
+function k20ParamsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const cells = (det.k20.params || []).map(p => `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}</span><select onchange="k20SetParam('${code}','${p.key}',this.value)">${d10Opts(ans['k20p-' + p.key], p.opts)}</select></div>`).join('');
+  const cond = [];
+  if (c.threshold === 'SPM') cond.push(`<div class="b40-f"><span class="b40-fl">Същественост за изпълнение (праг)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k20-spm'] || '')}" placeholder="${!isNaN(c.thrAbs) && !(ans['k20-spm'] || '').trim() ? 'авто от D-20: ' + g00Fmt(c.thrAbs) : '0,00'}" onchange="k20Set('${code}','k20-spm',this.value)"></div>`);
+  if (c.threshold === 'Персонализиран') cond.push(`<div class="b40-f"><span class="b40-fl">Персонализиран праг (стойност)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k20-custom'] || '')}" placeholder="0,00" onchange="k20Set('${code}','k20-custom',this.value)"></div>`);
+  const condHtml = cond.length ? `<div class="b40-fields" style="margin-top:12px">${cond.join('')}</div>` : '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Параметри на теста</div><div style="padding:12px 14px">
+    <div class="b40-fields">${cells}</div>
+    ${condHtml}
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Четирите параметъра определят метода, базата, дезагрегирането и прага за разследване. Прагът „SPM" се тегли автоматично от теста за същественост за изпълнение (D-20).</div>
+  </div></div>`;
+}
+function k20Upload(code, key) {
+  const files = testFiles(code, key);
+  const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="k20RemoveFile('${code}','${key}',${i})">✕</button></div>`).join('') + '</div>' : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="k20AddFiles('${code}','${key}',this.files)"></label>${fl}`;
+}
+function k20DocsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['k20-generated'] === '1';
+  const slots = (det.k20.docs || []).map(d => {
+    const key = 'k20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${k20Upload(code, key)}</div></div>`;
+  }).join('');
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="k20Generate('${code}')">Изпълни автоматичен анализ</button>`;
+  const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k20Generate('${code}')">Обнови анализа</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="k20-docs">
+    ${slots}
+    <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
+    <div id="k20-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
+  </div></div>`;
+}
+function k20PromptCard(code, c) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:12px 14px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">Тестът се изпълнява по фиксирана методология. Долу можете да прегледате инструкцията и текущо избраните параметри.</div>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap"><div id="k20-aiparams" style="font-weight:700;color:var(--p-text1)">${escHtml(k20ParamsBlock(c))}</div>
+<div style="border-top:1px dashed var(--p-border);margin:8px 0"></div>${escHtml(det.aiPrompt || '')}</div>
+    </details>
+  </div></div>`;
+}
+function k20DataCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const inp = (k, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k20d-' + k + '-' + f] || '')}" onchange="k20Set('${code}','k20d-${k}-${f}',this.value)">`;
+  const rows = (det.k20.indicators || []).map((ind, idx) => `<tr><td class="role">${idx + 1}</td><td class="base">${escHtml(ind.name)}</td><td>${inp(ind.key, 'cur')}</td><td>${inp(ind.key, 'prev')}</td><td>${inp(ind.key, 'bud')}</td><td style="font-size:11px;color:var(--p-text3)">${escHtml(ind.src)}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Данни за аналитична процедура</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:800px"><thead><tr><th>№</th><th style="min-width:230px">Показател / група</th><th>Текущ период</th><th>Предходен период</th><th>Бюджет / модел</th><th>Източник</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div></div>`;
+}
+function k20CmpCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const inp = (k, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['k20c-' + k + '-' + f] || '')}" onchange="k20Set('${code}','k20c-${k}-${f}',this.value)">`;
+  const rows = c.cmp.map(r => `<tr${r.over ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="base">${escHtml(r.name)}</td>
+    <td>${inp(r.key, 'act')}</td><td>${inp(r.key, 'exp')}</td>
+    <td style="text-align:right;white-space:nowrap" id="k20c-${r.key}-dev">${g00Fmt(r.dev)}</td>
+    <td style="text-align:right;white-space:nowrap" id="k20c-${r.key}-devpct">${g00Pct(r.devpct)}</td>
+    <td class="c" id="k20c-${r.key}-over" style="font-weight:700;color:${r.over ? '#d92d20' : 'var(--p-text3)'}">${r.over ? 'Да' : 'Не'}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изграждане на очакване и съпоставка</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:800px"><thead><tr><th style="min-width:230px">Показател / група</th><th>Отчетена стойност</th><th>Очаквана стойност</th><th>Абс. отклонение</th><th>% отклонение</th><th>Над прага?</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="b40-fields" style="margin-top:12px">
+      <div class="b40-f"><span class="b40-fl">Несъответствие счетоводство ↔ склад?</span><select onchange="k20Set('${code}','k20-mismatch',this.value)">${d10Opts(ans['k20-mismatch'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Отрицателни наличности / стойности?</span><select onchange="k20Set('${code}','k20-negative',this.value)">${d10Opts(ans['k20-negative'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Значително увеличение на запасите?</span><select onchange="k20Set('${code}','k20-invgrowth',this.value)">${d10Opts(ans['k20-invgrowth'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Липса на обезценка при залежалост?</span><select onchange="k20Set('${code}','k20-noimpair',this.value)">${d10Opts(ans['k20-noimpair'], ['Да', 'Не'])}</select></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Колоните „Абс. отклонение" (= отчетена − очаквана), „% отклонение" и „Над прага?" се изчисляват автоматично спрямо избрания праг. Отклонения над прага: <b>${c.devOverCount}</b>.</div>
+  </div></div>`;
+}
+function k20CoeffCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const it = (k, f) => `<input value="${escHtml(ans['k20cf-' + k + '-' + f] || '')}" onchange="k20SetText('${code}','k20cf-${k}-${f}',this.value)">`;
+  const sel = (k, f) => `<select onchange="k20Set('${code}','k20cf-${k}-${f}',this.value)">${d10Opts(ans['k20cf-' + k + '-' + f], ['Да', 'Не'])}</select>`;
+  const rows = c.coeffs.map((r, idx) => `<tr><td class="role">${idx + 1}</td><td class="base">${escHtml(r.name)}</td><td>${it(r.key, 'cur')}</td><td>${it(r.key, 'prev')}</td><td style="font-size:11px;color:var(--p-text3)">${escHtml(r.interp)}</td><td>${sel(r.key, 'proc')}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Коефициенти и аналитични индикатори</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:860px"><thead><tr><th>№</th><th style="min-width:150px">Коефициент / индикатор</th><th>Текущ период</th><th>Предходен / база</th><th style="min-width:240px">Интерпретация</th><th>Последваща процедура?</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Коефициентите подпомагат идентифицирането на залежалост, свръхналичности и индикатори за обезценка. Стойностите се попълват от одитора или автоматично при наличие на данни.</div>
+  </div></div>`;
+}
+function k20DevCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const inp = (i, f) => `<input value="${escHtml(ans['k20ex' + i + '-' + f] || '')}" onchange="k20SetText('${code}','k20ex${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="k20Set('${code}','k20ex${i}-${f}',this.value)">${d10Opts(ans['k20ex' + i + '-' + f], opts)}</select>`;
+  const rows = c.devs.map(r => `<tr>
+    <td class="role">${r.i}</td><td>${inp(r.i, 'item')}</td><td>${inp(r.i, 'size')}</td><td>${inp(r.i, 'cause')}</td><td>${inp(r.i, 'doc')}</td>
+    <td>${sel(r.i, 'eval', ['Приемливо', 'За изясняване', 'Неприемливо'])}</td>
+    <td>${inp(r.i, 'proc')}</td>
+    <td style="text-align:center">${c.devs.length > 1 ? `<button class="rm" title="Премахни" onclick="k20DelRow('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обяснения за отклонения над прага</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:980px"><thead><tr><th>№</th><th style="min-width:150px">Отклонение / показател</th><th style="min-width:90px">Размер</th><th style="min-width:150px">Вероятна причина</th><th style="min-width:130px">Документ / обяснение</th><th>Одиторска оценка</th><th style="min-width:130px">Последваща процедура</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="k20AddRow('${code}')">+ Добави отклонение</button></div>
+  </div></div>`;
+}
+function k20ChecksInner(code, c) {
+  c = c || k20Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : (w.lc === 'info' ? 'ℹ' : '⚠'));
+    return `<div class="b50-chk ${cls}" style="padding:6px 14px"><span class="ic">${ic}</span><span>${escHtml(w.name)}${w.hit ? '' : ' — няма'} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function k20ChecksCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="k20-checks" class="b50-checks">${k20ChecksInner(code, c)}</div></div>`;
+}
+function k20ConclCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const ta = (k, ph) => `<textarea rows="2" oninput="k20SetText('${code}','${k}',this.value)" placeholder="${escHtml(ph || '')}">${escHtml(ans[k] || '')}</textarea>`;
+  const it = (k, type) => `<input${type ? ' type="' + type + '"' : ''} value="${escHtml(ans[k] || '')}" onchange="k20SetText('${code}','${k}',this.value)">`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Заключение по раздела</div><div style="padding:12px 14px">
+    <div class="b40-f span"><span class="b40-fl">Обобщение на отклоненията</span>${ta('k20-devsummary', 'Генерира се при „Изпълни автоматичен анализ" — редактируемо')}</div>
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Предупреждения и ограничения</span>${ta('k20-limits', 'Свободен текст')}</div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема заключението</span><select onchange="k20Set('${code}','k20-accept',this.value)">${d10Opts(ans['k20-accept'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Изготвил</span>${it('k20-by')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата</span>${it('k20-date', 'date')}</div>
+      <div class="b40-f"><span class="b40-fl">Прегледал</span>${it('k20-rev')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата на преглед</span>${it('k20-revdate', 'date')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Финалният текст на заключението се попълва в полето „Заключение" под въпросите; черновата се генерира при „Изпълни автоматичен анализ".</div>
+  </div></div>`;
+}
+function k20PanelInner(code) {
+  const c = k20Compute(code);
+  const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="k20-summary">${k20SummaryInner(code, c)}</div></div>`;
+  const body = k20DataCard(code, c) + k20CmpCard(code, c) + k20CoeffCard(code, c) + k20DevCard(code, c) + k20ChecksCard(code, c) + k20ConclCard(code, c);
+  return summary + k20ParamsCard(code, c) + k20DocsCard(code, c) + k20PromptCard(code, c) + body;
+}
+function testK20Panel(code) {
+  const det = testDet(code);
+  if (!det.k20) return '';
+  return `<div id="k20-panel">${k20PanelInner(code)}</div>`;
+}
+function k20Rerender(code) { const el = document.getElementById('k20-panel'); if (el) el.innerHTML = k20PanelInner(code); }
+function k20SetParam(code, key, value) { setAnswer(code, 'k20p-' + key, value); k20Rerender(code); }
+function k20Set(code, key, value) { setAnswer(code, key, value); k20Recalc(code); }
+function k20SetText(code, key, value) { setAnswer(code, key, value); }
+function k20AddFiles(code, key, files) { testAddFiles(code, key, files); k20Rerender(code); }
+function k20RemoveFile(code, key, i) { testRemoveFile(code, key, i); k20Rerender(code); }
+function k20AddRow(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k20-devn'] || (det.k20.defDev || 2), 10) || 2; setAnswer(code, 'k20-devn', String(n + 1)); k20Rerender(code); }
+function k20DelRow(code, i) {
+  const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['k20-devn'] || (det.k20.defDev || 2), 10) || 2; if (n <= 1) return;
+  const fields = ['item', 'size', 'cause', 'doc', 'eval', 'proc'];
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, 'k20ex' + r + '-' + f, ans['k20ex' + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, 'k20ex' + n + '-' + f, ''));
+  setAnswer(code, 'k20-devn', String(n - 1)); k20Rerender(code);
+}
+function k20Recalc(code) {
+  const det = testDet(code); if (!det || !det.k20) return;
+  const c = k20Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set('k20-summary', k20SummaryInner(code, c));
+  set('k20-checks', k20ChecksInner(code, c));
+  set('k20-aiparams', escHtml(k20ParamsBlock(c)));
+  c.cmp.forEach(r => { const de = document.getElementById('k20c-' + r.key + '-dev'); if (de) de.textContent = g00Fmt(r.dev); const pe = document.getElementById('k20c-' + r.key + '-devpct'); if (pe) pe.textContent = g00Pct(r.devpct); const oe = document.getElementById('k20c-' + r.key + '-over'); if (oe) { oe.textContent = r.over ? 'Да' : 'Не'; oe.style.color = r.over ? '#d92d20' : 'var(--p-text3)'; } });
+}
+function k20Generate(code) {
+  const c = k20Compute(code);
+  setAnswer(code, 'k20-generated', '1');
+  const ans = testAnswers[code] || {};
+  if (c.enough && !((ans['k20-devsummary'] || '').trim())) setAnswer(code, 'k20-devsummary', k20DevSummary(c));
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const tx = k20ConclText(code, c); setConcl(code, tx); if (conclEl) conclEl.value = tx; }
+  k20Rerender(code);
+}
+function k20ExcelInfo(code) { const el = document.getElementById('k20-excel-note'); if (el) el.textContent = 'Експортът в Excel (.xlsx) — с данните, изграденото очакване, коефициентите, отклоненията и проверките — ще бъде добавен в следваща версия.'; }
+function k20WpHtml(code, secN) {
+  const det = testDet(code); if (!det.k20) return '';
+  const c = k20Compute(code), ans = testAnswers[code] || {};
+  const dRows = (det.k20.docs || []).map(d => `<tr><td>${d.n}</td><td>${escHtml(d.name)}</td><td class="c">${d10HasFile(code, 'k20d' + d.n) ? 'Качен' : 'Липсва'}</td></tr>`).join('');
+  const cRows = c.cmp.map(r => `<tr${r.over ? ' style="font-weight:700"' : ''}><td>${escHtml(r.name)}</td><td class="c">${g00Fmt(r.act)}</td><td class="c">${g00Fmt(r.exp)}</td><td class="c">${g00Fmt(r.dev)}</td><td class="c">${g00Pct(r.devpct)}</td><td class="c">${r.over ? 'Да' : 'Не'}</td></tr>`).join('');
+  const cfRows = c.coeffs.map((r, idx) => `<tr><td>${idx + 1}</td><td>${escHtml(r.name)}</td><td class="c">${escHtml(r.cur || '—')}</td><td class="c">${escHtml(r.prev || '—')}</td><td class="c">${escHtml(r.proc || '—')}</td></tr>`).join('');
+  const vRows = c.devs.filter(r => r.has).map(r => `<tr><td>${r.i}</td><td>${escHtml(r.item || '—')}</td><td>${escHtml(r.size || '—')}</td><td>${escHtml(r.cause || '—')}</td><td class="c">${escHtml(r.evalv || '—')}</td><td class="c">${escHtml(r.proc || '—')}</td></tr>`).join('') || '<tr><td colspan="6">Няма отклонения за разглеждане.</td></tr>';
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Материални запаси – аналитични процедури по същество</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Метод</td><td class="c">${escHtml(c.method || '—')}</td></tr>
+      <tr><td>База</td><td class="c">${escHtml(c.base || '—')}</td></tr>
+      <tr><td>Дезагрегиране</td><td class="c">${escHtml(c.dezagr || '—')}</td></tr>
+      <tr><td>Праг за отклонение</td><td class="c">${escHtml(c.threshold || '—')}${c.thrKind === 'abs' && !isNaN(c.thrAbs) ? ' (' + g00Fmt(c.thrAbs) + ')' : ''}</td></tr>
+      <tr><td>Брой отклонения над прага</td><td class="c"><b>${c.devOverCount}</b></td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Документи и входни данни</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Документ / данни</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Изграждане на очакване и съпоставка</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Показател / група</th><th>Отчетена</th><th>Очаквана</th><th>Отклонение</th><th>Откл. %</th><th>Над прага</th></tr></thead><tbody>${cRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Коефициенти и аналитични индикатори</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Коефициент</th><th>Текущ</th><th>Предходен</th><th>Последваща процедура</th></tr></thead><tbody>${cfRows}</tbody></table>
+    ${(ans['k20-devsummary'] || '').trim() ? `<div class="wp-text"><b>Обобщение на отклоненията:</b> ${escHtml(ans['k20-devsummary'])}</div>` : ''}
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Обяснения за отклонения над прага</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Показател</th><th>Размер</th><th>Причина</th><th>Оценка</th><th>Процедура</th></tr></thead><tbody>${vRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Предупреждения и проверки</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // ── G-05 „Нематериални активи – програма за одит и одиторски подход" — описателен тест с решения + програма ──
 // Поток: одиторът попълва 6-те решения → „Генерирай подход и програма" (гейтван) → авто-предложение + програма.
 // Фиксиран промпт + динамичен блок „Избрани параметри" (6-те решения). Excel = визуален бутон (без backend).
@@ -13389,6 +13687,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testJ20Panel(code)}
       ${testJ30Panel(code)}
       ${testK00Panel(code)}
+      ${testK20Panel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -13435,6 +13734,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).j20) j20Recalc(code);
   if (testDet(code).j30) j30Recalc(code);
   if (testDet(code).k00) k00Recalc(code);
+  if (testDet(code).k20) k20Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -13582,6 +13882,7 @@ function setAnswer(code, n, value, btnEl) {
   if (typeof j20Recalc === 'function' && testDet(code) && testDet(code).j20) j20Recalc(code);
   if (typeof j30Recalc === 'function' && testDet(code) && testDet(code).j30) j30Recalc(code);
   if (typeof k00Recalc === 'function' && testDet(code) && testDet(code).k00) k00Recalc(code);
+  if (typeof k20Recalc === 'function' && testDet(code) && testDet(code).k20) k20Recalc(code);
   qProgress(code);
 }
 
@@ -14521,7 +14822,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secK20 = aiDet.k20 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -14549,6 +14850,7 @@ function testWpSections(code) {
   const j20Html = aiDet.j20 ? j20WpHtml(code, secJ20) : '';
   const j30Html = aiDet.j30 ? j30WpHtml(code, secJ30) : '';
   const k00Html = aiDet.k00 ? k00WpHtml(code, secK00) : '';
+  const k20Html = aiDet.k20 ? k20WpHtml(code, secK20) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -14597,6 +14899,7 @@ function testWpSections(code) {
       ${j20Html}
       ${j30Html}
       ${k00Html}
+      ${k20Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
