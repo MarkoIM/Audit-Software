@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260814144235"></script>
-<script src="pd-spec.js?v=20260814144235"></script>
-<script src="pd-details.js?v=20260814144235"></script>
-<script src="test-details.js?v=20260814144235"></script>
+<script src="questions.js?v=20260814145143"></script>
+<script src="pd-spec.js?v=20260814145143"></script>
+<script src="pd-details.js?v=20260814145143"></script>
+<script src="test-details.js?v=20260814145143"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5422,7 +5422,7 @@ function testDetailCards(code) {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00 || det.k20 || det.k30 || det.l00 || det.l10 || det.l20 || det.l30 || det.m00 || det.m20 || det.m30 || det.n00 || det.n10 || det.n20 || det.n30 || det.o00 || det.o10 || det.o20 || det.o30 || det.p00) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00…K-30 / L-00…L-30 / M-00 / M-20 / M-30 / N-00 / N-10 / N-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00 || det.k20 || det.k30 || det.l00 || det.l10 || det.l20 || det.l30 || det.m00 || det.m20 || det.m30 || det.n00 || det.n10 || det.n20 || det.n30 || det.o00 || det.o10 || det.o20 || det.o30 || det.p00 || det.p10) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00…K-30 / L-00…L-30 / M-00 / M-20 / M-30 / N-00 / N-10 / N-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -15211,6 +15211,358 @@ function m00WpHtml(code, secN) {
     <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
 }
 
+// ===================== P-10: Провизии и условни задължения – процедури по същество (детайлни тестове) =====================
+// По подобие на O-10/N-10, но за раздел P: 5 параметъра (обхват/твърдение/праг/метод/изход) + 5 документа + популация +
+// тествани позиции + ТАБЛИЦА ОПОВЕСТЯВАНЕ/ПРЕДСТАВЯНЕ (5 проверки) + provisions индикатори (адвокатско писмо, разчет,
+// правно противоречие, пълнота, над прага) + изключения + корекции + 8 проверки. Праг: SPM ← D-20, Цял праг ← D-10.
+function p10Compute(code) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const gp = (k) => ans['p10p-' + k] || '';
+  const scope = gp('scope'), assertion = gp('assertion'), threshold = gp('threshold'), method = gp('method'), output = gp('output');
+  const paramsComplete = !!(scope && assertion && threshold && method && output);
+  let spm = d10Num(ans['p10-spm']); if (isNaN(spm)) { try { if (testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const p = d20Compute('D-20'); if (p && !isNaN(p.pm)) spm = p.pm; } } catch (e) {} }
+  let fullmat = d10Num(ans['p10-fullmat']); if (isNaN(fullmat)) { try { if (testDetails['D-10'] && testDetails['D-10'].d10 && typeof d10Compute === 'function') { const dc = d10Compute('D-10'); if (dc && !isNaN(dc.materiality)) fullmat = dc.materiality; } } catch (e) {} }
+  const custom = d10Num(ans['p10-custom']);
+  const thrVal = threshold === 'SPM' ? spm : (threshold === 'Цял праг' ? fullmat : (threshold === 'Персонализиран' ? custom : NaN));
+  const popCount = parseInt(d10Num(ans['p10-popcount']), 10);
+  const popValue = d10Num(ans['p10-popvalue']);
+  const hasPop = !isNaN(popValue) || !isNaN(popCount);
+  const ovtotal = d10Num(ans['p10-ovtotal']);
+  const reconOff = !isNaN(ovtotal) && !isNaN(popValue) && Math.abs(popValue - ovtotal) > 0.5;
+  const itN = Math.max(1, parseInt(ans['p10-itn'] || (det.p10.defItems || 3), 10) || 3);
+  const items = [];
+  for (let i = 1; i <= itN; i++) {
+    const v = d10Num(ans['p10it' + i + '-value']);
+    items.push({ i, name: ans['p10it' + i + '-name'] || '', ctp: ans['p10it' + i + '-ctp'] || '', assertion: ans['p10it' + i + '-assertion'] || '', proc: ans['p10it' + i + '-proc'] || '', doc: (ans['p10it' + i + '-doc'] || '').trim(), value: v, result: ans['p10it' + i + '-result'] || '', exc: ans['p10it' + i + '-exc'] || '', has: (ans['p10it' + i + '-name'] || '').trim() !== '' || !isNaN(v) });
+  }
+  const itemRows = items.filter(r => r.has);
+  const itemCount = itemRows.length, testedValue = itemRows.reduce((a, r) => a + (isNaN(r.value) ? 0 : r.value), 0);
+  const itemsExc = itemRows.filter(r => r.exc === 'Да' || r.result === 'С изключение').length;
+  const itemNoDoc = itemRows.some(r => !r.doc);
+  const coverage = (!isNaN(popValue) && popValue > 0) ? testedValue / popValue * 100 : NaN;
+  // оповестяване / представяне
+  const disc = (det.p10.disclosure || []).map(a => ({ key: a.key, name: a.name, res: ans['p10dc-' + a.key + '-res'] || '', exc: ans['p10dc-' + a.key + '-exc'] || '', note: ans['p10dc-' + a.key + '-note'] || '' }));
+  const discExc = disc.filter(r => r.exc === 'Да' || r.res === 'Не').length;
+  // изключения
+  const exN = Math.max(1, parseInt(ans['p10-exn'] || (det.p10.defExc || 2), 10) || 2);
+  const exc = [];
+  for (let i = 1; i <= exN; i++) {
+    const amount = d10Num(ans['p10ex' + i + '-amount']);
+    exc.push({ i, item: ans['p10ex' + i + '-item'] || '', desc: (ans['p10ex' + i + '-desc'] || '').trim(), assertion: ans['p10ex' + i + '-assertion'] || '', impact: ans['p10ex' + i + '-impact'] || '', amount, corr: (ans['p10ex' + i + '-corr'] || '').trim(), classif: ans['p10ex' + i + '-classif'] || '', status: ans['p10ex' + i + '-status'] || '', has: (ans['p10ex' + i + '-desc'] || '').trim() !== '' || (ans['p10ex' + i + '-item'] || '').trim() !== '' });
+  }
+  const excCount = exc.filter(r => r.has).length;
+  const excMaterialNoCorr = exc.some(e => e.has && !isNaN(e.amount) && !isNaN(thrVal) && Math.abs(e.amount) > thrVal && !e.corr);
+  // корекции
+  const corN = Math.max(1, parseInt(ans['p10-corn'] || (det.p10.defCor || 2), 10) || 2);
+  const cors = [];
+  for (let i = 1; i <= corN; i++) {
+    const sum = d10Num(ans['p10cor' + i + '-sum']);
+    cors.push({ i, desc: ans['p10cor' + i + '-desc'] || '', dr: ans['p10cor' + i + '-dr'] || '', cr: ans['p10cor' + i + '-cr'] || '', sum, basis: ans['p10cor' + i + '-basis'] || '', impact: ans['p10cor' + i + '-impact'] || '', accepted: ans['p10cor' + i + '-accepted'] || '', has: (ans['p10cor' + i + '-desc'] || '').trim() !== '' || !isNaN(sum) });
+  }
+  const corCount = cors.filter(r => r.has).length, corTotal = cors.reduce((a, r) => a + (isNaN(r.sum) ? 0 : r.sum), 0);
+  const hasCorr = corCount > 0 || itemsExc > 0 || excCount > 0;
+  const d1 = d10HasFile(code, 'p10d1'), d2 = d10HasFile(code, 'p10d2');
+  const noLegal = ans['p10-nolegal'] === 'Да', noCalc = ans['p10-nocalc'] === 'Да', legalConflict = ans['p10-legalconflict'] === 'Да', incompleteAssess = ans['p10-incomplete'] === 'Да', aboveThr = ans['p10-abovethr'] === 'Да';
+  const accepted = ans['p10-accept'] === 'Да';
+  const partner = noCalc || legalConflict || excMaterialNoCorr || ans['p10-partner'] === 'Да';
+  const warns = [
+    { n: 1, name: 'Липсва регистър на провизии и дела', hit: !d2, level: 'Критично', lc: 'crit', act: 'Да се изиска регистър/аналитична справка по позиции.' },
+    { n: 2, name: 'Липсва адвокатско писмо / правно становище', hit: noLegal, level: 'За преглед', lc: 'rev', act: 'Да се изиска адвокатско писмо или алтернативни процедури.' },
+    { n: 3, name: 'Позиция над праг не е тествана', hit: aboveThr, level: 'За корекция', lc: 'fix', act: 'Да се добави позицията към обхвата.' },
+    { n: 4, name: 'Провизия без разчет', hit: noCalc, level: 'Висок риск', lc: 'high', act: 'Да се изиска разчет и да се извърши преизчисление.' },
+    { n: 5, name: 'Правно становище противоречи на счетоводното третиране', hit: legalConflict, level: 'Висок риск', lc: 'high', act: 'Да се обсъди с ръководството и да се предложи корекция/оповестяване.' },
+    { n: 6, name: 'Липсва оценка на пълнота', hit: incompleteAssess, level: 'За преглед', lc: 'rev', act: 'Да се изпълнят допълнителни процедури (протоколи, договори, последващи събития).' },
+    { n: 7, name: 'Изключение без предложена реакция', hit: excMaterialNoCorr, level: 'За корекция', lc: 'fix', act: 'Да се попълни предложена корекция или обосновка.' },
+    { n: 8, name: 'Необходим партньорски преглед', hit: partner, level: 'Задължително', lc: 'high', act: 'Преглед и одобрение от отговорния одитор/партньор.' }
+  ];
+  const warnCount = warns.filter(w => w.hit).length;
+  const canGen = paramsComplete && (d1 || d2);
+  const enough = paramsComplete && (d1 || d2) && itemCount > 0;
+  let status;
+  if (!paramsComplete || (!d1 && !d2) || itemCount === 0) status = 'Непълен';
+  else if (aboveThr || excMaterialNoCorr) status = 'За корекция';
+  else if (noCalc || legalConflict || noLegal || incompleteAssess || discExc > 0 || excCount > 0 || itemNoDoc) status = 'За преглед';
+  else if (!accepted) status = 'За допълване';
+  else status = 'Завършен';
+  return { scope, assertion, threshold, method, output, paramsComplete, spm, fullmat, custom, thrVal, popCount, popValue, hasPop, ovtotal, reconOff, items, itemCount, testedValue, itemsExc, itemNoDoc, coverage, disc, discExc, exc, excCount, excMaterialNoCorr, cors, corCount, corTotal, hasCorr, d1, d2, noLegal, noCalc, legalConflict, incompleteAssess, aboveThr, accepted, partner, warns, warnCount, canGen, enough, status };
+}
+function p10ParamsBlock(c) {
+  const v = (x) => x || '—';
+  return 'ИЗБРАНИ ПАРАМЕТРИ:\n- Обхват: ' + v(c.scope) + '\n- Твърдение: ' + v(c.assertion) + '\n- Праг: ' + v(c.threshold) + (isNaN(c.thrVal) ? '' : ' (' + g00Fmt(c.thrVal) + ')') + '\n- Метод: ' + v(c.method) + '\n- Изход: ' + v(c.output);
+}
+function p10ConclText(code, c) {
+  if (!c.enough) {
+    const miss = [];
+    if (!c.paramsComplete) miss.push('всички параметри на теста');
+    if (!c.d1 && !c.d2) miss.push('популация / регистър на провизии и дела');
+    if (c.itemCount === 0) miss.push('тествани позиции');
+    return 'Към момента тестът не може да бъде приключен, тъй като липсват следните необходими документи или данни: ' + (miss.join('; ') || 'необходими данни') + '. След предоставяне на липсващата информация тестът следва да бъде изпълнен повторно.';
+  }
+  const cov = isNaN(c.coverage) ? '—' : g00Pct(c.coverage);
+  return 'На база извършените детайлни процедури по същество върху избраните позиции от раздел „Провизии и условни задължения" тестът провери приложимите твърдения, включително „' + (c.assertion || '').toLowerCase() + '". Тествани са ' + c.itemCount + ' позиции с обща стойност ' + g00Fmt(c.testedValue) + ' (' + cov + ' от популацията) чрез метод „' + (c.method || '').toLowerCase() + '" — преизчисление на провизиите и допусканията, съпоставка с регистър, адвокатски писма, протоколи и последващи събития, проверка на признаване и класификация, както и проверка на представянето и оповестяването. ' + (c.hasCorr ? 'Установените изключения и предложените корекции са документирани.' : 'Не са установени съществени изключения по тестваните позиции.') + ' Резултатът подлежи на преглед и одобрение от отговорния одитор или партньор.';
+}
+function p10SummaryInner(code, c) {
+  c = c || p10Compute(code);
+  const st = (v, k, cls) => `<div class="d10-stat${cls ? ' ' + cls : ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  return `<div class="d10-stats">
+    ${st(escHtml(c.scope || '—'), 'Обхват')}
+    ${st(escHtml(c.assertion || '—'), 'Твърдение')}
+    ${st(c.itemCount + ' поз. · ' + g00Fmt(c.testedValue), 'Тествани', c.itemCount ? 'accent' : '')}
+    ${st(isNaN(c.coverage) ? '—' : g00Pct(c.coverage), 'Покритие')}
+    ${st('' + c.excCount, 'Изключения', c.excCount ? 'badv' : '')}
+    ${st('' + c.warnCount, 'Предупреждения', c.warnCount ? 'warnv' : '')}
+    ${st(escHtml(c.status), 'Статус', c.status === 'За корекция' ? 'badv' : ((c.status === 'За преглед' || c.status === 'За допълване') ? 'warnv' : ''))}
+  </div>`;
+}
+function p10ParamsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {};
+  const cells = (det.p10.params || []).map(p => `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}</span><select onchange="p10SetParam('${code}','${p.key}',this.value)">${d10Opts(ans['p10p-' + p.key], p.opts)}</select></div>`).join('');
+  const cond = [];
+  if (c.threshold === 'Персонализиран') cond.push(`<div class="b40-f"><span class="b40-fl">Персонализиран праг (стойност)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10-custom'] || '')}" placeholder="0,00" onchange="p10Set('${code}','p10-custom',this.value)"></div>`);
+  const condHtml = cond.length ? `<div class="b40-fields" style="margin-top:12px">${cond.join('')}</div>` : '';
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Параметри на теста</div><div style="padding:12px 14px">
+    <div class="b40-fields">${cells}</div>
+    ${condHtml}
+    <div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Бележки на одитора</span><input value="${escHtml(ans['p10-parnote'] || '')}" onchange="p10SetText('${code}','p10-parnote',this.value)"></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Петте параметъра управляват обхвата, твърденията, прага, метода и изхода. Прагът „SPM" се тегли от D-20, а „Цял праг" — от D-10.</div>
+  </div></div>`;
+}
+function p10Upload(code, key) {
+  const files = testFiles(code, key);
+  const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="p10RemoveFile('${code}','${key}',${i})">✕</button></div>`).join('') + '</div>' : '';
+  return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="p10AddFiles('${code}','${key}',this.files)"></label>${fl}`;
+}
+function p10DocsCard(code, c) {
+  const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['p10-generated'] === '1';
+  const slots = (det.p10.docs || []).map(d => {
+    const key = 'p10d' + d.n, up = d10HasFile(code, key);
+    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
+    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${p10Upload(code, key)}</div></div>`;
+  }).join('');
+  const genBtn = `<button class="btn btn-primary btn-sm" onclick="p10Generate('${code}')">Изпълни автоматичен анализ</button>`;
+  const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p10Generate('${code}')">Обнови анализа</button>` : '';
+  const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="p10-docs">
+    ${slots}
+    <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
+    <div id="p10-excel-note" style="font-size:11px;color:var(--p-text3);margin-top:4px"></div>
+  </div></div>`;
+}
+function p10PromptCard(code, c) {
+  const det = testDet(code);
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:12px 14px">
+    <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">Тестът се изпълнява по фиксирана методология. Долу можете да прегледате инструкцията и текущо избраните параметри.</div>
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap"><div id="p10-aiparams" style="font-weight:700;color:var(--p-text1)">${escHtml(p10ParamsBlock(c))}</div>
+<div style="border-top:1px dashed var(--p-border);margin:8px 0"></div>${escHtml(det.aiPrompt || '')}</div>
+    </details>
+  </div></div>`;
+}
+function p10PopCard(code, c) {
+  const ans = testAnswers[code] || {};
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на популацията</div><div style="padding:12px 14px">
+    <div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Брой позиции в популацията</span><input inputmode="numeric" style="text-align:right" value="${escHtml(ans['p10-popcount'] || '')}" placeholder="0" onchange="p10Set('${code}','p10-popcount',this.value)"></div>
+      <div class="b40-f"><span class="b40-fl">Обща стойност на популацията</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10-popvalue'] || '')}" placeholder="0,00" onchange="p10Set('${code}','p10-popvalue',this.value)"></div>
+      <div class="b40-f"><span class="b40-fl">Салдо по ОВ / ГК (за равнение)</span><input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10-ovtotal'] || '')}" placeholder="0,00" onchange="p10Set('${code}','p10-ovtotal',this.value)"></div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Покритие на теста (= стойност на тестваните позиции ÷ стойност на популацията): <b id="p10-cov">${isNaN(c.coverage) ? '—' : g00Pct(c.coverage)}</b>.</div>
+  </div></div>`;
+}
+function p10ItemsCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['p10it' + i + '-' + f] || '')}" onchange="p10SetText('${code}','p10it${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10it' + i + '-' + f] || '')}" onchange="p10Set('${code}','p10it${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="p10Set('${code}','p10it${i}-${f}',this.value)">${d10Opts(ans['p10it' + i + '-' + f], opts)}</select>`;
+  const rows = c.items.map(r => `<tr${(r.exc === 'Да' || r.result === 'С изключение') ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="role">${r.i}</td><td>${it(r.i, 'name')}</td><td>${it(r.i, 'ctp')}</td>
+    <td>${sel(r.i, 'assertion', ['Оценка', 'Пълнота', 'Съществуване', 'Признаване', 'Точност', 'Представяне'])}</td>
+    <td>${it(r.i, 'proc')}</td><td>${it(r.i, 'doc')}</td><td>${num(r.i, 'value')}</td>
+    <td>${sel(r.i, 'result', ['Без изключение', 'С изключение', 'За допълване', 'Неприложимо'])}</td>
+    <td>${sel(r.i, 'exc', ['Да', 'Не'])}</td>
+    <td style="text-align:center">${c.items.length > 1 ? `<button class="rm" title="Премахни" onclick="p10DelItem('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Детайлни тестове — тествани позиции</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1200px"><thead><tr><th>№</th><th style="min-width:150px">Позиция</th><th style="min-width:120px">Контрагент / дело</th><th>Твърдение</th><th style="min-width:170px">Процедура</th><th style="min-width:130px">Доказателство</th><th style="min-width:110px">Стойност</th><th>Резултат</th><th>Изключение</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="p10AddItem('${code}')">+ Добави позиция</button></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Тествани позиции: <b>${c.itemCount}</b> · стойност <b id="p10-selval">${g00Fmt(c.testedValue)}</b> · с изключение: <b>${c.itemsExc}</b>.</div>
+  </div></div>`;
+}
+function p10DiscCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const sel = (k, f, opts) => `<select onchange="p10Set('${code}','p10dc-${k}-${f}',this.value)">${d10Opts(ans['p10dc-' + k + '-' + f], opts)}</select>`;
+  const txt = (k, f) => `<input value="${escHtml(ans['p10dc-' + k + '-' + f] || '')}" onchange="p10SetText('${code}','p10dc-${k}-${f}',this.value)">`;
+  const rows = c.disc.map(r => `<tr${(r.exc === 'Да' || r.res === 'Не') ? ' style="background:var(--p-amber-bg)"' : ''}>
+    <td class="base">${escHtml(r.name)}</td>
+    <td>${sel(r.key, 'res', ['Да', 'Не', 'Неприложимо'])}</td>
+    <td>${sel(r.key, 'exc', ['Да', 'Не'])}</td>
+    <td>${txt(r.key, 'note')}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Проверка на представяне и оповестяване</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:720px"><thead><tr><th style="min-width:300px">Оповестяване / представяне</th><th>Резултат</th><th>Изключение</th><th style="min-width:180px">Бележки</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Проверки с „Резултат = Не" или „Изключение = Да" се отчитат като изключения по представяне/оповестяване: <b>${c.discExc}</b>.</div>
+  </div></div>`;
+}
+function p10ExcCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['p10ex' + i + '-' + f] || '')}" onchange="p10SetText('${code}','p10ex${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10ex' + i + '-' + f] || '')}" onchange="p10Set('${code}','p10ex${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="p10Set('${code}','p10ex${i}-${f}',this.value)">${d10Opts(ans['p10ex' + i + '-' + f], opts)}</select>`;
+  const rows = c.exc.map(r => `<tr>
+    <td class="role">${r.i}</td><td>${it(r.i, 'item')}</td><td>${it(r.i, 'desc')}</td>
+    <td>${sel(r.i, 'assertion', ['Оценка', 'Пълнота', 'Съществуване', 'Точност', 'Представяне'])}</td>
+    <td>${sel(r.i, 'impact', ['Актив', 'Пасив', 'Разход', 'Оповестяване'])}</td>
+    <td>${num(r.i, 'amount')}</td><td>${it(r.i, 'corr')}</td>
+    <td>${sel(r.i, 'classif', ['Фактическа', 'Преценъчна', 'Проектирана'])}</td>
+    <td>${sel(r.i, 'status', ['Отворено', 'Прието', 'Отхвърлено'])}</td>
+    <td style="text-align:center">${c.exc.length > 1 ? `<button class="rm" title="Премахни" onclick="p10DelExc('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изключения</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1160px"><thead><tr><th>№</th><th style="min-width:120px">Позиция</th><th style="min-width:170px">Описание на изключението</th><th>Засегнато твърдение</th><th>Ефект върху ГФО</th><th style="min-width:100px">Сума</th><th style="min-width:130px">Предложена корекция</th><th>Класификация</th><th>Статус</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="p10AddExc('${code}')">+ Добави изключение</button></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Установени изключения: <b id="p10-exccnt">${c.excCount}</b>.</div>
+  </div></div>`;
+}
+function p10CorCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const it = (i, f) => `<input value="${escHtml(ans['p10cor' + i + '-' + f] || '')}" onchange="p10SetText('${code}','p10cor${i}-${f}',this.value)">`;
+  const num = (i, f) => `<input inputmode="decimal" style="text-align:right" value="${escHtml(ans['p10cor' + i + '-' + f] || '')}" onchange="p10Set('${code}','p10cor${i}-${f}',this.value)">`;
+  const sel = (i, f, opts) => `<select onchange="p10Set('${code}','p10cor${i}-${f}',this.value)">${d10Opts(ans['p10cor' + i + '-' + f], opts)}</select>`;
+  const rows = c.cors.map(r => `<tr>
+    <td class="role">${r.i}</td><td>${it(r.i, 'desc')}</td><td>${it(r.i, 'dr')}</td><td>${it(r.i, 'cr')}</td><td>${num(r.i, 'sum')}</td><td>${it(r.i, 'basis')}</td>
+    <td>${sel(r.i, 'impact', ['Пасив', 'Актив', 'Разход', 'Печалба или загуба', 'Оповестявания'])}</td>
+    <td>${sel(r.i, 'accepted', ['Да', 'Не', 'Предстои'])}</td>
+    <td style="text-align:center">${c.cors.length > 1 ? `<button class="rm" title="Премахни" onclick="p10DelCor('${code}',${r.i})">✕</button>` : ''}</td></tr>`).join('');
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предложени корекции</div><div style="padding:12px 14px">
+    <div style="overflow-x:auto"><table class="b50-att" style="min-width:1040px"><thead><tr><th>№</th><th style="min-width:170px">Описание</th><th style="min-width:100px">Сметка дебит</th><th style="min-width:100px">Сметка кредит</th><th style="min-width:110px">Сума</th><th style="min-width:130px">Основание</th><th>Влияние върху ГФО</th><th>Приета от клиента</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="p10AddCor('${code}')">+ Добави корекция</button></div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Предложени корекции: <b id="p10-corcnt">${c.corCount}</b> · обща стойност: <b id="p10-cortot">${g00Fmt(c.corTotal)}</b>.</div>
+  </div></div>`;
+}
+function p10IndicatorsCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const sel = (k, opts) => `<select onchange="p10Set('${code}','${k}',this.value)">${d10Opts(ans[k], opts)}</select>`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Специфични индикатори (провизии)</div><div style="padding:12px 14px">
+    <div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Липсва адвокатско писмо (при съдебно дело)?</span>${sel('p10-nolegal', ['Да', 'Не'])}</div>
+      <div class="b40-f"><span class="b40-fl">Провизия без разчет?</span>${sel('p10-nocalc', ['Да', 'Не'])}</div>
+      <div class="b40-f"><span class="b40-fl">Правно становище противоречи на счетоводното третиране?</span>${sel('p10-legalconflict', ['Да', 'Не'])}</div>
+      <div class="b40-f"><span class="b40-fl">Липсва оценка на пълнота?</span>${sel('p10-incomplete', ['Да', 'Не'])}</div>
+      <div class="b40-f"><span class="b40-fl">Позиция над праг, която не е тествана?</span>${sel('p10-abovethr', ['Да', 'Не'])}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Тези индикатори задействат специфичните проверки за провизии (адвокатски писма, разчети, правно противоречие, пълнота, покритие над прага).</div>
+  </div></div>`;
+}
+function p10ChecksInner(code, c) {
+  c = c || p10Compute(code);
+  return c.warns.map(w => {
+    const cls = !w.hit ? 'ok' : (w.lc === 'crit' || w.lc === 'high' ? 'bad' : (w.lc === 'info' ? 'ok' : 'warn'));
+    const ic = !w.hit ? '✓' : (cls === 'bad' ? '✕' : (w.lc === 'info' ? 'ℹ' : '⚠'));
+    return `<div class="b50-chk ${cls}" style="padding:6px 14px"><span class="ic">${ic}</span><span>${escHtml(w.name)}${w.hit ? '' : ' — няма'} <span class="d10-lvl ${w.lc}">${escHtml(w.level)}</span>${w.hit ? ' · <span style="color:var(--p-text3)">' + escHtml(w.act) + '</span>' : ''}</span></div>`;
+  }).join('');
+}
+function p10ChecksCard(code, c) {
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Проверки и предупреждения</div><div id="p10-checks" class="b50-checks">${p10ChecksInner(code, c)}</div></div>`;
+}
+function p10ConclCard(code, c) {
+  const ans = testAnswers[code] || {};
+  const ta = (k, ph) => `<textarea rows="2" oninput="p10SetText('${code}','${k}',this.value)" placeholder="${escHtml(ph || '')}">${escHtml(ans[k] || '')}</textarea>`;
+  const it = (k, type) => `<input${type ? ' type="' + type + '"' : ''} value="${escHtml(ans[k] || '')}" onchange="p10SetText('${code}','${k}',this.value)">`;
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Заключение по раздела</div><div style="padding:12px 14px">
+    <div class="b40-f span"><span class="b40-fl">Необходими последващи действия</span>${ta('p10-followproc', 'Свободен текст')}</div>
+    <div class="b40-fields" style="margin-top:10px">
+      <div class="b40-f"><span class="b40-fl">Одиторът приема заключението</span><select onchange="p10Set('${code}','p10-accept',this.value)">${d10Opts(ans['p10-accept'], ['Да', 'Не'])}</select></div>
+      <div class="b40-f"><span class="b40-fl">Изготвил</span>${it('p10-by')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата</span>${it('p10-date', 'date')}</div>
+      <div class="b40-f"><span class="b40-fl">Прегледал</span>${it('p10-rev')}</div>
+      <div class="b40-f"><span class="b40-fl">Дата на преглед</span>${it('p10-revdate', 'date')}</div>
+    </div>
+    <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Финалният текст на заключението се попълва в полето „Заключение" под въпросите; черновата се генерира при „Изпълни автоматичен анализ".</div>
+  </div></div>`;
+}
+function p10PanelInner(code) {
+  const c = p10Compute(code);
+  const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="p10-summary">${p10SummaryInner(code, c)}</div></div>`;
+  const body = p10PopCard(code, c) + p10ItemsCard(code, c) + p10DiscCard(code, c) + p10IndicatorsCard(code, c) + p10ExcCard(code, c) + p10CorCard(code, c) + p10ChecksCard(code, c) + p10ConclCard(code, c);
+  return summary + p10ParamsCard(code, c) + p10DocsCard(code, c) + p10PromptCard(code, c) + body;
+}
+function testP10Panel(code) {
+  const det = testDet(code);
+  if (!det.p10) return '';
+  return `<div id="p10-panel">${p10PanelInner(code)}</div>`;
+}
+function p10Rerender(code) { const el = document.getElementById('p10-panel'); if (el) el.innerHTML = p10PanelInner(code); }
+function p10SetParam(code, key, value) { setAnswer(code, 'p10p-' + key, value); p10Rerender(code); }
+function p10Set(code, key, value) { setAnswer(code, key, value); p10Recalc(code); }
+function p10SetText(code, key, value) { setAnswer(code, key, value); }
+function p10AddFiles(code, key, files) { testAddFiles(code, key, files); p10Rerender(code); }
+function p10RemoveFile(code, key, i) { testRemoveFile(code, key, i); p10Rerender(code); }
+function p10RowShift(code, prefix, fields, cntKey, defN, i) {
+  const ans = testAnswers[code] || {}; const n = parseInt(ans[cntKey] || defN, 10) || defN; if (n <= 1) return;
+  for (let r = i; r < n; r++) fields.forEach(f => setAnswer(code, prefix + r + '-' + f, ans[prefix + (r + 1) + '-' + f] || ''));
+  fields.forEach(f => setAnswer(code, prefix + n + '-' + f, ''));
+  setAnswer(code, cntKey, String(n - 1)); p10Rerender(code);
+}
+function p10AddItem(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['p10-itn'] || (det.p10.defItems || 3), 10) || 3; setAnswer(code, 'p10-itn', String(n + 1)); p10Rerender(code); }
+function p10DelItem(code, i) { p10RowShift(code, 'p10it', ['name', 'ctp', 'assertion', 'proc', 'doc', 'value', 'result', 'exc'], 'p10-itn', (testDet(code).p10.defItems || 3), i); }
+function p10AddExc(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['p10-exn'] || (det.p10.defExc || 2), 10) || 2; setAnswer(code, 'p10-exn', String(n + 1)); p10Rerender(code); }
+function p10DelExc(code, i) { p10RowShift(code, 'p10ex', ['item', 'desc', 'assertion', 'impact', 'amount', 'corr', 'classif', 'status'], 'p10-exn', (testDet(code).p10.defExc || 2), i); }
+function p10AddCor(code) { const det = testDet(code), ans = testAnswers[code] || {}; const n = parseInt(ans['p10-corn'] || (det.p10.defCor || 2), 10) || 2; setAnswer(code, 'p10-corn', String(n + 1)); p10Rerender(code); }
+function p10DelCor(code, i) { p10RowShift(code, 'p10cor', ['desc', 'dr', 'cr', 'sum', 'basis', 'impact', 'accepted'], 'p10-corn', (testDet(code).p10.defCor || 2), i); }
+function p10Recalc(code) {
+  const det = testDet(code); if (!det || !det.p10) return;
+  const c = p10Compute(code);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const t = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('p10-summary', p10SummaryInner(code, c));
+  set('p10-checks', p10ChecksInner(code, c));
+  set('p10-aiparams', escHtml(p10ParamsBlock(c)));
+  t('p10-cov', isNaN(c.coverage) ? '—' : g00Pct(c.coverage));
+  t('p10-selval', g00Fmt(c.testedValue));
+  t('p10-exccnt', String(c.excCount));
+  t('p10-corcnt', String(c.corCount)); t('p10-cortot', g00Fmt(c.corTotal));
+}
+function p10Generate(code) {
+  const c = p10Compute(code);
+  setAnswer(code, 'p10-generated', '1');
+  const conclEl = document.getElementById(code + '-concl');
+  if (!((testNotes[code] || {}).concl || '').trim()) { const tx = p10ConclText(code, c); setConcl(code, tx); if (conclEl) conclEl.value = tx; }
+  p10Rerender(code);
+}
+function p10ExcelInfo(code) { const el = document.getElementById('p10-excel-note'); if (el) el.textContent = 'Експортът в Excel (.xlsx) — с тестваните позиции, оповестяването, изключенията, корекциите и проверките — ще бъде добавен в следваща версия.'; }
+function p10WpHtml(code, secN) {
+  const det = testDet(code); if (!det.p10) return '';
+  const c = p10Compute(code), ans = testAnswers[code] || {};
+  const dRows = (det.p10.docs || []).map(d => `<tr><td>${d.n}</td><td>${escHtml(d.name)}</td><td class="c">${d10HasFile(code, 'p10d' + d.n) ? 'Качен' : (d.req ? 'Липсва' : '—')}</td></tr>`).join('');
+  const iRows = c.items.filter(r => r.has).map(r => `<tr${(r.exc === 'Да' || r.result === 'С изключение') ? ' style="font-weight:700"' : ''}><td>${r.i}</td><td>${escHtml(r.name || '—')}</td><td class="c">${escHtml(r.assertion || '—')}</td><td class="c">${g00Fmt(r.value)}</td><td class="c">${escHtml(r.result || '—')}</td><td class="c">${(r.exc === 'Да' || r.result === 'С изключение') ? 'Да' : 'Не'}</td></tr>`).join('') || '<tr><td colspan="6">Няма тествани позиции.</td></tr>';
+  const dcRows = c.disc.map(r => `<tr${(r.exc === 'Да' || r.res === 'Не') ? ' style="font-weight:700"' : ''}><td>${escHtml(r.name)}</td><td class="c">${escHtml(r.res || '—')}</td><td class="c">${r.exc === 'Да' ? 'Да' : 'Не'}</td></tr>`).join('');
+  const eRows = c.exc.filter(r => r.has).map(r => `<tr><td>${r.i}</td><td>${escHtml(r.item || '—')}</td><td>${escHtml(r.desc || '—')}</td><td class="c">${escHtml(r.assertion || '—')}</td><td class="c">${g00Fmt(r.amount)}</td><td class="c">${escHtml(r.status || '—')}</td></tr>`).join('') || '<tr><td colspan="6">Не са установени изключения.</td></tr>';
+  const wRows = c.warns.map(w => `<tr><td>${w.n}</td><td>${escHtml(w.name)}</td><td class="c">${w.hit ? 'Да' : 'Не'}</td><td class="c">${escHtml(w.level)}</td></tr>`).join('');
+  return `<div class="wp-sec"><h3><span class="n">${secN}.</span>Провизии и условни задължения – процедури по същество (детайлни тестове)</h3>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Обобщение</div>
+    <table class="wp-std" style="margin-bottom:10px"><tbody>
+      <tr><td>Обхват</td><td class="c">${escHtml(c.scope || '—')}</td></tr>
+      <tr><td>Твърдение</td><td class="c">${escHtml(c.assertion || '—')}</td></tr>
+      <tr><td>Праг</td><td class="c">${escHtml(c.threshold || '—')}${isNaN(c.thrVal) ? '' : ' (' + g00Fmt(c.thrVal) + ')'}</td></tr>
+      <tr><td>Метод</td><td class="c">${escHtml(c.method || '—')}</td></tr>
+      <tr><td>Тествани / стойност</td><td class="c">${c.itemCount} · ${g00Fmt(c.testedValue)}</td></tr>
+      <tr><td>Покритие на теста</td><td class="c">${isNaN(c.coverage) ? '—' : g00Pct(c.coverage)}</td></tr>
+      <tr><td>Изключения (тестове / оповестяване)</td><td class="c">${c.excCount} / ${c.discExc}</td></tr>
+      <tr><td>Предложени корекции</td><td class="c">${c.corCount} · ${g00Fmt(c.corTotal)}</td></tr>
+      <tr><td>Брой предупреждения</td><td class="c">${c.warnCount}</td></tr>
+      <tr><td>Финален статус</td><td class="c">${escHtml(c.status)}</td></tr>
+    </tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Входни документи</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Документ / данни</th><th>Статус</th></tr></thead><tbody>${dRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Детайлни тестове</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Позиция</th><th>Твърдение</th><th>Стойност</th><th>Резултат</th><th>Изключение</th></tr></thead><tbody>${iRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Представяне и оповестяване</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>Оповестяване</th><th>Резултат</th><th>Изключение</th></tr></thead><tbody>${dcRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin-bottom:4px">Изключения</div>
+    <table class="wp-std" style="margin-bottom:10px"><thead><tr><th>№</th><th>Позиция</th><th>Описание</th><th>Твърдение</th><th>Сума</th><th>Статус</th></tr></thead><tbody>${eRows}</tbody></table>
+    <div class="wp-text" style="font-weight:700;margin:8px 0 4px">Проверки и предупреждения</div>
+    <table class="wp-std" style="margin-bottom:6px"><thead><tr><th>№</th><th>Проверка</th><th>Резултат</th><th>Ниво</th></tr></thead><tbody>${wRows}</tbody></table></div>`;
+}
+
 // ===================== P-00: Провизии и условни задължения – водещ лист (lead schedule) =====================
 // По подобие на O-00, но за раздел P: roll-forward движения (начално + начисления − използване − обратно
 // възстановяване = крайно, авто) + класификация вид/провизия-условно-начисление + нужно оповестяване + сравнение +
@@ -19602,6 +19954,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
       ${testO20Panel(code)}
       ${testO30Panel(code)}
       ${testP00Panel(code)}
+      ${testP10Panel(code)}
       ${testBudgetPanel(code)}
       ${card}
       <div class="sh-card" style="margin:20px 0">
@@ -19666,6 +20019,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).o20) o20Recalc(code);
   if (testDet(code).o30) o30Recalc(code);
   if (testDet(code).p00) p00Recalc(code);
+  if (testDet(code).p10) p10Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
 }
@@ -19831,6 +20185,7 @@ function setAnswer(code, n, value, btnEl) {
   if (typeof o20Recalc === 'function' && testDet(code) && testDet(code).o20) o20Recalc(code);
   if (typeof o30Recalc === 'function' && testDet(code) && testDet(code).o30) o30Recalc(code);
   if (typeof p00Recalc === 'function' && testDet(code) && testDet(code).p00) p00Recalc(code);
+  if (typeof p10Recalc === 'function' && testDet(code) && testDet(code).p10) p10Recalc(code);
   qProgress(code);
 }
 
@@ -20770,7 +21125,7 @@ function testWpSections(code) {
   const conclText = notes.concl ? escHtml(notes.concl) : '';
   const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
   let n = 0;
-  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secK20 = aiDet.k20 ? ++n : 0, secK30 = aiDet.k30 ? ++n : 0, secL00 = aiDet.l00 ? ++n : 0, secL10 = aiDet.l10 ? ++n : 0, secL20 = aiDet.l20 ? ++n : 0, secL30 = aiDet.l30 ? ++n : 0, secM00 = aiDet.m00 ? ++n : 0, secM20 = aiDet.m20 ? ++n : 0, secM30 = aiDet.m30 ? ++n : 0, secN00 = aiDet.n00 ? ++n : 0, secN10 = aiDet.n10 ? ++n : 0, secN20 = aiDet.n20 ? ++n : 0, secN30 = aiDet.n30 ? ++n : 0, secO00 = aiDet.o00 ? ++n : 0, secO10 = aiDet.o10 ? ++n : 0, secO20 = aiDet.o20 ? ++n : 0, secO30 = aiDet.o30 ? ++n : 0, secP00 = aiDet.p00 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
+  const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secK20 = aiDet.k20 ? ++n : 0, secK30 = aiDet.k30 ? ++n : 0, secL00 = aiDet.l00 ? ++n : 0, secL10 = aiDet.l10 ? ++n : 0, secL20 = aiDet.l20 ? ++n : 0, secL30 = aiDet.l30 ? ++n : 0, secM00 = aiDet.m00 ? ++n : 0, secM20 = aiDet.m20 ? ++n : 0, secM30 = aiDet.m30 ? ++n : 0, secN00 = aiDet.n00 ? ++n : 0, secN10 = aiDet.n10 ? ++n : 0, secN20 = aiDet.n20 ? ++n : 0, secN30 = aiDet.n30 ? ++n : 0, secO00 = aiDet.o00 ? ++n : 0, secO10 = aiDet.o10 ? ++n : 0, secO20 = aiDet.o20 ? ++n : 0, secO30 = aiDet.o30 ? ++n : 0, secP00 = aiDet.p00 ? ++n : 0, secP10 = aiDet.p10 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
   const b50Html = aiDet.discussion ? b50WpHtml(code, secB50) : '';
   const c10Html = aiDet.understanding ? c10WpHtml(code, secC10) : '';
@@ -20816,6 +21171,7 @@ function testWpSections(code) {
   const o20Html = aiDet.o20 ? o20WpHtml(code, secO20) : '';
   const o30Html = aiDet.o30 ? o30WpHtml(code, secO30) : '';
   const p00Html = aiDet.p00 ? p00WpHtml(code, secP00) : '';
+  const p10Html = aiDet.p10 ? p10WpHtml(code, secP10) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
@@ -20882,6 +21238,7 @@ function testWpSections(code) {
       ${o20Html}
       ${o30Html}
       ${p00Html}
+      ${p10Html}
       <div class="wp-sec"><h3><span class="n">${secQ}.</span>Въпроси и отговори</h3>
         <table class="wp-std"><tbody>${qaRows || '<tr><td>Няма дефинирани въпроси.</td><td>—</td></tr>'}</tbody></table></div>
       ${aiHtml}
