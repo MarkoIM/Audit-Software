@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260814191407"></script>
-<script src="pd-spec.js?v=20260814191407"></script>
-<script src="pd-details.js?v=20260814191407"></script>
-<script src="test-details.js?v=20260814191407"></script>
+<script src="questions.js?v=20260815120717"></script>
+<script src="pd-spec.js?v=20260815120717"></script>
+<script src="pd-details.js?v=20260815120717"></script>
+<script src="test-details.js?v=20260815120717"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8106,17 +8106,166 @@ function g00ParamsCard(code, c) {
     <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Четирите параметъра са задължителни и управляват извличането, групирането, сравнението и формата на изхода.</div>
   </div></div>`;
 }
+// ══════════════════════════════════════════════════════════════════════
+// ПИЛОТ: Централно хранилище на документи за ангажимента (раздел G)
+// Одиторът качва всеки документ веднъж в „Документи на ангажимента" (в
+// раздел G), а тестовете си ги ПРИСВОЯВАТ автоматично. Вътрешните входове
+// (водещи листове, същественост, риск, резултати от други тестове) се
+// СВЪРЗВАТ автоматично и не се качват. Реконсилирането попълва
+// testUploads[code][slot], за да работят непроменени всички изчисления.
+// ══════════════════════════════════════════════════════════════════════
+window.engDocs = window.engDocs || {};          // engDocs[catId] = [{name,size}]
+window.engDocOptOut = window.engDocOptOut || {}; // engDocOptOut[code][slot] = true
+function engDocsPersist() { try { localStorage.setItem(engKey('auditpro_eng_docs'), JSON.stringify(engDocs)); localStorage.setItem(engKey('auditpro_eng_optout'), JSON.stringify(engDocOptOut)); } catch (e) {} }
+
+// Каталог на клиентските документи за раздел G (качват се веднъж)
+const G_DOC_CATALOG = [
+  { id: 'ov',      grp: 'Ядрени счетоводни',       name: 'Оборотна ведомост (текущ и предходен период)', req: true },
+  { id: 'gk',      grp: 'Ядрени счетоводни',       name: 'Главна книга / аналитична справка за НМА', req: true },
+  { id: 'gfo',     grp: 'Ядрени счетоводни',       name: 'Проект на ГФО, пояснения и счетоводна политика', req: true },
+  { id: 'compare', grp: 'Ядрени счетоводни',       name: 'Сравнителни данни за предходен период / бюджет', req: false },
+  { id: 'reg_nma', grp: 'Раздел G — специфични',   name: 'Регистър / инвентарна книга на НМА', req: true },
+  { id: 'amort',   grp: 'Раздел G — специфични',   name: 'Амортизационен план на НМА', req: true },
+  { id: 'moves',   grp: 'Раздел G — специфични',   name: 'Данни за придобивания, отписвания, лицензи и обезценки', req: false },
+  { id: 'support', grp: 'Първични документи',      name: 'Подкрепящи документи за избрани позиции (договори, фактури, лицензии, протоколи)', req: false }
+];
+function gCat(id) { return G_DOC_CATALOG.find(d => d.id === id); }
+
+// Вътрешни входове — свързват се автоматично, не се качват
+const G_INTERNAL = {
+  lead_g00: { label: 'Водещ лист G-00', src: 'тест G-00' },
+  spm:      { label: 'Същественост за изпълнение (SPM)', src: 'D-20' },
+  ctt:      { label: 'Праг за явно незначителни неточности', src: 'D-30' },
+  risk_g:   { label: 'Оценка на риска по раздел G', src: 'раздел E' },
+  prior_g:  { label: 'Резултати от G-05 / G-10 / G-20', src: 'раздел G' },
+  policy:   { label: 'Счетоводна политика', src: 'Постоянно досие · ПД-04' },
+  controls: { label: 'Контроли, walkthrough и ITGC', src: 'Етап 1 · раздел C' }
+};
+
+// Съответствие тест → слот (ключът е точно този, който изчисленията ползват)
+const G_SLOTMAP = {
+  'G-00': { g1: { t: 'client', cat: 'ov' }, g2: { t: 'client', cat: 'gk' }, g3: { t: 'client', cat: 'compare' }, g4: { t: 'client', cat: 'reg_nma' } },
+  'G-10': { g10d1: { t: 'client', cat: 'ov' }, g10d2: { t: 'client', cat: 'reg_nma' }, g10d3: { t: 'client', cat: 'support' }, g10d4: { t: 'client', cat: 'gfo' }, g10d5: { t: 'internal', ref: 'spm' } },
+  'G-20': { g20d1: { t: 'internal', ref: 'lead_g00' }, g20d2: { t: 'client', cat: 'reg_nma' }, g20d3: { t: 'client', cat: 'compare' }, g20d4: { t: 'client', cat: 'moves' }, g20d5: { t: 'internal', ref: 'spm' } },
+  'G-30': { g30d1: { t: 'internal', ref: 'lead_g00' }, g30d2: { t: 'client', cat: 'reg_nma' }, g30d3: { t: 'client', cat: 'gk' }, g30d4: { t: 'internal', ref: 'spm' }, g30d5: { t: 'internal', ref: 'prior_g' } }
+};
+
+function gRepoHas(cat) { return (engDocs[cat] || []).length > 0; }
+function gOptedOut(code, slot) { return !!((engDocOptOut[code] || {})[slot]); }
+// Дали вътрешният вход е наличен (произвеждащият тест/данни са готови)
+function gInternalReady(ref) {
+  try {
+    if (ref === 'lead_g00') return typeof aiTestHasData === 'function' && aiTestHasData('G-00');
+    if (ref === 'prior_g') return typeof aiTestHasData === 'function' && (aiTestHasData('G-05') || aiTestHasData('G-10') || aiTestHasData('G-20'));
+    if (ref === 'spm') { if (window.testDetails && testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const p = d20Compute('D-20'); return !!(p && !isNaN(p.pm)); } return false; }
+    if (ref === 'ctt') { if (window.testDetails && testDetails['D-30'] && testDetails['D-30'].d30 && typeof d30Compute === 'function') { const p = d30Compute('D-30'); return !!(p && !isNaN(p.thr)); } return false; }
+  } catch (e) {}
+  return true; // risk_g, policy, controls — черпят се от планиране / ПД, считат се налични
+}
+
+// Реконсилиране: попълва testUploads[code][slot] според хранилището/връзките
+function gEngSync(code) {
+  const map = G_SLOTMAP[code]; if (!map) return;
+  testUploads[code] = testUploads[code] || {};
+  Object.keys(map).forEach(slot => {
+    const m = map[slot];
+    if (m.t === 'client') {
+      if (gRepoHas(m.cat) && !gOptedOut(code, slot)) {
+        testUploads[code][slot] = (engDocs[m.cat] || []).map(f => ({ name: f.name, size: f.size, fromRepo: true, cat: m.cat }));
+      } else { delete testUploads[code][slot]; }
+    } else {
+      const info = G_INTERNAL[m.ref] || { label: 'Свързан вход', src: '' };
+      if (gInternalReady(m.ref)) testUploads[code][slot] = [{ name: '⟳ ' + info.label, size: 0, linked: true, src: info.src }];
+      else delete testUploads[code][slot];
+    }
+  });
+  if (!Object.keys(testUploads[code]).length) delete testUploads[code];
+  try { testUploadsPersist(); } catch (e) {}
+}
+function gEngSyncAll() { ['G-00', 'G-10', 'G-20', 'G-30'].forEach(gEngSync); }
+
+// Пре-рендиране на активния изглед на раздел G след промяна в хранилището
+function gRefreshActiveG() {
+  const map = { g00: 'G-00', g10: 'G-10', g20: 'G-20', g30: 'G-30' };
+  Object.keys(map).forEach(p => { if (document.getElementById(p + '-panel') && typeof window[p + 'Rerender'] === 'function') window[p + 'Rerender'](map[p]); });
+  if (document.getElementById('g-engrepo') && typeof entShowSection === 'function') entShowSection('G');
+}
+
+function gRepoAdd(cat, fileList) {
+  if (!fileList || !fileList.length) return;
+  engDocs[cat] = (engDocs[cat] || []).concat(Array.from(fileList).map(f => ({ name: f.name, size: f.size })));
+  engDocsPersist(); gEngSyncAll(); gRefreshActiveG();
+}
+function gRepoRemove(cat, i) {
+  if (!engDocs[cat]) return;
+  engDocs[cat].splice(i, 1); if (!engDocs[cat].length) delete engDocs[cat];
+  engDocsPersist(); gEngSyncAll(); gRefreshActiveG();
+}
+function gOptOut(code, slot, val) {
+  engDocOptOut[code] = engDocOptOut[code] || {};
+  if (val) engDocOptOut[code][slot] = true; else delete engDocOptOut[code][slot];
+  if (!Object.keys(engDocOptOut[code]).length) delete engDocOptOut[code];
+  engDocsPersist(); gEngSync(code); gRefreshActiveG();
+}
+
+// Рендер на един слот в docs картата на тест: присвояване или авто-връзка
+function gDocSlotHtml(code, slot, d) {
+  const m = (G_SLOTMAP[code] || {})[slot];
+  const note = d.note ? `<div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note)}</div>` : '';
+  const nameHtml = `<span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span>`;
+  if (!m) return `<div class="pd-slot"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}</div>${note}</div>`;
+  if (m.t !== 'client') {
+    const info = G_INTERNAL[m.ref] || { label: 'Свързан вход', src: '' };
+    const ready = gInternalReady(m.ref);
+    const badge = ready ? '🔗 Свързан автоматично' : '⏳ Ще се свърже автоматично';
+    const txt = ready
+      ? `Свързва се автоматично от <b>${escHtml(info.src)}</b> — не се качва в този тест.`
+      : `Ще се свърже автоматично от <b>${escHtml(info.src)}</b>, когато е наличен — не се качва тук.`;
+    return `<div class="pd-slot${ready ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"${ready ? ' style="background:var(--p-accent)"' : ''}></span>${nameHtml}<span class="pd-slot-count" style="color:var(--p-accent);font-weight:700">${badge}</span></div>${note}<div style="font-size:11.5px;color:var(--p-text2);margin-top:6px">${txt}</div></div>`;
+  }
+  const has = gRepoHas(m.cat), out = gOptedOut(code, slot);
+  let status, body;
+  if (has && !out) {
+    const files = (engDocs[m.cat] || []).map(f => escHtml(f.name)).join(', ');
+    status = `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Присвоен от хранилището</span>`;
+    body = `<div style="font-size:11.5px;color:var(--p-text2);margin-top:6px">Присвоен: <b>${files}</b> · <a href="#" onclick="gOptOut('${code}','${slot}',true);return false" style="color:var(--p-text3)">премахни от този тест</a></div>`;
+  } else if (has && out) {
+    status = `<span class="pd-slot-count">Наличен в хранилището · не е присвоен</span>`;
+    body = `<div style="margin-top:6px"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои от хранилището</button></div>`;
+  } else {
+    status = `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва в хранилището</span>`;
+    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowSection('G')">Отвори хранилището</button></div>`;
+  }
+  return `<div class="pd-slot${(has && !out) ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}${status}</div>${note}${body}</div>`;
+}
+
+// Централна карта „Документи на ангажимента" (показва се в горната част на раздел G)
+function gEngRepoCard() {
+  const groups = {};
+  G_DOC_CATALOG.forEach(d => { (groups[d.grp] = groups[d.grp] || []).push(d); });
+  const reqAll = G_DOC_CATALOG.filter(d => d.req), reqDone = reqAll.filter(d => gRepoHas(d.id)).length;
+  let html = '';
+  Object.keys(groups).forEach(g => {
+    html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-text3);margin:14px 0 6px">${escHtml(g)}</div>`;
+    groups[g].forEach(d => {
+      const files = engDocs[d.id] || [];
+      const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="gRepoRemove('${d.id}',${i})">✕</button></div>`).join('') + '</div>' : '';
+      const st = files.length ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва</span>`;
+      html += `<div class="pd-slot${files.length ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
+    });
+  });
+  return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи на ангажимента — раздел G <span style="font-weight:600;color:var(--p-text3);font-size:12px">· пилот · качете веднъж</span></div><div style="padding:12px 16px">
+    <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Качените тук документи се присвояват автоматично на тестовете <b>G-00, G-10, G-20 и G-30</b>, където са необходими — качват се веднъж, вместо поотделно за всеки тест. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
+    <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени.</div>
+    ${html}
+  </div></div>`;
+}
+
 function g00DocsCard(code, c) {
   c = c || g00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['g00-generated'] === '1';
-  const slots = (det.g00.docs || []).map(d => {
-    const key = 'g' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'По избор');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.g00.docs || []).map(d => gDocSlotHtml(code, 'g' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g00Generate('${code}')">Генерирай водещ лист</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -8228,6 +8377,7 @@ function g00PanelInner(code) {
 function testG00Panel(code) {
   const det = testDet(code);
   if (!det.g00) return '';
+  gEngSync(code);
   return `<div id="g00-panel">${g00PanelInner(code)}</div>`;
 }
 function g00Rerender(code) { const el = document.getElementById('g00-panel'); if (el) el.innerHTML = g00PanelInner(code); }
@@ -27351,10 +27501,7 @@ function g10Upload(code, key) {
 }
 function g10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['g10-generated'] === '1';
-  const slots = (det.g10.docs || []).map(d => {
-    const key = 'g10d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.g10.docs || []).map(d => gDocSlotHtml(code, 'g10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g10Generate('${code}')">Изпълни автоматичен тест</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g10Generate('${code}')">Обнови резултата</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -27479,6 +27626,7 @@ function g10PanelInner(code) {
 function testG10Panel(code) {
   const det = testDet(code);
   if (!det.g10) return '';
+  gEngSync(code);
   return `<div id="g10-panel">${g10PanelInner(code)}</div>`;
 }
 function g10Rerender(code) { const el = document.getElementById('g10-panel'); if (el) el.innerHTML = g10PanelInner(code); }
@@ -27668,10 +27816,7 @@ function g20Upload(code, key) {
 }
 function g20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['g20-generated'] === '1';
-  const slots = (det.g20.docs || []).map(d => {
-    const key = 'g20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.g20.docs || []).map(d => gDocSlotHtml(code, 'g20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -27771,6 +27916,7 @@ function g20PanelInner(code) {
 function testG20Panel(code) {
   const det = testDet(code);
   if (!det.g20) return '';
+  gEngSync(code);
   return `<div id="g20-panel">${g20PanelInner(code)}</div>`;
 }
 function g20Rerender(code) { const el = document.getElementById('g20-panel'); if (el) el.innerHTML = g20PanelInner(code); }
@@ -27984,10 +28130,7 @@ function g30Upload(code, key) {
 }
 function g30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['g30-generated'] === '1';
-  const slots = (det.g30.docs || []).map(d => {
-    const key = 'g30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${g30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.g30.docs || []).map(d => gDocSlotHtml(code, 'g30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -28152,6 +28295,7 @@ function g30PanelInner(code) {
 function testG30Panel(code) {
   const det = testDet(code);
   if (!det.g30) return '';
+  gEngSync(code);
   return `<div id="g30-panel">${g30PanelInner(code)}</div>`;
 }
 function g30Rerender(code) { const el = document.getElementById('g30-panel'); if (el) el.innerHTML = g30PanelInner(code); }
@@ -29041,8 +29185,10 @@ function entShowSection(code) {
     const filled = docs ? String(p.done) : `${p.done}/${p.total}`;
     return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${w.name}</td><td class="num">${w.mos || ''}</td><td><span class="ent-kind${entWdType(w.code) === 'AI' ? ' ai' : ''}">${entWdType(w.code)}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span></td></tr>`;
   }).join('');
+  const engCard = (code === 'G' && typeof gEngRepoCard === 'function') ? gEngRepoCard() : '';
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>${sec.code} · ${sec.name}</h1><div class="sub">${pd ? 'Постоянно досие' : ('Етап ' + phaseN + ' · ' + phaseName)} · ${(sec.wds || []).length} работни документа</div></div><span class="ent-badge ${sec.status || 'pending'}"><span class="d"></span>${entStatusLabel(sec.status)}</span></div>
+    ${engCard}
     <div class="sh-card"><div class="ent-card-h">Работни документи</div>
       <table class="ent-tbl"><thead><tr><th>Индекс</th><th>Работен документ</th><th>Стандарт</th><th>Тип</th><th class="r">Попълнени</th><th>Прогрес</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table>
     </div></div>`;
@@ -29910,6 +30056,7 @@ const ENG_STORES = [
   ['pdUploads', 'auditpro_pd_docs'], ['pdCustom', 'auditpro_pd_custom'], ['pdHiddenUser', 'auditpro_pd_hidden'],
   ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
   ['team', 'auditpro_team'],
+  ['engDocs', 'auditpro_eng_docs'], ['engDocOptOut', 'auditpro_eng_optout'],
 ];
 function engSuffix() { const c = clients[iosCurrentClient]; return (c ? c.id : 'def') + '_' + (iosCurrentYear || 'na'); }
 function engKey(base) { return base + '__' + engSuffix(); }
@@ -29918,6 +30065,7 @@ function reloadEngagement() {
     try { window[g] = JSON.parse(localStorage.getItem(engKey(base)) || '{}'); }
     catch (e) { window[g] = {}; }
   });
+  try { if (typeof gEngSyncAll === 'function') gEngSyncAll(); } catch (e) {}
 }
 function clearEngagementData(id, year) {
   ENG_STORES.forEach(([g, base]) => { try { localStorage.removeItem(base + '__' + id + '_' + year); } catch (e) {} });
