@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815120717"></script>
-<script src="pd-spec.js?v=20260815120717"></script>
-<script src="pd-details.js?v=20260815120717"></script>
-<script src="test-details.js?v=20260815120717"></script>
+<script src="questions.js?v=20260815122045"></script>
+<script src="pd-spec.js?v=20260815122045"></script>
+<script src="pd-details.js?v=20260815122045"></script>
+<script src="test-details.js?v=20260815122045"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8184,11 +8184,21 @@ function gEngSync(code) {
 }
 function gEngSyncAll() { ['G-00', 'G-10', 'G-20', 'G-30'].forEach(gEngSync); }
 
-// Пре-рендиране на активния изглед на раздел G след промяна в хранилището
+// Пре-рендиране на активния изглед след промяна в хранилището
 function gRefreshActiveG() {
   const map = { g00: 'G-00', g10: 'G-10', g20: 'G-20', g30: 'G-30' };
   Object.keys(map).forEach(p => { if (document.getElementById(p + '-panel') && typeof window[p + 'Rerender'] === 'function') window[p + 'Rerender'](map[p]); });
-  if (document.getElementById('g-engrepo') && typeof entShowSection === 'function') entShowSection('G');
+  if (document.getElementById('eng-docs-page') && typeof entShowEngDocs === 'function') entShowEngDocs();
+}
+// Централен екран „Документи на ангажимента" — едно хранилище за целия одит
+function entShowEngDocs() {
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="engdocs"]'));
+  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Документи на ангажимента' }]);
+  m.innerHTML = `<div class="ent-page" id="eng-docs-page">
+    <div class="ent-h"><div><h1>Документи на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · качете веднъж · ползват се от всички тестове</div></div></div>
+    ${gEngRepoCard()}
+  </div>`;
 }
 
 function gRepoAdd(cat, fileList) {
@@ -8234,7 +8244,7 @@ function gDocSlotHtml(code, slot, d) {
     body = `<div style="margin-top:6px"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои от хранилището</button></div>`;
   } else {
     status = `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва в хранилището</span>`;
-    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowSection('G')">Отвори хранилището</button></div>`;
+    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button></div>`;
   }
   return `<div class="pd-slot${(has && !out) ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}${status}</div>${note}${body}</div>`;
 }
@@ -8254,9 +8264,9 @@ function gEngRepoCard() {
       html += `<div class="pd-slot${files.length ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
     });
   });
-  return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи на ангажимента — раздел G <span style="font-weight:600;color:var(--p-text3);font-size:12px">· пилот · качете веднъж</span></div><div style="padding:12px 16px">
-    <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Качените тук документи се присвояват автоматично на тестовете <b>G-00, G-10, G-20 и G-30</b>, където са необходими — качват се веднъж, вместо поотделно за всеки тест. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
-    <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени.</div>
+  return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи на ангажимента <span style="font-weight:600;color:var(--p-text3);font-size:12px">· качете веднъж за целия одит</span></div><div style="padding:12px 16px">
+    <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Едно хранилище за целия одит. Качете всеки документ веднъж тук — той се присвоява автоматично на всички тестове, където е необходим, вместо да се качва поотделно. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
+    <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени. <span style="color:var(--p-text3)">Пилотът обхваща раздел G; при разширяване към другите раздели каталогът се допълва.</span></div>
     ${html}
   </div></div>`;
 }
@@ -29105,6 +29115,7 @@ function entTogglePhase(btn) {
 function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
+  h += `<button class="ent-item" data-k="engdocs" onclick="entShowEngDocs()">Документи на ангажимента</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -29185,10 +29196,10 @@ function entShowSection(code) {
     const filled = docs ? String(p.done) : `${p.done}/${p.total}`;
     return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${w.name}</td><td class="num">${w.mos || ''}</td><td><span class="ent-kind${entWdType(w.code) === 'AI' ? ' ai' : ''}">${entWdType(w.code)}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span></td></tr>`;
   }).join('');
-  const engCard = (code === 'G' && typeof gEngRepoCard === 'function') ? gEngRepoCard() : '';
+  const engLink = (code === 'G' && typeof entShowEngDocs === 'function') ? `<div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 16px;font-size:12.5px;color:var(--p-text2)">📁 Документите се качват централно веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват автоматично на тестовете от този раздел.</div></div>` : '';
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>${sec.code} · ${sec.name}</h1><div class="sub">${pd ? 'Постоянно досие' : ('Етап ' + phaseN + ' · ' + phaseName)} · ${(sec.wds || []).length} работни документа</div></div><span class="ent-badge ${sec.status || 'pending'}"><span class="d"></span>${entStatusLabel(sec.status)}</span></div>
-    ${engCard}
+    ${engLink}
     <div class="sh-card"><div class="ent-card-h">Работни документи</div>
       <table class="ent-tbl"><thead><tr><th>Индекс</th><th>Работен документ</th><th>Стандарт</th><th>Тип</th><th class="r">Попълнени</th><th>Прогрес</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table>
     </div></div>`;
