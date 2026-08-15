@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815153731"></script>
-<script src="pd-spec.js?v=20260815153731"></script>
-<script src="pd-details.js?v=20260815153731"></script>
-<script src="test-details.js?v=20260815153731"></script>
+<script src="questions.js?v=20260815163532"></script>
+<script src="pd-spec.js?v=20260815163532"></script>
+<script src="pd-details.js?v=20260815163532"></script>
+<script src="test-details.js?v=20260815163532"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -29200,12 +29200,15 @@ document.addEventListener('keydown', e => {
 function entStatusLabel(s) { return ({ done: 'Завършен', active: 'В процес', pending: 'Не започнат' })[s || 'pending']; }
 function entWdType(code) {
   if (window.pdSpec && pdSpec[code]) return 'Документи';
-  // Реален вид на теста = базовият режим в questions.js. Тестовете -00/-10/-20/-30 са
-  // AI (имат „Генерирай" + инструкция/aiPrompt); програмите/заключенията са описателни.
-  // (test-details.mode='descriptive' е само технически флаг за рендиране на панел — не вид.)
-  const d = window.testQuestions && testQuestions[code];
-  const mode = d ? d.mode : null;
-  return mode ? (mode === 'ai' ? 'AI' : 'Описателен') : '—';
+  const q = window.testQuestions && testQuestions[code];
+  if (!q) return '—';
+  // AI тест = има реален AI механизъм: базов режим „ai", или AI инструкция/входове (aiPrompt/aiInputs),
+  // или собствен изчислителен/генериращ панел (config ключ като d20, g00, c40…). Иначе — описателен.
+  // (test-details.mode='descriptive' е само технически флаг за рендиране, не определя вида.)
+  const det = (typeof testDet === 'function') ? testDet(code) : {};
+  const hasPanel = det && Object.keys(det).some(k => det[k] && typeof det[k] === 'object' && !Array.isArray(det[k]) && /^[a-z]\d\d?$/.test(k));
+  const isAi = (q.mode === 'ai') || !!(det && (det.aiPrompt || det.aiInputs)) || hasPanel;
+  return isAi ? 'AI' : 'Описателен';
 }
 function entWdProgress(code) {
   if (window.pdSpec && pdSpec[code]) {
