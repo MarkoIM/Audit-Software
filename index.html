@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815142050"></script>
-<script src="pd-spec.js?v=20260815142050"></script>
-<script src="pd-details.js?v=20260815142050"></script>
-<script src="test-details.js?v=20260815142050"></script>
+<script src="questions.js?v=20260815152342"></script>
+<script src="pd-spec.js?v=20260815152342"></script>
+<script src="pd-details.js?v=20260815152342"></script>
+<script src="test-details.js?v=20260815152342"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4264,16 +4264,26 @@ const auditPhases = [
   ['U','Разходи за персонал','pending',                 ['pending','pending','pending','pending','pending','pending']],
   ['V','Финансови приходи и разходи','pending',         ['pending','pending','pending','pending','pending','pending']],
 ].forEach(([code, name, status, ws]) => {
-  auditPhases[1].sections.push({
-    code, name, mos:'ISA 230, 330, 500, 501, 505, 520, 530', status, wds:[
-      { code:`${code}-00`, name:`${name} — водещ лист (lead schedule)`,         mos:'ISA 230, 500', ai:['extract','analytics'],         status:ws[0] },
-      { code:`${code}-05`, name:`${name} — програма за одит и подход`,          mos:'ISA 330',      ai:['draft','review'],              status:ws[1] },
-      { code:`${code}-10`, name:`${name} — процедури по същество (детайлни)`,   mos:'ISA 330, 500', ai:['extract','match','anomaly'],   status:ws[2] },
-      { code:`${code}-20`, name:`${name} — аналитични процедури`,               mos:'ISA 520',      ai:['analytics'],                   status:ws[3] },
-      { code:`${code}-30`, name:`${name} — извадки и обхват`,                   mos:'ISA 530',      ai:['sampling','fulltest'],         status:ws[4] },
-      { code:`${code}-90`, name:`${name} — заключение по раздела`,              mos:'ISA 230, 330', ai:['draft','review'],              status:ws[5] },
-    ]
-  });
+  // Кои работни документи да съществуват по раздел (само тестове със спецификации).
+  // Премахнати: всички -90; всички -05 освен G-05; H-20, H-30; K-10; M-10; S-10.
+  const KEEP = {
+    G:['00','05','10','20','30'], H:['00','10'],       I:['00','10','20','30'], J:['00','10','20','30'],
+    K:['00','20','30'],           L:['00','10','20','30'], M:['00','20','30'], N:['00','10','20','30'],
+    O:['00','10','20','30'],      P:['00','10','20','30'], Q:['00','10','20','30'], R:['00','10','20','30'],
+    S:['00','20','30'],           T:['00','10','20','30'], U:['00','10','20','30'], V:['00','10','20','30']
+  };
+  const DEFS = [
+    { sfx:'00', name:`${name} — водещ лист (lead schedule)`,       mos:'ISA 230, 500', ai:['extract','analytics'],       si:0 },
+    { sfx:'05', name:`${name} — програма за одит и подход`,        mos:'ISA 330',      ai:['draft','review'],            si:1 },
+    { sfx:'10', name:`${name} — процедури по същество (детайлни)`, mos:'ISA 330, 500', ai:['extract','match','anomaly'], si:2 },
+    { sfx:'20', name:`${name} — аналитични процедури`,             mos:'ISA 520',      ai:['analytics'],                 si:3 },
+    { sfx:'30', name:`${name} — извадки и обхват`,                 mos:'ISA 530',      ai:['sampling','fulltest'],       si:4 },
+    { sfx:'90', name:`${name} — заключение по раздела`,            mos:'ISA 230, 330', ai:['draft','review'],            si:5 },
+  ];
+  const keep = KEEP[code] || ['00','05','10','20','30','90'];
+  const wds = DEFS.filter(d => keep.indexOf(d.sfx) !== -1)
+    .map(d => ({ code:`${code}-${d.sfx}`, name:d.name, mos:d.mos, ai:d.ai, status:ws[d.si] }));
+  auditPhases[1].sections.push({ code, name, mos:'ISA 230, 330, 500, 501, 505, 520, 530', status, wds });
 });
 
 let iosCurrentClient  = null;
