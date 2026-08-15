@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815135120"></script>
-<script src="pd-spec.js?v=20260815135120"></script>
-<script src="pd-details.js?v=20260815135120"></script>
-<script src="test-details.js?v=20260815135120"></script>
+<script src="questions.js?v=20260815142050"></script>
+<script src="pd-spec.js?v=20260815142050"></script>
+<script src="pd-details.js?v=20260815142050"></script>
+<script src="test-details.js?v=20260815142050"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8295,15 +8295,24 @@ function gRefreshActiveG() {
   if (document.getElementById('eng-docs-page') && typeof entShowEngDocs === 'function') entShowEngDocs();
 }
 // Централен екран „Документи на ангажимента" — едно хранилище за целия одит
-function entShowEngDocs() {
+function entShowEngDocs(focusCat) {
   const m = entMainTop();
   entSetActive(document.querySelector('#ent-tree .ent-item[data-k="engdocs"]'));
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Документи на ангажимента' }]);
   m.innerHTML = `<div class="ent-page" id="eng-docs-page">
     <div class="ent-h"><div><h1>Документи на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · качете веднъж · ползват се от всички тестове</div></div></div>
     ${pdEngRepoCard()}
-    ${gEngRepoCard()}
+    ${gEngRepoCard(focusCat)}
   </div>`;
+  if (focusCat) {
+    const el = document.querySelector('#eng-docs-page [data-cat="' + focusCat + '"]');
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+      el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px';
+      const prevBg = el.style.background; el.style.background = 'var(--p-accent-bg)';
+      setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; el.style.background = prevBg; } catch (e) {} }, 2800);
+    }
+  }
 }
 
 // Постоянно досие в единното хранилище — ползва СЪЩИЯ pdUploads store като ПД екраните
@@ -8380,13 +8389,13 @@ function gDocSlotHtml(code, slot, d) {
     body = `<div style="margin-top:6px"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои от хранилището</button></div>`;
   } else {
     status = `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва в хранилището</span>`;
-    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button></div>`;
+    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('${m.cat}')">Отвори хранилището</button></div>`;
   }
   return `<div class="pd-slot${(has && !out) ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}${status}</div>${note}${body}</div>`;
 }
 
 // Централна карта „Документи на ангажимента" (показва се в горната част на раздел G)
-function gEngRepoCard() {
+function gEngRepoCard(focusCat) {
   const cat = engCatalog();
   const groups = {}, order = [];
   cat.forEach(d => { if (!groups[d.grp]) { groups[d.grp] = []; order.push(d.grp); } groups[d.grp].push(d); });
@@ -8394,15 +8403,16 @@ function gEngRepoCard() {
   let html = '';
   order.forEach(g => {
     const items = groups[g];
+    const hasFocus = !!focusCat && items.some(d => d.id === focusCat);
     let gFilled = 0;
     const slots = items.map(d => {
       const files = engDocs[d.id] || [];
       if (files.length) gFilled++;
       const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="gRepoRemove('${d.id}',${i})">✕</button></div>`).join('') + '</div>' : '';
       const st = files.length ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва</span>`;
-      return `<div class="pd-slot${files.length ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
+      return `<div class="pd-slot${files.length ? ' filled' : ''}" data-cat="${d.id}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
     }).join('');
-    html += `<details style="margin-bottom:6px"><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${escHtml(g)} <span style="font-weight:600;color:var(--p-text3)">— ${gFilled}/${items.length} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
+    html += `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${escHtml(g)} <span style="font-weight:600;color:var(--p-text3)">— ${gFilled}/${items.length} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
   });
   return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи за периода <span style="font-weight:600;color:var(--p-text3);font-size:12px">· текущ одит · качете веднъж</span></div><div style="padding:12px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Документи за текущия период. Качете всеки веднъж тук — присвоява се автоматично на всички тестове, където е необходим, вместо да се качва поотделно. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
