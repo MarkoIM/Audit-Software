@@ -1398,6 +1398,43 @@
   .trial-acts { display: flex; gap: 9px; }
   .trial-acts .btn { flex: 1; justify-content: center; }
   .trial-note { margin-top: 12px; font-size: 11px; color: var(--p-text3); }
+
+  /* ============================================================
+     КОРПОРАТИВЕН ТЕМАТИЧЕН СЛОЙ — само за екраните на тестовете от Етап 2
+     (обхватен под .corp). Само визуален стил (g-tests-view); функциите остават 1:1.
+     ============================================================ */
+  .corp-head { display: flex; align-items: center; gap: 14px; margin: 2px 0 18px; flex-wrap: wrap; }
+  .corp-code { font-size: 12px; font-weight: 700; color: var(--p-text1); background: var(--p-surface2); border: 1px solid var(--p-border-strong); padding: 7px 11px; border-radius: 8px; flex: none; }
+  .corp-head-main { min-width: 0; }
+  .corp-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--p-text1); letter-spacing: -.3px; line-height: 1.2; }
+  .corp-sub { font-size: 12.5px; color: var(--p-text3); margin-top: 3px; }
+  /* Карти — чисти заглавия, по-голям радиус */
+  .corp .sh-card { border-radius: 10px; box-shadow: none; margin-bottom: 16px; }
+  .corp .ent-card-h,
+  .corp .sh-card-header { background: var(--p-surface); color: var(--p-text1); text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 700; padding: 14px 18px; }
+  /* Обобщение — свързана лента (както в g-tests-view) */
+  .corp .d10-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; border: 1px solid var(--p-border); border-radius: 10px; overflow: hidden; background: var(--p-surface); }
+  .corp .d10-stat { background: var(--p-surface); border: none; border-left: 1px solid var(--p-border); border-radius: 0; padding: 14px 16px; }
+  .corp .d10-stat.accent { background: var(--p-surface); }
+  .corp .d10-stat.accent .k { color: var(--p-text3); }
+  .corp .d10-stat.accent .v { color: var(--p-accent); }
+  .corp .d10-stat.warnv .v { color: var(--p-amber); }
+  /* Таблици — data-grid стил (само хоризонтални линии + hover) */
+  .corp .b50-att th { background: var(--p-surface); border: none; border-bottom: 1px solid var(--p-border-strong); font-size: 10px; padding: 9px 11px; }
+  .corp .b50-att td { border: none; border-bottom: 1px solid var(--p-border); padding: 9px 11px; }
+  .corp .b50-att tbody tr:hover td { background: var(--p-surface2); }
+  /* Документи — по-чисти слотове */
+  .corp .pd-slot { border-radius: 8px; padding: 12px 14px; }
+  .corp .pd-slot.filled { border-color: var(--p-green); }
+  /* Проверки — редове с разделители */
+  .corp .b50-checks { gap: 0; padding: 0; }
+  .corp .b50-chk { padding: 12px 18px; border-bottom: 1px solid var(--p-border); }
+  .corp .b50-chk:last-child { border-bottom: none; }
+  /* Полета */
+  .corp .b40-fl { color: var(--p-text3); }
+  /* Бутони — акцент */
+  .corp .btn-primary { background: var(--p-accent); border-color: var(--p-accent); }
+  .corp .btn-primary:hover { background: var(--p-accent-2, var(--p-accent)); filter: brightness(1.08); }
 </style>
 </head>
 <body>
@@ -3824,10 +3861,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815163532"></script>
-<script src="pd-spec.js?v=20260815163532"></script>
-<script src="pd-details.js?v=20260815163532"></script>
-<script src="test-details.js?v=20260815163532"></script>
+<script src="questions.js?v=20260815184206"></script>
+<script src="pd-spec.js?v=20260815184206"></script>
+<script src="pd-details.js?v=20260815184206"></script>
+<script src="test-details.js?v=20260815184206"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -28590,11 +28627,15 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
 
   const card = isAi ? renderAiQuestions(code, def) : renderDescriptiveQuestions(code, def);
 
+  // Етап 2 — корпоративен изглед (тематичен слой .corp); останалите етапи остават непроменени
+  const isStage2 = def.phase === '2. Изпълнение';
+  const corpHead = `<div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} — ${escHtml(def.test)}</h1><div class="corp-sub">${escHtml(subtitle)} · ${escHtml(clientName)} · Одит ${year}</div></div></div>`;
+
   main.innerHTML = `
-    <div style="width:100%;padding:24px 32px;max-width:1280px">
+    <div class="${isStage2 ? 'corp' : ''}" style="width:100%;padding:24px 32px;max-width:1280px">
       ${iosBreadcrumb(breadcrumbItems)}
-      <div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
-      <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>
+      ${isStage2 ? corpHead : `<div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
+      <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>`}
       ${infoStrip}
       ${testDetailCards(code)}
       ${testAiPanel(code)}
