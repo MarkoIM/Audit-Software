@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815125144"></script>
-<script src="pd-spec.js?v=20260815125144"></script>
-<script src="pd-details.js?v=20260815125144"></script>
-<script src="test-details.js?v=20260815125144"></script>
+<script src="questions.js?v=20260815131344"></script>
+<script src="pd-spec.js?v=20260815131344"></script>
+<script src="pd-details.js?v=20260815131344"></script>
+<script src="test-details.js?v=20260815131344"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8126,11 +8126,12 @@ const G_DOC_CATALOG = [
   { id: 'ov',      grp: 'Ядрени счетоводни',       name: 'Оборотна ведомост (текущ и предходен период)', req: true },
   { id: 'gk',      grp: 'Ядрени счетоводни',       name: 'Главна книга / аналитична справка за НМА', req: true },
   { id: 'gfo',     grp: 'Ядрени счетоводни',       name: 'Проект на ГФО, пояснения и счетоводна политика', req: true },
-  { id: 'compare', grp: 'Ядрени счетоводни',       name: 'Сравнителни данни за предходен период / бюджет', req: false },
-  { id: 'reg_nma', grp: 'Раздел G — специфични',   name: 'Регистър / инвентарна книга на НМА', req: true },
-  { id: 'amort',   grp: 'Раздел G — специфични',   name: 'Амортизационен план на НМА', req: true },
-  { id: 'moves',   grp: 'Раздел G — специфични',   name: 'Данни за придобивания, отписвания, лицензи и обезценки', req: false },
-  { id: 'support', grp: 'Първични документи',      name: 'Подкрепящи документи за избрани позиции (договори, фактури, лицензии, протоколи)', req: false }
+  { id: 'compare', grp: 'Ядрени счетоводни',       name: 'Сравнителни данни / предходен период / бюджет / модел', req: false },
+  { id: 'policy',  grp: 'Ядрени счетоводни',       name: 'Счетоводна политика', req: false },
+  { id: 'reg_nma', grp: 'Раздел G · Нематериални активи',   name: 'Регистър / инвентарна книга на НМА', req: true },
+  { id: 'amort',   grp: 'Раздел G · Нематериални активи',   name: 'Амортизационен план на НМА', req: true },
+  { id: 'moves',   grp: 'Раздел G · Нематериални активи',   name: 'Данни за придобивания, отписвания, лицензи и обезценки', req: false },
+  { id: 'support', grp: 'Раздел G · Нематериални активи',   name: 'Подкрепящи документи за избрани позиции (договори, фактури, лицензии, протоколи)', req: false }
 ];
 function gCat(id) { return G_DOC_CATALOG.find(d => d.id === id); }
 
@@ -8156,6 +8157,89 @@ const G_SLOTMAP = {
   'G-30': { g30d1: { t: 'internal', ref: 'lead_g00' }, g30d2: { t: 'client', cat: 'reg_nma' }, g30d3: { t: 'client', cat: 'gk' }, g30d4: { t: 'internal', ref: 'spm' }, g30d5: { t: 'internal', ref: 'prior_g' } }
 };
 
+// ── Генерично разгъване към всички раздели от Етап 2 (без дублиране в хранилището) ──
+// Явно мапнатите кодове ползват пълния модел (destructive sync + opt-out). Останалите раздели
+// от Етап 2 се класифицират автоматично по име на документа и присвояването е адитивно
+// (не изтрива ръчни качвания) — за да не се чупят съществуващите тестове.
+const ENG_EXPLICIT = { 'D-10': 1, 'G-00': 1, 'G-10': 1, 'G-20': 1, 'G-30': 1 };
+const SEC_NAMES = {
+  G: 'Нематериални активи', H: 'Имоти, машини и съоръжения', I: 'Инвестиционни имоти',
+  J: 'Инвестиции и финансови инструменти', K: 'Материални запаси', L: 'Търговски и други вземания',
+  M: 'Парични средства', N: 'Търговски и други задължения', O: 'Заеми и лизинги',
+  P: 'Провизии и условни задължения', Q: 'Данъци', R: 'Собствен капитал и резерви',
+  S: 'Приходи', T: 'Разходи за дейността', U: 'Разходи за персонал', V: 'Финансови приходи и разходи'
+};
+function secName(sec) { return SEC_NAMES[sec] || ('Раздел ' + sec); }
+function engCfgKey(code) { return code.toLowerCase().replace('-', ''); }               // 'H-00' → 'h00'
+function engDocKey(code, n) { return code === 'G-00' ? ('g' + n) : (code === 'D-10' ? ('d' + n) : (engCfgKey(code) + 'd' + n)); }
+// Класификатор: съпоставя документ (по име) към ЕДИН каноничен запис — споделен или раздел-специфичен.
+function gClassify(code, name, sec) {
+  const s = (name || '').toLowerCase();
+  // споделени клиентски документи (проверяват се първи, за да хванат комбинирани описания)
+  if (/оборотна ведомост/.test(s)) return { t: 'client', cat: 'ov' };
+  if (/главна книга|извлечени[ея][^.]{0,20}по сметк/.test(s)) return { t: 'client', cat: 'gk' };
+  if (/проект на гфо|проект на годишен|финансов отчет|отчет за приход|отчет за собствения капитал|\bопр\b|пояснени/.test(s)) return { t: 'client', cat: 'gfo' };
+  if (/бюджет|прогнозен модел|управленск|сравнителни данни|предходен период|отрасл/.test(s)) return { t: 'client', cat: 'compare' };
+  if (/счетоводна политика/.test(s)) return { t: 'client', cat: 'policy' };
+  // вътрешни входове (свързват се автоматично)
+  if (/водещ лист/.test(s)) return { t: 'internal', ref: 'lead_' + sec };
+  if (/оценка на риск|риск за раздел|значими рискове/.test(s)) return { t: 'internal', ref: 'risk_' + sec };
+  if (/резултати от .*(тест|g-|h-|i-|j-|k-|l-|m-|n-|o-|p-|q-|r-|s-|t-|u-|v-)|предходни тест/.test(s)) return { t: 'internal', ref: 'prior_' + sec };
+  if (/същественост|\bspm\b|праг за разследване/.test(s)) return { t: 'internal', ref: 'spm' };
+  if (/праг[^.]{0,30}незначител/.test(s)) return { t: 'internal', ref: 'ctt' };
+  // раздел-специфични клиентски документи
+  if (/регистър|подкнига|инвентарна книга|аналитична справка|складов|портфейл|популаци|ведомост|разчет/.test(s)) return { t: 'client', cat: 'reg_' + sec };
+  return { t: 'client', cat: 'support_' + sec };
+}
+// Слот-мап на тест: явен (G/D-10) или изведен от класификатора за останалите Етап 2 раздели.
+function engSlotMap(code) {
+  if (G_SLOTMAP[code]) return G_SLOTMAP[code];
+  const cfg = testDet(code)[engCfgKey(code)];
+  if (!cfg || !cfg.docs) return null;
+  const sec = code.split('-')[0], m = {};
+  cfg.docs.forEach(d => { m[engDocKey(code, d.n)] = gClassify(code, d.name, sec); });
+  return m;
+}
+function engClassifiedCodes() {
+  const out = [], tq = window.testQuestions || {};
+  Object.keys(tq).forEach(code => {
+    if (ENG_EXPLICIT[code] || code.split('-')[0] === 'G') return;
+    if (!tq[code] || tq[code].phase !== '2. Изпълнение') return;
+    const cfg = testDet(code)[engCfgKey(code)];
+    if (cfg && cfg.docs) out.push(code);
+  });
+  return out;
+}
+// Динамичен каталог на хранилището — БЕЗ повтарящи се документи (по каноничен id)
+let _engCatalog = null;
+function engCatalog() {
+  if (_engCatalog) return _engCatalog;
+  const list = [], seen = new Set();
+  const push = (id, grp, name, req) => { if (seen.has(id)) return; seen.add(id); list.push({ id: id, grp: grp, name: name, req: req }); };
+  G_DOC_CATALOG.forEach(c => push(c.id, c.grp, c.name, c.req));
+  engClassifiedCodes().forEach(code => {
+    const sec = code.split('-')[0], cfg = testDet(code)[engCfgKey(code)];
+    (cfg.docs || []).forEach(d => {
+      const cl = gClassify(code, d.name, sec);
+      if (cl.t !== 'client' || seen.has(cl.cat)) return;
+      const isReg = cl.cat.indexOf('reg_') === 0;
+      push(cl.cat, 'Раздел ' + sec + ' · ' + secName(sec), 'Раздел ' + sec + ' · ' + (isReg ? 'регистър / подкнига / справка' : 'подкрепящи и първични документи'), isReg);
+    });
+  });
+  _engCatalog = list;
+  return list;
+}
+function gInternalInfo(ref) {
+  if (ref === 'spm') return { label: 'Същественост за изпълнение (SPM)', src: 'D-20' };
+  if (ref === 'ctt') return { label: 'Праг за явно незначителни неточности', src: 'D-30' };
+  if (ref === 'lead_g00') return { label: 'Водещ лист G-00', src: 'тест G-00' };
+  if (ref === 'prior_g') return { label: 'Резултати от G-05 / G-10 / G-20', src: 'раздел G' };
+  if (ref.indexOf('lead_') === 0) { const sec = ref.slice(5); return { label: 'Водещ лист ' + sec + '-00', src: 'тест ' + sec + '-00' }; }
+  if (ref.indexOf('prior_') === 0) { const sec = ref.slice(6); return { label: 'Резултати от предходни тестове', src: 'раздел ' + sec }; }
+  if (ref.indexOf('risk_') === 0) return { label: 'Оценка на риска', src: 'раздел E' };
+  return { label: 'Свързан вход', src: '' };
+}
+
 function gRepoHas(cat) { return (engDocs[cat] || []).length > 0; }
 function gOptedOut(code, slot) { return !!((engDocOptOut[code] || {})[slot]); }
 // Дали вътрешният вход е наличен (произвеждащият тест/данни са готови)
@@ -8163,32 +8247,37 @@ function gInternalReady(ref) {
   try {
     if (ref === 'lead_g00') return typeof aiTestHasData === 'function' && aiTestHasData('G-00');
     if (ref === 'prior_g') return typeof aiTestHasData === 'function' && (aiTestHasData('G-05') || aiTestHasData('G-10') || aiTestHasData('G-20'));
+    if (ref.indexOf('lead_') === 0) { const sec = ref.slice(5); return typeof aiTestHasData === 'function' && aiTestHasData(sec + '-00'); }
+    if (ref.indexOf('prior_') === 0) { const sec = ref.slice(6); return typeof aiTestHasData === 'function' && (aiTestHasData(sec + '-05') || aiTestHasData(sec + '-10') || aiTestHasData(sec + '-20')); }
+    if (ref.indexOf('risk_') === 0) return typeof aiSectionHasData === 'function' ? aiSectionHasData('E') : true;
     if (ref === 'spm') { if (window.testDetails && testDetails['D-20'] && testDetails['D-20'].d20 && typeof d20Compute === 'function') { const p = d20Compute('D-20'); return !!(p && !isNaN(p.pm)); } return false; }
     if (ref === 'ctt') { if (window.testDetails && testDetails['D-30'] && testDetails['D-30'].d30 && typeof d30Compute === 'function') { const p = d30Compute('D-30'); return !!(p && !isNaN(p.thr)); } return false; }
   } catch (e) {}
-  return true; // risk_g, policy, controls — черпят се от планиране / ПД, считат се налични
+  return true; // policy, controls — черпят се от планиране / ПД, считат се налични
 }
 
-// Реконсилиране: попълва testUploads[code][slot] според хранилището/връзките
+// Реконсилиране: попълва testUploads[code][slot] според хранилището/връзките.
+// Явните кодове (G/D-10) са destructive (с opt-out); класифицираните — адитивни (пазят ръчни качвания).
 function gEngSync(code) {
-  const map = G_SLOTMAP[code]; if (!map) return;
+  const map = engSlotMap(code); if (!map) return;
+  const explicit = !!ENG_EXPLICIT[code];
   testUploads[code] = testUploads[code] || {};
   Object.keys(map).forEach(slot => {
     const m = map[slot];
     if (m.t === 'client') {
       if (gRepoHas(m.cat) && !gOptedOut(code, slot)) {
         testUploads[code][slot] = (engDocs[m.cat] || []).map(f => ({ name: f.name, size: f.size, fromRepo: true, cat: m.cat }));
-      } else { delete testUploads[code][slot]; }
+      } else if (explicit) { delete testUploads[code][slot]; }
     } else {
-      const info = G_INTERNAL[m.ref] || { label: 'Свързан вход', src: '' };
+      const info = gInternalInfo(m.ref);
       if (gInternalReady(m.ref)) testUploads[code][slot] = [{ name: '⟳ ' + info.label, size: 0, linked: true, src: info.src }];
-      else delete testUploads[code][slot];
+      else if (explicit) delete testUploads[code][slot];
     }
   });
   if (!Object.keys(testUploads[code]).length) delete testUploads[code];
   try { testUploadsPersist(); } catch (e) {}
 }
-function gEngSyncAll() { Object.keys(G_SLOTMAP).forEach(gEngSync); }
+function gEngSyncAll() { const set = {}; Object.keys(G_SLOTMAP).forEach(c => set[c] = 1); engClassifiedCodes().forEach(c => set[c] = 1); Object.keys(set).forEach(gEngSync); }
 
 // Пре-рендиране на активния изглед след промяна в хранилището
 function gRefreshActiveG() {
@@ -8259,12 +8348,12 @@ function gOptOut(code, slot, val) {
 
 // Рендер на един слот в docs картата на тест: присвояване или авто-връзка
 function gDocSlotHtml(code, slot, d) {
-  const m = (G_SLOTMAP[code] || {})[slot];
+  const m = (engSlotMap(code) || {})[slot];
   const note = d.note ? `<div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note)}</div>` : '';
   const nameHtml = `<span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span>`;
   if (!m) return `<div class="pd-slot"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}</div>${note}</div>`;
   if (m.t !== 'client') {
-    const info = G_INTERNAL[m.ref] || { label: 'Свързан вход', src: '' };
+    const info = gInternalInfo(m.ref);
     const ready = gInternalReady(m.ref);
     const badge = ready ? '🔗 Свързан автоматично' : '⏳ Ще се свърже автоматично';
     const txt = ready
@@ -8290,11 +8379,12 @@ function gDocSlotHtml(code, slot, d) {
 
 // Централна карта „Документи на ангажимента" (показва се в горната част на раздел G)
 function gEngRepoCard() {
-  const groups = {};
-  G_DOC_CATALOG.forEach(d => { (groups[d.grp] = groups[d.grp] || []).push(d); });
-  const reqAll = G_DOC_CATALOG.filter(d => d.req), reqDone = reqAll.filter(d => gRepoHas(d.id)).length;
+  const cat = engCatalog();
+  const groups = {}, order = [];
+  cat.forEach(d => { if (!groups[d.grp]) { groups[d.grp] = []; order.push(d.grp); } groups[d.grp].push(d); });
+  const reqAll = cat.filter(d => d.req), reqDone = reqAll.filter(d => gRepoHas(d.id)).length;
   let html = '';
-  Object.keys(groups).forEach(g => {
+  order.forEach(g => {
     html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-text3);margin:14px 0 6px">${escHtml(g)}</div>`;
     groups[g].forEach(d => {
       const files = engDocs[d.id] || [];
