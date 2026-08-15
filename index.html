@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815123240"></script>
-<script src="pd-spec.js?v=20260815123240"></script>
-<script src="pd-details.js?v=20260815123240"></script>
-<script src="test-details.js?v=20260815123240"></script>
+<script src="questions.js?v=20260815125144"></script>
+<script src="pd-spec.js?v=20260815125144"></script>
+<script src="pd-details.js?v=20260815125144"></script>
+<script src="test-details.js?v=20260815125144"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -7111,10 +7111,12 @@ function d10ConclText(code, c) {
 
 function d10DocsCards(code) {
   const det = testDet(code);
-  return (det.d10.docs || []).map(d => {
-    const up = d10HasFile(code, 'd' + d.n);
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">Задължителен · ${up ? 'Качен' : 'Липсва'}</span></div><div style="margin-top:8px" id="tup-${code}-d${d.n}">${testUploadWidget2(code, 'd' + d.n)}</div></div>`;
-  }).join('') + `<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Качването на документ не стартира извличане или изчисление. Извличането започва след „Генерирай теста".</div>`;
+  const slots = (det.d10.docs || []).map(d =>
+    (typeof gDocSlotHtml === 'function' && (G_SLOTMAP[code] || {})['d' + d.n])
+      ? gDocSlotHtml(code, 'd' + d.n, Object.assign({ req: true }, d))
+      : (function () { const up = d10HasFile(code, 'd' + d.n); return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">Задължителен · ${up ? 'Качен' : 'Липсва'}</span></div><div style="margin-top:8px" id="tup-${code}-d${d.n}">${testUploadWidget2(code, 'd' + d.n)}</div></div>`; })()
+  ).join('');
+  return slots + `<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Документите се качват веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват тук. Извличането започва след „Генерирай теста".</div>`;
 }
 function d10SummaryInner(code, c) {
   c = c || d10Compute(code);
@@ -7252,6 +7254,7 @@ function d10PanelInner(code) {
 function testMaterialityPanel(code) {
   const det = testDet(code);
   if (!det.d10) return '';
+  if (typeof gEngSync === 'function') gEngSync(code);
   return `<div id="d10-panel">${d10PanelInner(code)}</div>`;
 }
 function d10SetText(code, key, value) { setAnswer(code, key, value); }
@@ -8142,8 +8145,11 @@ const G_INTERNAL = {
   controls: { label: 'Контроли, walkthrough и ITGC', src: 'Етап 1 · раздел C' }
 };
 
-// Съответствие тест → слот (ключът е точно този, който изчисленията ползват)
+// Съответствие тест → слот (ключът е точно този, който изчисленията ползват).
+// ВАЖНО: един и същ документ се мапва към ЕДИН каноничен запис (cat) — без дублиране в хранилището.
 const G_SLOTMAP = {
+  // Етап 1 — само D-10 качва документи; ползва същите канонични ГФО/ОВ като раздел G (без дублиране)
+  'D-10': { d1: { t: 'client', cat: 'gfo' }, d2: { t: 'client', cat: 'ov' } },
   'G-00': { g1: { t: 'client', cat: 'ov' }, g2: { t: 'client', cat: 'gk' }, g3: { t: 'client', cat: 'compare' }, g4: { t: 'client', cat: 'reg_nma' } },
   'G-10': { g10d1: { t: 'client', cat: 'ov' }, g10d2: { t: 'client', cat: 'reg_nma' }, g10d3: { t: 'client', cat: 'support' }, g10d4: { t: 'client', cat: 'gfo' }, g10d5: { t: 'internal', ref: 'spm' } },
   'G-20': { g20d1: { t: 'internal', ref: 'lead_g00' }, g20d2: { t: 'client', cat: 'reg_nma' }, g20d3: { t: 'client', cat: 'compare' }, g20d4: { t: 'client', cat: 'moves' }, g20d5: { t: 'internal', ref: 'spm' } },
@@ -8182,12 +8188,13 @@ function gEngSync(code) {
   if (!Object.keys(testUploads[code]).length) delete testUploads[code];
   try { testUploadsPersist(); } catch (e) {}
 }
-function gEngSyncAll() { ['G-00', 'G-10', 'G-20', 'G-30'].forEach(gEngSync); }
+function gEngSyncAll() { Object.keys(G_SLOTMAP).forEach(gEngSync); }
 
 // Пре-рендиране на активния изглед след промяна в хранилището
 function gRefreshActiveG() {
   const map = { g00: 'G-00', g10: 'G-10', g20: 'G-20', g30: 'G-30' };
   Object.keys(map).forEach(p => { if (document.getElementById(p + '-panel') && typeof window[p + 'Rerender'] === 'function') window[p + 'Rerender'](map[p]); });
+  if (document.getElementById('d10-panel') && typeof d10RenderPanel === 'function') d10RenderPanel('D-10');
   if (document.getElementById('eng-docs-page') && typeof entShowEngDocs === 'function') entShowEngDocs();
 }
 // Централен екран „Документи на ангажимента" — едно хранилище за целия одит
