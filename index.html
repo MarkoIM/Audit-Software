@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815152342"></script>
-<script src="pd-spec.js?v=20260815152342"></script>
-<script src="pd-details.js?v=20260815152342"></script>
-<script src="test-details.js?v=20260815152342"></script>
+<script src="questions.js?v=20260815153731"></script>
+<script src="pd-spec.js?v=20260815153731"></script>
+<script src="pd-details.js?v=20260815153731"></script>
+<script src="test-details.js?v=20260815153731"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -29200,19 +29200,25 @@ document.addEventListener('keydown', e => {
 function entStatusLabel(s) { return ({ done: 'Завършен', active: 'В процес', pending: 'Не започнат' })[s || 'pending']; }
 function entWdType(code) {
   if (window.pdSpec && pdSpec[code]) return 'Документи';
-  const det = (typeof testDet === 'function') ? testDet(code) : null;
+  // Реален вид на теста = базовият режим в questions.js. Тестовете -00/-10/-20/-30 са
+  // AI (имат „Генерирай" + инструкция/aiPrompt); програмите/заключенията са описателни.
+  // (test-details.mode='descriptive' е само технически флаг за рендиране на панел — не вид.)
   const d = window.testQuestions && testQuestions[code];
-  const mode = (det && det.mode) ? det.mode : (d ? d.mode : null);
+  const mode = d ? d.mode : null;
   return mode ? (mode === 'ai' ? 'AI' : 'Описателен') : '—';
 }
 function entWdProgress(code) {
   if (window.pdSpec && pdSpec[code]) {
     return { done: pdTotalCount(code), total: 0 };
   }
-  const d = window.testQuestions && testQuestions[code];
-  if (!d) return { done: 0, total: 0 };
+  // Брои действителните въпроси на теста (ефективна дефиниция + окончателните въпроси),
+  // както се показва на самия екран на теста.
+  const def = (typeof testEffectiveDef === 'function') ? testEffectiveDef(code) : (window.testQuestions && testQuestions[code]);
+  if (!def) return { done: 0, total: 0 };
+  const keys = (typeof testAnswerableKeys === 'function') ? testAnswerableKeys(def) : (def.questions || []).map(q => q.n);
   const a = (window.testAnswers && testAnswers[code]) || {};
-  return { done: d.questions.filter(q => a[q.n]).length, total: d.questions.length };
+  const done = keys.filter(k => String(a[k] == null ? '' : a[k]).trim() !== '').length;
+  return { done: done, total: keys.length };
 }
 function entMainTop() { const m = document.getElementById('ios-main'); m.style.alignItems = 'flex-start'; m.style.justifyContent = 'flex-start'; m.style.overflow = 'auto'; return m; }
 
@@ -29350,11 +29356,15 @@ function entShowSection(code) {
   else { const shdr = document.querySelector(`#ent-tree .ent-shdr[data-code="${code}"]`); if (shdr) entOpenSec(shdr.closest('.ent-sec')); entSetActive(shdr); }
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: pd ? 'Постоянно досие' : ('Етап ' + phaseN) }, { l: `${sec.code} · ${sec.name}` }]);
   const rows = (sec.wds || []).map(w => {
-    const p = entWdProgress(w.code);
     const docs = !!(window.pdSpec && pdSpec[w.code]);
+    const p = entWdProgress(w.code);
     const pct = docs ? (p.done > 0 ? 100 : 0) : (p.total ? Math.round(p.done / p.total * 100) : 0);
     const filled = docs ? String(p.done) : `${p.done}/${p.total}`;
-    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${w.name}</td><td class="num">${w.mos || ''}</td><td><span class="ent-kind${entWdType(w.code) === 'AI' ? ' ai' : ''}">${entWdType(w.code)}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span></td></tr>`;
+    // Реални данни от дефиницията на теста (име + стандарт), а не генеричните от билдъра
+    const nm = docs ? w.name : (((typeof testEffectiveDef === 'function') && (testEffectiveDef(w.code) || {}).test) || w.name);
+    const std = docs ? (w.mos || '') : ((window.testQuestions && testQuestions[w.code] && testQuestions[w.code].standard) || w.mos || '');
+    const kind = entWdType(w.code);
+    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${escHtml(nm)}</td><td class="num">${escHtml(std)}</td><td><span class="ent-kind${kind === 'AI' ? ' ai' : ''}">${kind}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span></td></tr>`;
   }).join('');
   const engLink = (code === 'G' && typeof entShowEngDocs === 'function') ? `<div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 16px;font-size:12.5px;color:var(--p-text2)">📁 Документите се качват централно веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват автоматично на тестовете от този раздел.</div></div>` : '';
   m.innerHTML = `<div class="ent-page">
