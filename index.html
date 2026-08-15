@@ -3824,10 +3824,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815131344"></script>
-<script src="pd-spec.js?v=20260815131344"></script>
-<script src="pd-details.js?v=20260815131344"></script>
-<script src="test-details.js?v=20260815131344"></script>
+<script src="questions.js?v=20260815133325"></script>
+<script src="pd-spec.js?v=20260815133325"></script>
+<script src="pd-details.js?v=20260815133325"></script>
+<script src="test-details.js?v=20260815133325"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8170,6 +8170,15 @@ const SEC_NAMES = {
   S: 'Приходи', T: 'Разходи за дейността', U: 'Разходи за персонал', V: 'Финансови приходи и разходи'
 };
 function secName(sec) { return SEC_NAMES[sec] || ('Раздел ' + sec); }
+// Нормализиране на име на документ → стабилен каноничен ключ (за дедупликация „документ по документ")
+function engNormDoc(name) {
+  return String(name || '').toLowerCase()
+    .replace(/[„“”"'().,;:/\\–—-]/g, ' ')
+    .replace(/\b(ако са налични|ако е налична|ако е налично|ако е приложимо|ако има такива|при разчитане на контроли|за периода|за одитирания период|към отчетната дата|към датата на баланса|към края на периода|към края на отчетния период|за текущия период|за текущ и предходен период|през периода)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function engDocHash(name) { const t = engNormDoc(name); let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); }
+function docCat(name) { return 'doc_' + engDocHash(name); }
 function engCfgKey(code) { return code.toLowerCase().replace('-', ''); }               // 'H-00' → 'h00'
 function engDocKey(code, n) { return code === 'G-00' ? ('g' + n) : (code === 'D-10' ? ('d' + n) : (engCfgKey(code) + 'd' + n)); }
 // Класификатор: съпоставя документ (по име) към ЕДИН каноничен запис — споделен или раздел-специфичен.
@@ -8187,9 +8196,8 @@ function gClassify(code, name, sec) {
   if (/резултати от .*(тест|g-|h-|i-|j-|k-|l-|m-|n-|o-|p-|q-|r-|s-|t-|u-|v-)|предходни тест/.test(s)) return { t: 'internal', ref: 'prior_' + sec };
   if (/същественост|\bspm\b|праг за разследване/.test(s)) return { t: 'internal', ref: 'spm' };
   if (/праг[^.]{0,30}незначител/.test(s)) return { t: 'internal', ref: 'ctt' };
-  // раздел-специфични клиентски документи
-  if (/регистър|подкнига|инвентарна книга|аналитична справка|складов|портфейл|популаци|ведомост|разчет/.test(s)) return { t: 'client', cat: 'reg_' + sec };
-  return { t: 'client', cat: 'support_' + sec };
+  // раздел-специфичен документ — самостоятелен каноничен запис (дедуплициран по нормализирано име)
+  return { t: 'client', cat: docCat(name) };
 }
 // Слот-мап на тест: явен (G/D-10) или изведен от класификатора за останалите Етап 2 раздели.
 function engSlotMap(code) {
@@ -8222,8 +8230,8 @@ function engCatalog() {
     (cfg.docs || []).forEach(d => {
       const cl = gClassify(code, d.name, sec);
       if (cl.t !== 'client' || seen.has(cl.cat)) return;
-      const isReg = cl.cat.indexOf('reg_') === 0;
-      push(cl.cat, 'Раздел ' + sec + ' · ' + secName(sec), 'Раздел ' + sec + ' · ' + (isReg ? 'регистър / подкнига / справка' : 'подкрепящи и първични документи'), isReg);
+      // всеки раздел-специфичен документ се обявява поотделно, с реалното си име
+      push(cl.cat, 'Раздел ' + sec + ' · ' + secName(sec), d.name, d.req === true);
     });
   });
   _engCatalog = list;
