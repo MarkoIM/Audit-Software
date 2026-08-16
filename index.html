@@ -1455,6 +1455,22 @@
     width: 26px; height: 26px; border-radius: 50%; background: var(--p-accent); color: #fff;
     font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
   }
+  /* Сбит списък „Необходими документи" (както в g-tests-view) */
+  .ndoc { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--p-border); font-size: 12.5px; }
+  .ndoc:last-child { border-bottom: none; }
+  .ndoc:hover { background: var(--p-surface2); }
+  .ndoc-ic { width: 16px; flex: none; text-align: center; color: var(--p-text3); }
+  .ndoc.ok .ndoc-ic { color: var(--p-green); } .ndoc.miss .ndoc-ic { color: var(--p-amber); } .ndoc.auto .ndoc-ic { color: var(--p-accent); }
+  .ndoc-nm { flex: 1; color: var(--p-text1); font-weight: 600; min-width: 140px; }
+  .ndoc-src { color: var(--p-text3); font-size: 11.5px; white-space: nowrap; }
+  .ndoc-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .ndoc-badge.ok { color: var(--p-green); background: var(--p-green-bg); }
+  .ndoc-badge.auto { color: var(--p-accent); background: var(--p-accent-bg); }
+  .ndoc-badge.miss { color: var(--p-amber); background: var(--p-amber-bg); }
+  .ndoc-act { flex: none; display: flex; gap: 6px; align-items: center; }
+  .ndoc-x { color: var(--p-text3); text-decoration: none; padding: 0 4px; font-size: 12px; }
+  .ndoc-x:hover { color: #d92d20; }
+  @media (max-width: 760px) { .ndoc { flex-wrap: wrap; } .ndoc-nm { min-width: 100%; } }
 </style>
 </head>
 <body>
@@ -3881,10 +3897,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816105854"></script>
-<script src="pd-spec.js?v=20260816105854"></script>
-<script src="pd-details.js?v=20260816105854"></script>
-<script src="test-details.js?v=20260816105854"></script>
+<script src="questions.js?v=20260816111444"></script>
+<script src="pd-spec.js?v=20260816111444"></script>
+<script src="pd-details.js?v=20260816111444"></script>
+<script src="test-details.js?v=20260816111444"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8495,32 +8511,23 @@ function gOptOut(code, slot, val) {
 // Рендер на един слот в docs картата на тест: присвояване или авто-връзка
 function gDocSlotHtml(code, slot, d) {
   const m = (engSlotMap(code) || {})[slot];
-  const note = d.note ? `<div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note)}</div>` : '';
-  const nameHtml = `<span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span>`;
-  if (!m) return `<div class="pd-slot"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}</div>${note}</div>`;
+  const tt = d.note ? ` title="${escHtml(d.note)}"` : '';
+  const nm = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}</span>`;
+  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}</div>`;
   if (m.t !== 'client') {
-    const info = gInternalInfo(m.ref);
-    const ready = gInternalReady(m.ref);
-    const badge = ready ? '🔗 Свързан автоматично' : '⏳ Ще се свърже автоматично';
-    const txt = ready
-      ? `Свързва се автоматично от <b>${escHtml(info.src)}</b> — не се качва в този тест.`
-      : `Ще се свърже автоматично от <b>${escHtml(info.src)}</b>, когато е наличен — не се качва тук.`;
-    return `<div class="pd-slot${ready ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"${ready ? ' style="background:var(--p-accent)"' : ''}></span>${nameHtml}<span class="pd-slot-count" style="color:var(--p-accent);font-weight:700">${badge}</span></div>${note}<div style="font-size:11.5px;color:var(--p-text2);margin-top:6px">${txt}</div></div>`;
+    const info = gInternalInfo(m.ref), ready = gInternalReady(m.ref);
+    const label = ready ? 'Свързан автоматично' : 'Ще се свърже автоматично';
+    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span></div>`;
   }
   const has = gRepoHas(m.cat), out = gOptedOut(code, slot);
-  let status, body;
   if (has && !out) {
     const files = (engDocs[m.cat] || []).map(f => escHtml(f.name)).join(', ');
-    status = `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Присвоен от хранилището</span>`;
-    body = `<div style="font-size:11.5px;color:var(--p-text2);margin-top:6px">Присвоен: <b>${files}</b> · <a href="#" onclick="gOptOut('${code}','${slot}',true);return false" style="color:var(--p-text3)">премахни от този тест</a></div>`;
-  } else if (has && out) {
-    status = `<span class="pd-slot-count">Наличен в хранилището · не е присвоен</span>`;
-    body = `<div style="margin-top:6px"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои от хранилището</button></div>`;
-  } else {
-    status = `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва в хранилището</span>`;
-    body = `<div style="margin-top:6px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи в хранилището<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('${m.cat}')">Отвори хранилището</button></div>`;
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">Хранилище · ${files}</span><span class="ndoc-badge ok">Присвоен</span><span class="ndoc-act"><a href="#" class="ndoc-x" title="Премахни от този тест" onclick="gOptOut('${code}','${slot}',true);return false">✕</a></span></div>`;
   }
-  return `<div class="pd-slot${(has && !out) ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span>${nameHtml}${status}</div>${note}${body}</div>`;
+  if (has && out) {
+    return `<div class="ndoc"><span class="ndoc-ic">○</span>${nm}<span class="ndoc-src">в хранилището · не е присвоен</span><span class="ndoc-act"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои</button></span></div>`;
+  }
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('${m.cat}')">Отвори хранилището</button></span></div>`;
 }
 
 // Централна карта „Документи на ангажимента" (показва се в горната част на раздел G)
