@@ -1478,6 +1478,20 @@
   .corp .corp-genfile .fnm { font-size: 12.5px; font-weight: 600; color: var(--p-text1); }
   .corp .corp-genfile .fsz { font-size: 11px; color: var(--p-text3); }
   .corp .corp-genfile .btn { margin-left: 6px; }
+  /* Статус на тест + заверка (изготвил/проверил) */
+  .tst-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 20px; white-space: nowrap; border: 1px solid transparent; }
+  .tst-badge.ns { color: var(--p-text3); background: var(--p-surface2); border-color: var(--p-border); }
+  .tst-badge.ip { color: #9a6a16; background: var(--p-amber-bg); }
+  .tst-badge.rv { color: var(--p-accent); background: var(--p-accent-bg); }
+  .tst-badge.rt { color: #b42318; background: #fde8e6; }
+  .tst-badge.ok { color: var(--p-green); background: var(--p-green-bg); }
+  .tst-badge.na { color: var(--p-text3); background: var(--p-surface2); border-color: var(--p-border-strong); font-style: italic; }
+  .tst-badge.fin { color: #1f3a5f; background: #e6edf6; border-color: #c9d6e6; }
+  .tst-val { font-size: 13px; color: var(--p-text1); font-weight: 600; }
+  .tst-note { font-size: 12px; color: var(--p-text3); }
+  .tst-logrow { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--p-text2); padding: 5px 0; border-bottom: 1px dashed var(--p-border); }
+  .tst-logrow:last-child { border-bottom: none; }
+  .tst-logmeta { color: var(--p-text3); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -3904,10 +3918,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816164804"></script>
-<script src="pd-spec.js?v=20260816164804"></script>
-<script src="pd-details.js?v=20260816164804"></script>
-<script src="test-details.js?v=20260816164804"></script>
+<script src="questions.js?v=20260816171952"></script>
+<script src="pd-spec.js?v=20260816171952"></script>
+<script src="pd-details.js?v=20260816171952"></script>
+<script src="test-details.js?v=20260816171952"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -28717,6 +28731,128 @@ function setConcl(code, value) {
   testNotes[code] = testNotes[code] || {};
   if (value === '') delete testNotes[code].concl; else testNotes[code].concl = value;
   persistNotes();
+  try { testStatusOnEdit(code); } catch (e) {}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// СТАТУСИ И ЗАВЕРКА НА ТЕСТОВЕТЕ — изготвил/проверил (потребител + дата),
+// бутон „Проверено от одитор", преходи по роли/права, одитна следа.
+// Стъпва на наличните роли: hasPerm('edit_wp')=изготвя, hasPerm('approve')=преглежда,
+// ангажиментна роля 'partner'/admin=финализира, 'eqcr'=контрол на качеството.
+// ══════════════════════════════════════════════════════════════════════
+window.testStatus = {};   // per-ангажимент: testStatus[code] = { status, prep{}, rev{}, fin{}, log[] }
+function persistStatus() { try { localStorage.setItem(engKey('auditpro_test_status'), JSON.stringify(testStatus)); } catch (e) {} }
+const TEST_STATUS_META = {
+  not_started: { l: 'Незапочнат', cls: 'ns' },
+  in_progress: { l: 'В процес', cls: 'ip' },
+  review: { l: 'За преглед', cls: 'rv' },
+  returned: { l: 'Върнат за корекция', cls: 'rt' },
+  reviewed: { l: 'Прегледан', cls: 'ok' },
+  na: { l: 'Неприложим', cls: 'na' },
+  finalized: { l: 'Финализиран', cls: 'fin' }
+};
+function testAnyAnswered(code) {
+  const ans = testAnswers[code] || {};
+  if (Object.keys(ans).length) return true;
+  if ((testNotes[code] || {}).concl) return true;
+  if (typeof testTotalCount === 'function' && testTotalCount(code) > 0) return true;
+  return false;
+}
+function testStatusOf(code) {
+  const r = testStatus[code];
+  if (r && r.status) return r.status;
+  return testAnyAnswered(code) ? 'in_progress' : 'not_started';
+}
+function testStatusRec(code) { testStatus[code] = testStatus[code] || {}; return testStatus[code]; }
+function testNowIso() { try { return new Date().toISOString(); } catch (e) { return ''; } }
+function testFmtWhen(iso) { if (!iso) return ''; try { const d = new Date(iso); return d.toLocaleDateString('bg-BG') + ' ' + d.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+function testStamp() { const u = currentUser(); return { id: u ? u.id : '', name: u ? userSignName(u) : '', at: testNowIso() }; }
+function testFmtStamp(s) { if (!s || !s.name) return '<span style="color:var(--p-text3)">—</span>'; const w = testFmtWhen(s.at); return escHtml(s.name) + (w ? ' <span style="color:var(--p-text3)">· ' + w + '</span>' : ''); }
+function testLog(code, t) { const r = testStatusRec(code); r.log = r.log || []; const u = currentUser(); r.log.push({ t: t, u: u ? userSignName(u) : '', at: testNowIso() }); }
+function myEngRole() { return (window.team || {})[sessionUid] || ''; }
+function canPrepareTest() { return hasPerm('edit_wp'); }
+function canReviewTest() { return hasPerm('approve'); }
+function canFinalizeTest() { return isAdmin() || myEngRole() === 'partner' || hasPerm('approve'); }
+function testSubmitReview(code) {
+  if (!canPrepareTest()) { alert('Нямате право да подавате за преглед.'); return; }
+  const r = testStatusRec(code); r.status = 'review'; r.prep = testStamp(); testLog(code, 'Подаден за преглед'); persistStatus(); testStatusRefresh(code);
+}
+function testApprove(code) {
+  if (!canReviewTest()) { alert('Нямате право да преглеждате тестове.'); return; }
+  const r = testStatusRec(code), u = currentUser();
+  if (r.prep && r.prep.id && u && r.prep.id === u.id) { alert('Не можете да проверите собствената си работа (разделение на функциите).'); return; }
+  r.status = 'reviewed'; r.rev = testStamp(); testLog(code, 'Проверено от одитор'); persistStatus(); testStatusRefresh(code);
+}
+function testReturnReview(code) {
+  if (!canReviewTest()) { alert('Нямате право.'); return; }
+  const r = testStatusRec(code); r.status = 'returned'; r.rev = null; testLog(code, 'Върнат за корекция'); persistStatus(); testStatusRefresh(code);
+}
+function testFinalize(code) {
+  if (!canFinalizeTest()) { alert('Само партньор/администратор може да финализира.'); return; }
+  const r = testStatusRec(code); if (r.status !== 'reviewed') { alert('Тестът трябва да е „Прегледан" преди финализиране.'); return; }
+  r.status = 'finalized'; r.fin = testStamp(); testLog(code, 'Финализиран (заключен)'); persistStatus(); testStatusRefresh(code);
+}
+function testReopen(code) {
+  if (!canFinalizeTest() && !canReviewTest()) { alert('Нямате право да реоткривате.'); return; }
+  const r = testStatusRec(code); r.status = 'in_progress'; r.rev = null; r.fin = null; testLog(code, 'Реоткрит за редакция'); persistStatus(); testStatusRefresh(code);
+}
+function testToggleNA(code) {
+  if (!canPrepareTest()) return;
+  const r = testStatusRec(code);
+  if (r.status === 'na') { r.status = ''; testLog(code, 'Отмяна на „Неприложим"'); }
+  else { r.status = 'na'; testLog(code, 'Маркиран като неприложим'); }
+  persistStatus(); testStatusRefresh(code);
+}
+// Анулиране на заверката при редакция след преглед (одиторски контрол)
+function testStatusOnEdit(code) {
+  const r = testStatus[code];
+  if (r && (r.status === 'reviewed' || r.status === 'finalized')) {
+    r.status = 'in_progress'; r.rev = null; r.fin = null;
+    testLog(code, 'Редактиран след заверка — заверката е анулирана'); persistStatus();
+    if (document.getElementById('test-signoff')) testStatusRefresh(code);
+  }
+}
+function testStatusHeadBadge(code) { const m = TEST_STATUS_META[testStatusOf(code)] || TEST_STATUS_META.not_started; return `<span class="tst-badge ${m.cls}" id="tst-head-badge" style="margin-left:auto">${m.l}</span>`; }
+function testStatusBadge(code) { const m = TEST_STATUS_META[testStatusOf(code)] || TEST_STATUS_META.not_started; return `<span class="tst-badge ${m.cls}">${m.l}</span>`; }
+function testStatusRefresh(code) {
+  const card = document.getElementById('test-signoff'); if (card) card.outerHTML = testSignoffCard(code);
+  const hb = document.getElementById('tst-head-badge'); if (hb) hb.outerHTML = testStatusHeadBadge(code);
+}
+function testSignoffCard(code) {
+  const r = testStatus[code] || {}, s = testStatusOf(code), me = currentUser();
+  const isPreparer = !!(r.prep && r.prep.id && me && r.prep.id === me.id);
+  const fields = `<div class="b40-fields">
+      <div class="b40-f"><span class="b40-fl">Изготвил</span><div class="tst-val">${testFmtStamp(r.prep)}</div></div>
+      <div class="b40-f"><span class="b40-fl">Проверил</span><div class="tst-val">${testFmtStamp(r.rev)}</div></div>
+      ${r.fin ? `<div class="b40-f"><span class="b40-fl">Финализирал</span><div class="tst-val">${testFmtStamp(r.fin)}</div></div>` : ''}
+    </div>`;
+  const btns = [];
+  if (s === 'na') { if (canPrepareTest()) btns.push(`<button class="btn btn-secondary" onclick="testToggleNA('${code}')">Върни като приложим</button>`); }
+  else if (s === 'finalized') {
+    btns.push(`<span class="tst-note">🔒 Заключен след финализиране — само за четене.</span>`);
+    if (canFinalizeTest()) btns.push(`<button class="btn btn-secondary" onclick="testReopen('${code}')">Реоткрий</button>`);
+  } else {
+    if ((s === 'not_started' || s === 'in_progress' || s === 'returned') && canPrepareTest())
+      btns.push(`<button class="btn btn-primary" onclick="testSubmitReview('${code}')">Подай за преглед</button>`);
+    if (s === 'review') {
+      if (canReviewTest() && !isPreparer) { btns.push(`<button class="btn btn-primary" onclick="testApprove('${code}')">Проверено от одитор</button>`); btns.push(`<button class="btn btn-secondary" onclick="testReturnReview('${code}')">Върни за корекция</button>`); }
+      else if (canReviewTest() && isPreparer) btns.push(`<span class="tst-note">Не можете да проверите собствената си работа (разделение на функциите).</span>`);
+      else btns.push(`<span class="tst-note">Изчаква преглед от одитор с право на одобрение.</span>`);
+    }
+    if (s === 'reviewed') {
+      if (canFinalizeTest()) btns.push(`<button class="btn btn-primary" onclick="testFinalize('${code}')">Финализирай (заключи)</button>`);
+      if (canReviewTest()) btns.push(`<button class="btn btn-secondary" onclick="testReturnReview('${code}')">Върни за корекция</button>`);
+    }
+    if (canPrepareTest() && s !== 'review' && s !== 'reviewed') btns.push(`<button class="btn btn-secondary" onclick="testToggleNA('${code}')">Маркирай „Неприложим"</button>`);
+  }
+  const logHtml = (r.log && r.log.length) ? `<details style="margin-top:12px"><summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Одитна следа (${r.log.length})</summary><div style="margin-top:8px">${r.log.slice().reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.t)}</span><span class="tst-logmeta">${escHtml(e.u)}${e.at ? ' · ' + testFmtWhen(e.at) : ''}</span></div>`).join('')}</div></details>` : '';
+  return `<div class="sh-card" id="test-signoff" style="margin:20px 0">
+    <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>Заверка и статус</span>${testStatusBadge(code)}</div>
+    <div style="padding:14px 18px">${fields}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px">${btns.join(' ') || '<span class="tst-note">Няма действия за вашата роля на този етап.</span>'}</div>
+      ${logHtml}
+    </div>
+  </div>`;
 }
 
 function renderQuestionScreen(code, year, clientName, breadcrumbItems, backAction) {
@@ -28741,13 +28877,13 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   // Корп изглед: Етап 1 и 2. Етап 3 е готов за включване — при започване на Етап 3
   // сменете проверката на /^[123]\./.test(def.phase || '') (цялата база вече е подготвена).
   const useCorp = isStage2 || def.phase === '1. Приемане и планиране';
-  const corpHead = `<div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} — ${escHtml(def.test)}</h1><div class="corp-sub">${escHtml(subtitle)} · ${escHtml(clientName)} · Одит ${year}</div></div></div>`;
+  const corpHead = `<div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} — ${escHtml(def.test)}</h1><div class="corp-sub">${escHtml(subtitle)} · ${escHtml(clientName)} · Одит ${year}</div></div>${testStatusHeadBadge(code)}</div>`;
 
   main.innerHTML = `
     <div class="${useCorp ? 'corp' : ''}" style="width:100%;padding:24px 32px;max-width:1280px">
       ${iosBreadcrumb(breadcrumbItems)}
-      ${useCorp ? corpHead : `<div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
-      <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>`}
+      ${useCorp ? corpHead : `<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:18px"><div><div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
+      <div style="font-size:13px;color:var(--p-text2);font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div></div>${testStatusHeadBadge(code)}</div>`}
       ${infoStrip}
       ${testDetailCards(code)}
       ${testAiPanel(code)}
@@ -28832,6 +28968,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
           ${testConclExample(code)}
         </div>
       </div>
+      ${testSignoffCard(code)}
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-bottom:12px">
         <button class="btn btn-secondary" onclick="${backAction}">← Назад</button>
         <button class="btn btn-secondary" onclick="saveTest('${code}')">Запази документа</button>
@@ -29038,6 +29175,7 @@ function setAnswer(code, n, value, btnEl) {
     if (value !== '') btnEl.classList.add('selected');
   }
   persistAnswers();
+  try { testStatusOnEdit(code); } catch (e) {}
   const def = testEffectiveDef(code);
   if (def.mode === 'ai') updatePrompt(code); else updateConclusion(code);
   if (typeof d10Recalc === 'function' && testDet(code) && testDet(code).d10) d10Recalc(code);
@@ -29521,7 +29659,11 @@ function entShowSection(code) {
     const nm = docs ? w.name : (((typeof testEffectiveDef === 'function') && (testEffectiveDef(w.code) || {}).test) || w.name);
     const std = docs ? (w.mos || '') : ((window.testQuestions && testQuestions[w.code] && testQuestions[w.code].standard) || w.mos || '');
     const kind = entWdType(w.code);
-    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${escHtml(nm)}</td><td class="num">${escHtml(std)}</td><td><span class="ent-kind${kind === 'AI' ? ' ai' : ''}">${kind}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span></td></tr>`;
+    // Реален статус на теста (изготвил/проверил); за ПД документите — старият индикатор
+    const badge = (!docs && window.testQuestions && testQuestions[w.code] && typeof testStatusBadge === 'function')
+      ? testStatusBadge(w.code)
+      : `<span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span>`;
+    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${escHtml(nm)}</td><td class="num">${escHtml(std)}</td><td><span class="ent-kind${kind === 'AI' ? ' ai' : ''}">${kind}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td>${badge}</td></tr>`;
   }).join('');
   const engLink = (code === 'G' && typeof entShowEngDocs === 'function') ? `<div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 16px;font-size:12.5px;color:var(--p-text2)">📁 Документите се качват централно веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват автоматично на тестовете от този раздел.</div></div>` : '';
   m.innerHTML = `<div class="ent-page">
@@ -30399,6 +30541,7 @@ function pdShowChecklist(code, idx) {
 window.team = {};   // екип по ангажимент: { userId: engRole } — per-ангажимент
 const ENG_STORES = [
   ['testAnswers', 'auditpro_answers'], ['testNotes', 'auditpro_notes'], ['testUploads', 'auditpro_test_docs'],
+  ['testStatus', 'auditpro_test_status'],
   ['pdUploads', 'auditpro_pd_docs'], ['pdCustom', 'auditpro_pd_custom'], ['pdHiddenUser', 'auditpro_pd_hidden'],
   ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
   ['team', 'auditpro_team'],
