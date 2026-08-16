@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816112259"></script>
-<script src="pd-spec.js?v=20260816112259"></script>
-<script src="pd-details.js?v=20260816112259"></script>
-<script src="test-details.js?v=20260816112259"></script>
+<script src="questions.js?v=20260816113531"></script>
+<script src="pd-spec.js?v=20260816113531"></script>
+<script src="pd-details.js?v=20260816113531"></script>
+<script src="test-details.js?v=20260816113531"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8888,13 +8888,7 @@ function h00DocsCard(code, c) {
   c = c || h00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['h00-generated'] === '1';
-  const slots = (det.h00.docs || []).map(d => {
-    const key = 'h00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${h00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.h00.docs || []).map(d => gDocSlotHtml(code, 'h00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="h00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="h00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="h00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -9232,11 +9226,7 @@ function h10Upload(code, key) {
 }
 function h10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['h10-generated'] === '1';
-  const slots = (det.h10.docs || []).map(d => {
-    const key = 'h10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : 'Условно';
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${h10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.h10.docs || []).map(d => gDocSlotHtml(code, 'h10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="h10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="h10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="h10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -9568,13 +9558,7 @@ function i00DocsCard(code, c) {
   c = c || i00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['i00-generated'] === '1';
-  const slots = (det.i00.docs || []).map(d => {
-    const key = 'i00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${i00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.i00.docs || []).map(d => gDocSlotHtml(code, 'i00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -9912,11 +9896,7 @@ function i10Upload(code, key) {
 }
 function i10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['i10-generated'] === '1';
-  const slots = (det.i10.docs || []).map(d => {
-    const key = 'i10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : 'Условно';
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${i10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.i10.docs || []).map(d => gDocSlotHtml(code, 'i10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -10238,10 +10218,7 @@ function i20Upload(code, key) {
 }
 function i20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['i20-generated'] === '1';
-  const slots = (det.i20.docs || []).map(d => {
-    const key = 'i20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${i20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.i20.docs || []).map(d => gDocSlotHtml(code, 'i20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -10562,10 +10539,7 @@ function i30Upload(code, key) {
 }
 function i30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['i30-generated'] === '1';
-  const slots = (det.i30.docs || []).map(d => {
-    const key = 'i30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${i30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.i30.docs || []).map(d => gDocSlotHtml(code, 'i30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -10919,13 +10893,7 @@ function j00DocsCard(code, c) {
   c = c || j00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['j00-generated'] === '1';
-  const slots = (det.j00.docs || []).map(d => {
-    const key = 'j00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${j00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.j00.docs || []).map(d => gDocSlotHtml(code, 'j00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -11290,11 +11258,7 @@ function j10Upload(code, key) {
 }
 function j10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['j10-generated'] === '1';
-  const slots = (det.j10.docs || []).map(d => {
-    const key = 'j10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${j10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.j10.docs || []).map(d => gDocSlotHtml(code, 'j10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -11610,10 +11574,7 @@ function j20Upload(code, key) {
 }
 function j20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['j20-generated'] === '1';
-  const slots = (det.j20.docs || []).map(d => {
-    const key = 'j20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'По избор'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${j20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.j20.docs || []).map(d => gDocSlotHtml(code, 'j20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -11929,10 +11890,7 @@ function j30Upload(code, key) {
 }
 function j30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['j30-generated'] === '1';
-  const slots = (det.j30.docs || []).map(d => {
-    const key = 'j30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'При наличие'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${j30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.j30.docs || []).map(d => gDocSlotHtml(code, 'j30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -12284,13 +12242,7 @@ function k00DocsCard(code, c) {
   c = c || k00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['k00-generated'] === '1';
-  const slots = (det.k00.docs || []).map(d => {
-    const key = 'k00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${k00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.k00.docs || []).map(d => gDocSlotHtml(code, 'k00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="k00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -12640,10 +12592,7 @@ function k20Upload(code, key) {
 }
 function k20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['k20-generated'] === '1';
-  const slots = (det.k20.docs || []).map(d => {
-    const key = 'k20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">салда</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${k20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.k20.docs || []).map(d => gDocSlotHtml(code, 'k20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="k20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -12981,10 +12930,7 @@ function k30Upload(code, key) {
 }
 function k30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['k30-generated'] === '1';
-  const slots = (det.k30.docs || []).map(d => {
-    const key = 'k30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${k30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.k30.docs || []).map(d => gDocSlotHtml(code, 'k30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="k30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -13343,13 +13289,7 @@ function l00DocsCard(code, c) {
   c = c || l00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['l00-generated'] === '1';
-  const slots = (det.l00.docs || []).map(d => {
-    const key = 'l00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${l00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.l00.docs || []).map(d => gDocSlotHtml(code, 'l00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -13704,11 +13644,7 @@ function l10Upload(code, key) {
 }
 function l10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['l10-generated'] === '1';
-  const slots = (det.l10.docs || []).map(d => {
-    const key = 'l10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${l10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.l10.docs || []).map(d => gDocSlotHtml(code, 'l10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -14045,10 +13981,7 @@ function l20Upload(code, key) {
 }
 function l20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['l20-generated'] === '1';
-  const slots = (det.l20.docs || []).map(d => {
-    const key = 'l20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 2;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">аналитична справка</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${l20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.l20.docs || []).map(d => gDocSlotHtml(code, 'l20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -14352,10 +14285,7 @@ function m20Upload(code, key) {
 }
 function m20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['m20-generated'] === '1';
-  const slots = (det.m20.docs || []).map(d => {
-    const key = 'm20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">основен източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Ако е приложимо'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${m20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.m20.docs || []).map(d => gDocSlotHtml(code, 'm20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="m20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="m20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="m20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -14688,10 +14618,7 @@ function l30Upload(code, key) {
 }
 function l30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['l30-generated'] === '1';
-  const slots = (det.l30.docs || []).map(d => {
-    const key = 'l30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${l30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.l30.docs || []).map(d => gDocSlotHtml(code, 'l30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -15070,10 +14997,7 @@ function m30Upload(code, key) {
 }
 function m30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['m30-generated'] === '1';
-  const slots = (det.m30.docs || []).map(d => {
-    const key = 'm30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${m30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.m30.docs || []).map(d => gDocSlotHtml(code, 'm30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="m30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="m30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="m30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -15434,13 +15358,7 @@ function m00DocsCard(code, c) {
   c = c || m00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['m00-generated'] === '1';
-  const slots = (det.m00.docs || []).map(d => {
-    const key = 'm00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'prev' ? c.cmpPrev : (d.cond === 'bud' ? c.cmpBud : d.req);
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${m00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.m00.docs || []).map(d => gDocSlotHtml(code, 'm00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="m00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="m00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="m00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -15845,10 +15763,7 @@ function v30Upload(code, key) {
 }
 function v30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['v30-generated'] === '1';
-  const slots = (det.v30.docs || []).map(d => {
-    const key = 'v30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${v30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.v30.docs || []).map(d => gDocSlotHtml(code, 'v30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -16186,10 +16101,7 @@ function v20Upload(code, key) {
 }
 function v20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['v20-generated'] === '1';
-  const slots = (det.v20.docs || []).map(d => {
-    const key = 'v20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${v20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.v20.docs || []).map(d => gDocSlotHtml(code, 'v20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -16489,11 +16401,7 @@ function v10Upload(code, key) {
 }
 function v10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['v10-generated'] === '1';
-  const slots = (det.v10.docs || []).map(d => {
-    const key = 'v10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${v10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.v10.docs || []).map(d => gDocSlotHtml(code, 'v10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -16809,11 +16717,7 @@ function v00DocsCard(code, c) {
   c = c || v00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['v00-generated'] === '1';
-  const slots = (det.v00.docs || []).map(d => {
-    const key = 'v00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${v00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.v00.docs || []).map(d => gDocSlotHtml(code, 'v00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -17164,10 +17068,7 @@ function u30Upload(code, key) {
 }
 function u30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['u30-generated'] === '1';
-  const slots = (det.u30.docs || []).map(d => {
-    const key = 'u30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${u30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.u30.docs || []).map(d => gDocSlotHtml(code, 'u30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -17505,10 +17406,7 @@ function u20Upload(code, key) {
 }
 function u20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['u20-generated'] === '1';
-  const slots = (det.u20.docs || []).map(d => {
-    const key = 'u20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${u20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.u20.docs || []).map(d => gDocSlotHtml(code, 'u20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -17808,11 +17706,7 @@ function u10Upload(code, key) {
 }
 function u10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['u10-generated'] === '1';
-  const slots = (det.u10.docs || []).map(d => {
-    const key = 'u10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${u10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.u10.docs || []).map(d => gDocSlotHtml(code, 'u10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -18143,11 +18037,7 @@ function u00DocsCard(code, c) {
   c = c || u00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['u00-generated'] === '1';
-  const slots = (det.u00.docs || []).map(d => {
-    const key = 'u00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${u00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.u00.docs || []).map(d => gDocSlotHtml(code, 'u00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -18501,10 +18391,7 @@ function t30Upload(code, key) {
 }
 function t30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['t30-generated'] === '1';
-  const slots = (det.t30.docs || []).map(d => {
-    const key = 't30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${t30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.t30.docs || []).map(d => gDocSlotHtml(code, 't30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -18846,10 +18733,7 @@ function t20Upload(code, key) {
 }
 function t20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['t20-generated'] === '1';
-  const slots = (det.t20.docs || []).map(d => {
-    const key = 't20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${t20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.t20.docs || []).map(d => gDocSlotHtml(code, 't20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -19156,11 +19040,7 @@ function t10Upload(code, key) {
 }
 function t10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['t10-generated'] === '1';
-  const slots = (det.t10.docs || []).map(d => {
-    const key = 't10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${t10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.t10.docs || []).map(d => gDocSlotHtml(code, 't10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -19483,11 +19363,7 @@ function t00DocsCard(code, c) {
   c = c || t00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['t00-generated'] === '1';
-  const slots = (det.t00.docs || []).map(d => {
-    const key = 't00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${t00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.t00.docs || []).map(d => gDocSlotHtml(code, 't00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -19830,10 +19706,7 @@ function s30Upload(code, key) {
 }
 function s30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['s30-generated'] === '1';
-  const slots = (det.s30.docs || []).map(d => {
-    const key = 's30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${s30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.s30.docs || []).map(d => gDocSlotHtml(code, 's30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="s30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="s30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="s30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -20175,10 +20048,7 @@ function s20Upload(code, key) {
 }
 function s20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['s20-generated'] === '1';
-  const slots = (det.s20.docs || []).map(d => {
-    const key = 's20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${s20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.s20.docs || []).map(d => gDocSlotHtml(code, 's20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="s20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="s20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="s20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -20473,11 +20343,7 @@ function s00DocsCard(code, c) {
   c = c || s00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['s00-generated'] === '1';
-  const slots = (det.s00.docs || []).map(d => {
-    const key = 's00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${s00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.s00.docs || []).map(d => gDocSlotHtml(code, 's00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="s00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="s00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="s00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -20833,10 +20699,7 @@ function r30Upload(code, key) {
 }
 function r30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['r30-generated'] === '1';
-  const slots = (det.r30.docs || []).map(d => {
-    const key = 'r30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${r30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.r30.docs || []).map(d => gDocSlotHtml(code, 'r30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -21176,10 +21039,7 @@ function r20Upload(code, key) {
 }
 function r20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['r20-generated'] === '1';
-  const slots = (det.r20.docs || []).map(d => {
-    const key = 'r20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${r20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.r20.docs || []).map(d => gDocSlotHtml(code, 'r20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -21482,11 +21342,7 @@ function r10Upload(code, key) {
 }
 function r10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['r10-generated'] === '1';
-  const slots = (det.r10.docs || []).map(d => {
-    const key = 'r10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${r10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.r10.docs || []).map(d => gDocSlotHtml(code, 'r10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -21813,11 +21669,7 @@ function r00DocsCard(code, c) {
   c = c || r00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['r00-generated'] === '1';
-  const slots = (det.r00.docs || []).map(d => {
-    const key = 'r00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${r00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.r00.docs || []).map(d => gDocSlotHtml(code, 'r00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -22174,10 +22026,7 @@ function q30Upload(code, key) {
 }
 function q30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['q30-generated'] === '1';
-  const slots = (det.q30.docs || []).map(d => {
-    const key = 'q30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${q30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.q30.docs || []).map(d => gDocSlotHtml(code, 'q30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -22518,10 +22367,7 @@ function q20Upload(code, key) {
 }
 function q20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['q20-generated'] === '1';
-  const slots = (det.q20.docs || []).map(d => {
-    const key = 'q20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${q20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.q20.docs || []).map(d => gDocSlotHtml(code, 'q20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -22824,11 +22670,7 @@ function q10Upload(code, key) {
 }
 function q10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['q10-generated'] === '1';
-  const slots = (det.q10.docs || []).map(d => {
-    const key = 'q10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${q10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.q10.docs || []).map(d => gDocSlotHtml(code, 'q10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -23170,11 +23012,7 @@ function q00DocsCard(code, c) {
   c = c || q00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['q00-generated'] === '1';
-  const slots = (det.q00.docs || []).map(d => {
-    const key = 'q00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${q00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.q00.docs || []).map(d => gDocSlotHtml(code, 'q00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -23534,10 +23372,7 @@ function p30Upload(code, key) {
 }
 function p30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['p30-generated'] === '1';
-  const slots = (det.p30.docs || []).map(d => {
-    const key = 'p30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${p30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.p30.docs || []).map(d => gDocSlotHtml(code, 'p30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -23876,10 +23711,7 @@ function p20Upload(code, key) {
 }
 function p20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['p20-generated'] === '1';
-  const slots = (det.p20.docs || []).map(d => {
-    const key = 'p20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 3;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">регистър</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${p20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.p20.docs || []).map(d => gDocSlotHtml(code, 'p20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -24180,11 +24012,7 @@ function p10Upload(code, key) {
 }
 function p10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['p10-generated'] === '1';
-  const slots = (det.p10.docs || []).map(d => {
-    const key = 'p10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${p10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.p10.docs || []).map(d => gDocSlotHtml(code, 'p10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -24531,11 +24359,7 @@ function p00DocsCard(code, c) {
   c = c || p00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['p00-generated'] === '1';
-  const slots = (det.p00.docs || []).map(d => {
-    const key = 'p00d' + d.n, up = d10HasFile(code, key);
-    const isSrc = c.srcKey === key;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Препоръчителен'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${p00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.p00.docs || []).map(d => gDocSlotHtml(code, 'p00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -24888,10 +24712,7 @@ function o30Upload(code, key) {
 }
 function o30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['o30-generated'] === '1';
-  const slots = (det.o30.docs || []).map(d => {
-    const key = 'o30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${o30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.o30.docs || []).map(d => gDocSlotHtml(code, 'o30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -25236,10 +25057,7 @@ function o20Upload(code, key) {
 }
 function o20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['o20-generated'] === '1';
-  const slots = (det.o20.docs || []).map(d => {
-    const key = 'o20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">източник</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${o20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.o20.docs || []).map(d => gDocSlotHtml(code, 'o20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -25552,11 +25370,7 @@ function o10Upload(code, key) {
 }
 function o10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['o10-generated'] === '1';
-  const slots = (det.o10.docs || []).map(d => {
-    const key = 'o10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${o10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.o10.docs || []).map(d => gDocSlotHtml(code, 'o10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -25908,13 +25722,7 @@ function o00DocsCard(code, c) {
   c = c || o00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['o00-generated'] === '1';
-  const slots = (det.o00.docs || []).map(d => {
-    const key = 'o00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${o00Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.o00.docs || []).map(d => gDocSlotHtml(code, 'o00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -26269,10 +26077,7 @@ function n30Upload(code, key) {
 }
 function n30DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['n30-generated'] === '1';
-  const slots = (det.n30.docs || []).map(d => {
-    const key = 'n30d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 1;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">популация</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : 'Условно'} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${n30Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.n30.docs || []).map(d => gDocSlotHtml(code, 'n30d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -26621,10 +26426,7 @@ function n20Upload(code, key) {
 }
 function n20DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['n20-generated'] === '1';
-  const slots = (det.n20.docs || []).map(d => {
-    const key = 'n20d' + d.n, up = d10HasFile(code, key), isSrc = d.n === 2;
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">аналитична справка</span>' : ''}</span><span class="pd-slot-count">${d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен')} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${n20Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.n20.docs || []).map(d => gDocSlotHtml(code, 'n20d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -26935,11 +26737,7 @@ function n10Upload(code, key) {
 }
 function n10DocsCard(code, c) {
   const det = testDet(code), ans = testAnswers[code] || {}, gen = ans['n10-generated'] === '1';
-  const slots = (det.n10.docs || []).map(d => {
-    const key = 'n10d' + d.n, up = d10HasFile(code, key);
-    const reqLbl = d.req ? 'Задължителен' : (d.cond ? 'Условно' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${n10Upload(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.n10.docs || []).map(d => gDocSlotHtml(code, 'n10d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
@@ -27264,13 +27062,7 @@ function n00DocsCard(code, c) {
   c = c || n00Compute(code);
   const det = testDet(code), ans = testAnswers[code] || {};
   const gen = ans['n00-generated'] === '1';
-  const slots = (det.n00.docs || []).map(d => {
-    const key = 'n00d' + d.n, up = d10HasFile(code, key);
-    const required = d.cond === 'compare' ? c.cmpOn : d.req;
-    const isSrc = c.srcKey === key;
-    const reqLbl = d.cond === 'compare' ? 'Задължителен при сравнение' : (required ? 'Задължителен' : 'Препоръчителен');
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}${isSrc ? ' · <span style="color:var(--p-accent);font-weight:700">избран източник</span>' : ''}</span><span class="pd-slot-count">${reqLbl} · ${up ? 'Качен' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">${escHtml(d.note || '')}</div><div style="margin-top:8px">${n00UploadWidget(code, key)}</div></div>`;
-  }).join('');
+  const slots = (det.n00.docs || []).map(d => gDocSlotHtml(code, 'n00d' + d.n, d)).join('');
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n00Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n00Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n00ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
