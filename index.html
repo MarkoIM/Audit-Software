@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816144721"></script>
-<script src="pd-spec.js?v=20260816144721"></script>
-<script src="pd-details.js?v=20260816144721"></script>
-<script src="test-details.js?v=20260816144721"></script>
+<script src="questions.js?v=20260816151155"></script>
+<script src="pd-spec.js?v=20260816151155"></script>
+<script src="pd-details.js?v=20260816151155"></script>
+<script src="test-details.js?v=20260816151155"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5786,10 +5786,7 @@ function b10SectionECodes() { return aiSectionCodes('E'); }
 function b10SectionEOk() { return aiSectionHasData('E'); }
 function b10InputsComplete(code) { return aiInputsComplete(code); }
 function b10StrategyPanel(code) {
-  return `<div class="sh-card" style="margin-bottom:16px">
-    <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>AI асистент — чернова на стратегията</span><span class="ai-badge">AI</span></div>
-    <div id="b10-ai-wrap">${b10AiInner(code)}</div>
-  </div>`;
+  return `<div id="b10-ai-wrap">${b10AiInner(code)}</div>`;
 }
 function b10AiInner(code) {
   const det = testDet(code), inputs = det.aiInputs || [];
@@ -5818,20 +5815,22 @@ function b10AiInner(code) {
   const intro = hasUpload
     ? 'Черновата се <b>генерира автоматично</b>, след като качите документите и са налични данните от посочените тестове по-долу. Можете и сами да я генерирате по всяко време с бутона, дори някой източник да липсва.'
     : 'Черновата се <b>генерира автоматично</b>, след като бъдат попълнени посочените тестове по-долу. Можете и сами да я генерирате по всяко време с бутона, дори някой източник да липсва.';
-  return `<div style="padding:14px 16px">
+  const inputsCard = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>Необходими документи и данни</span><span class="ai-badge">AI</span></div><div style="padding:14px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:12px">${intro}</div>
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-top:6px;margin-bottom:2px">Необходими документи и данни</div>
-    ${rows}
-    <details style="margin-top:14px">
-      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
-      <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt || '')}</div>
-    </details>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+    ${rows}</div></div>`;
+  const genCard = `<div class="sh-card corp-gencard" style="margin-bottom:16px"><div class="ent-card-h">Генерирайте черновата</div><div style="padding:14px 16px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Генерирай чернова с AI</button>
       <span style="font-size:12px;color:var(--p-text3)">${complete ? 'Всички източници са налични — черновата се генерира автоматично.' : 'Може да генерирате и при липсващи източници.'}</span>
-    </div>
-    <div id="b10-ai-result" style="display:none;margin-top:14px"></div>
-  </div>`;
+    </div></div></div>`;
+  const instrCard = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:14px 16px">
+    <details>
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
+      <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt || '')}</div>
+    </details></div></div>`;
+  const resultCard = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Резултат — чернова на стратегията</div><div style="padding:14px 16px">
+    <div id="b10-ai-result">${aiInputsComplete(code) ? '' : '<div style="font-size:12.5px;color:var(--p-text3)">Черновата ще се появи тук след „Генерирай чернова с AI".</div>'}</div></div></div>`;
+  return corpPrepDiv() + '<div class="corp-prep">' + inputsCard + genCard + '</div>' + instrCard + corpResDiv() + '<div class="corp-result">' + resultCard + '</div>';
 }
 function b10RefreshPanel(code) { const wrap = document.getElementById('b10-ai-wrap'); if (wrap) wrap.innerHTML = b10AiInner(code); }
 function b10AddFiles(code, key, files) { testAddFiles(code, key, files); b10RefreshPanel(code); b10AiAuto(code); }
@@ -7432,10 +7431,6 @@ function d10ParamsInner(code, c) {
   const refRange = selB ? (d10FmtPct(selB.min) + '–' + d10FmtPct(selB.max)) : '—';
   const baseSel = `<select onchange="d10SetParam('${code}','d10-selbase',this.value)"><option value=""></option>${det.d10.bases.map(b => `<option value="${b.key}"${ans['d10-selbase'] === b.key ? ' selected' : ''}>${escHtml(b.name)}</option>`).join('')}</select>`;
   const varSel = `<select onchange="d10SetParam('${code}','d10-variant',this.value)"><option value=""></option><option value="1"${ans['d10-variant'] === '1' ? ' selected' : ''}>Вариант 1 — автоматично</option><option value="2"${ans['d10-variant'] === '2' ? ' selected' : ''}>Вариант 2 — ръчно</option></select>`;
-  const genBtn = c.canGenerate
-    ? `<button class="btn btn-primary btn-sm" onclick="d10Generate('${code}')">${c.generated ? 'Обнови анализа' : 'Генерирай теста'}</button>`
-    : `<button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="Изберете счетоводна база и вариант (при Вариант 2 — база и процент) и качете двата документа">Генерирай теста</button>`;
-  const changeBtn = c.generated ? `<button class="btn btn-secondary btn-sm" onclick="d10ChangeParams('${code}')">Промени параметрите</button>` : '';
   return `<div class="b40-fields">
     <div class="b40-f"><span class="b40-fl">Приложима счетоводна база *</span><select onchange="d10SetParam('${code}','d10-fw',this.value)">${d10Opts(ans['d10-fw'], det.d10.frameworks || [])}</select></div>
     <div class="b40-f"><span class="b40-fl">Вариант на определяне *</span>${varSel}</div>
@@ -7444,7 +7439,6 @@ function d10ParamsInner(code, c) {
     <div class="b40-f"><span class="b40-fl">Дата на избора</span><input type="date" value="${escHtml(ans['d10-paramdate'] || '')}" onchange="d10SetText('${code}','d10-paramdate',this.value)"></div>
   </div>
   ${isOther ? `<div class="b40-f span" style="margin-top:10px"><span class="b40-fl">Описание на другата рамка *</span><textarea rows="2" onchange="d10SetParam('${code}','d10-fwdesc',this.value)" placeholder="Задължително при „Друга рамка"">${escHtml(ans['d10-fwdesc'] || '')}</textarea></div>` : ''}
-  <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">${genBtn}${changeBtn}</div>
   <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Счетоводната база и вариантът се избират задължително преди генериране. Смяна след генериране изисква повторно генериране.</div>`;
 }
 function d10MetricsTable(code) {
@@ -7527,20 +7521,25 @@ function d10ActionsInner(code, c) {
 function d10PanelInner(code) {
   const c = d10Compute(code);
   const card = (title, inner) => `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">${title}</div><div style="padding:12px 14px">${inner}</div></div>`;
-  let html = card('Обобщение на анализа', `<div id="d10-summary">${d10SummaryInner(code, c)}</div>`);
-  html += card('Таб 1 · Документи', d10DocsCards(code));
-  html += card('Таб 2 · Параметри преди генериране', `<div id="d10-params">${d10ParamsInner(code, c)}</div>`);
+  const genBtn = c.canGenerate
+    ? `<button class="btn btn-primary btn-sm" onclick="d10Generate('${code}')">${c.generated ? 'Обнови анализа' : 'Генерирай теста'}</button>`
+    : `<button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="Изберете счетоводна база и вариант (при Вариант 2 — база и процент) и качете двата документа">Генерирай теста</button>`;
+  const changeBtn = c.generated ? `<button class="btn btn-secondary btn-sm" onclick="d10ChangeParams('${code}')">Промени параметрите</button>` : '';
+  const prep = card('Необходими документи и данни', d10DocsCards(code))
+    + card('Входни параметри', `<div id="d10-params">${d10ParamsInner(code, c)}</div>`)
+    + `<div class="sh-card corp-gencard" style="margin-bottom:16px"><div class="ent-card-h">Генерирайте теста</div><div style="padding:12px 14px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${genBtn}${changeBtn}</div></div></div>`;
+  let result = card('Обобщение на анализа', `<div id="d10-summary">${d10SummaryInner(code, c)}</div>`);
   if (!c.generated) {
-    html += `<div class="sh-card" style="margin-bottom:16px"><div style="padding:16px;color:var(--p-text3);font-size:13px">Изберете счетоводна база и вариант, качете двата документа и натиснете „Генерирай теста", за да продължите към извличането, изчислението и проверките. Тестът не показва определена същественост, преди да е избран вариант.</div></div>`;
+    result += `<div class="sh-card" style="margin-bottom:16px"><div style="padding:16px;color:var(--p-text3);font-size:13px">Изберете счетоводна база и вариант, качете двата документа и натиснете „Генерирай теста", за да продължите към извличането, изчислението и проверките. Тестът не показва определена същественост, преди да е избран вариант.</div></div>`;
   } else {
-    html += card('Таб 3 · Извлечени финансови показатели', d10MetricsTable(code));
-    html += card('Таб 4 · Изчисление на съществеността', `<div id="d10-calc">${d10CalcInner(code, c)}</div>`);
-    html += card('Таб 5 · Потвърждение от одитора', d10ConfirmInner(code, c));
-    html += card('Таб 6 · Предупреждения и проверки', `<div id="d10-warns" class="b50-checks">${d10WarnsInner(code, c)}</div>`);
-    html += card('Таб 7 · Заключение (допълнителни полета)', d10ConclFieldsInner(code));
-    html += card('Действия', `<div id="d10-actions">${d10ActionsInner(code, c)}</div>`);
+    result += card('Извлечени финансови показатели', d10MetricsTable(code));
+    result += card('Изчисление на съществеността', `<div id="d10-calc">${d10CalcInner(code, c)}</div>`);
+    result += card('Потвърждение от одитора', d10ConfirmInner(code, c));
+    result += card('Предупреждения и проверки', `<div id="d10-warns" class="b50-checks">${d10WarnsInner(code, c)}</div>`);
+    result += card('Заключение (допълнителни полета)', d10ConclFieldsInner(code));
+    result += card('Действия', `<div id="d10-actions">${d10ActionsInner(code, c)}</div>`);
   }
-  return html;
+  return corpPrepDiv() + '<div class="corp-prep">' + prep + '</div>' + corpResDiv() + '<div class="corp-result">' + result + '</div>';
 }
 function testMaterialityPanel(code) {
   const det = testDet(code);
@@ -7919,13 +7918,15 @@ function testPerfMatPanel(code) {
   const det = testDet(code);
   if (!det.d20) return '';
   const c = d20Compute(code);
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d20-summary">${d20SummaryInner(code, c)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d20DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d20Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d20Analyze('${code}')">Обнови анализа</button></div></div></div>
+  const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d20DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d20ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на процента</div><div style="padding:12px 14px">${d20FactorsTable(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="d20Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d20Analyze('${code}')">Обнови анализа</button></div></div>`;
+  const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d20-summary">${d20SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на съществеността за изпълнение</div><div style="padding:12px 14px" id="d20-calc">${d20CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за същественост за изпълнение</div><div id="d20-proposal">${d20ProposalInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="d20-warns" class="b50-checks">${d20WarnsInner(code, c)}</div></div>`;
+  return corpPrepDiv() + '<div class="corp-prep">' + prep + '</div>' + corpResDiv() + '<div class="corp-result">' + result + '</div>';
 }
 function d20SetText(code, key, value) { setAnswer(code, key, value); }
 function d20Set(code, key, value) { setAnswer(code, key, value); d20Recalc(code); }
@@ -8233,13 +8234,15 @@ function testTrivialPanel(code) {
   const det = testDet(code);
   if (!det.d30) return '';
   const c = d30Compute(code);
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d30DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div></div>
+  const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d30DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d30ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на прага</div><div style="padding:12px 14px">${d30FactorsTable(code)}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div>`;
+  const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на прага за ясно незначителни неточности</div><div style="padding:12px 14px" id="d30-calc">${d30CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за праг</div><div id="d30-proposal">${d30ProposalInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Предупреждения и проверки</div><div id="d30-warns" class="b50-checks">${d30WarnsInner(code, c)}</div></div>`;
+  return corpPrepDiv() + '<div class="corp-prep">' + prep + '</div>' + corpResDiv() + '<div class="corp-result">' + result + '</div>';
 }
 function d30SetText(code, key, value) { setAnswer(code, key, value); }
 function d30Set(code, key, value) { setAnswer(code, key, value); d30Recalc(code); }
