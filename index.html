@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816160903"></script>
-<script src="pd-spec.js?v=20260816160903"></script>
-<script src="pd-details.js?v=20260816160903"></script>
-<script src="test-details.js?v=20260816160903"></script>
+<script src="questions.js?v=20260816163156"></script>
+<script src="pd-spec.js?v=20260816163156"></script>
+<script src="pd-details.js?v=20260816163156"></script>
+<script src="test-details.js?v=20260816163156"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5812,7 +5812,8 @@ function b10AiInner(code) {
       ? `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${inp.code}')">Отвори ${escHtml(inp.code)}</button>`
       : `<button class="btn btn-secondary btn-sm" onclick="entShowSection('${inp.section}')">Отвори Раздел ${escHtml(inp.section)}</button>`;
     const badge = ok ? '<span class="ndoc-badge auto">наличен</span>' : '<span class="ndoc-badge miss">липсва</span>';
-    return `<div class="ndoc ${ok ? 'auto' : 'miss'}"><span class="ndoc-ic">🔗</span>${nm}${desc}${badge}<span class="ndoc-act">${open} ${repo}</span></div>`;
+    // Вход от друг тест/раздел — само „Отвори <източник>", БЕЗ „Отвори хранилището"
+    return `<div class="ndoc ${ok ? 'auto' : 'miss'}"><span class="ndoc-ic">🔗</span>${nm}${desc}${badge}<span class="ndoc-act">${open}</span></div>`;
   }).join('');
   const hasUpload = inputs.some(inp => inp.type === 'upload');
   const intro = hasUpload
@@ -8454,6 +8455,8 @@ const G_SLOTMAP = {
 // (не изтрива ръчни качвания) — за да не се чупят съществуващите тестове.
 const ENG_EXPLICIT = { 'D-10': 1, 'G-00': 1, 'G-10': 1, 'G-20': 1, 'G-30': 1 };
 const SEC_NAMES = {
+  A: 'Приемане и продължаване на ангажимента', B: 'Планиране и одиторска стратегия',
+  C: 'Разбиране на предприятието и вътрешния контрол', D: 'Същественост',
   G: 'Нематериални активи', H: 'Имоти, машини и съоръжения', I: 'Инвестиционни имоти',
   J: 'Инвестиции и финансови инструменти', K: 'Материални запаси', L: 'Търговски и други вземания',
   M: 'Парични средства', N: 'Търговски и други задължения', O: 'Заеми и лизинги',
@@ -8691,11 +8694,12 @@ function gDocSlotHtml(code, slot, d) {
   const tt = d.note ? ` title="${escHtml(d.note)}"` : '';
   const nm = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}</span>`;
   const repo = (cat) => `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs(${cat ? "'" + cat + "'" : ''})">Отвори хранилището</button>`;
-  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}<span class="ndoc-act">${repo('')}</span></div>`;
+  // Документ без връзка към хранилище или взет от друг тест (авто-свързан) — БЕЗ бутон „Отвори хранилището"
+  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}</div>`;
   if (m.t !== 'client') {
     const info = gInternalInfo(m.ref), ready = gInternalReady(m.ref);
     const label = ready ? 'Свързан автоматично' : 'Ще се свърже автоматично';
-    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span><span class="ndoc-act">${repo('')}</span></div>`;
+    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span></div>`;
   }
   const has = gRepoHas(m.cat), out = gOptedOut(code, slot);
   if (has && !out) {
@@ -8740,8 +8744,15 @@ function gEngRepoCard(focusCat) {
   const groups = {}, order = [];
   cat.forEach(d => { if (!groups[d.grp]) { groups[d.grp] = []; order.push(d.grp); } groups[d.grp].push(d); });
   const reqAll = cat.filter(d => d.req), reqDone = reqAll.filter(d => gRepoHas(d.id)).length;
-  let html = '';
-  order.forEach(g => {
+  // Класифициране на групите (разделите) по етап; „Ядрени счетоводни" → общи (за всички етапи)
+  const secLetter = (grp) => { const m = grp.match(/Раздел\s+(\S+)/); return m ? m[1] : ''; };
+  const stageOf = (grp) => { if (grp === 'Ядрени счетоводни') return 'common'; return 'ABCD'.indexOf(secLetter(grp)) !== -1 ? 'e1' : 'e2'; };
+  const buckets = { common: [], e1: [], e2: [] };
+  order.forEach(g => buckets[stageOf(g)].push(g));
+  // Разделите се подреждат азбучно (по буквата на раздела); документите остават както са
+  const bySec = (a, b) => secLetter(a).localeCompare(secLetter(b));
+  buckets.e1.sort(bySec); buckets.e2.sort(bySec);
+  const renderGroup = (g) => {
     const items = groups[g];
     const hasFocus = !!focusCat && items.some(d => d.id === focusCat);
     let gFilled = 0;
@@ -8752,11 +8763,15 @@ function gEngRepoCard(focusCat) {
       const st = files.length ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва</span>`;
       return `<div class="pd-slot${files.length ? ' filled' : ''}" data-cat="${d.id}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
     }).join('');
-    html += `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${escHtml(g)} <span style="font-weight:600;color:var(--p-text3)">— ${gFilled}/${items.length} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
-  });
+    return `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${escHtml(g)} <span style="font-weight:600;color:var(--p-text3)">— ${gFilled}/${items.length} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
+  };
+  const sub = (title, arr) => arr.length ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--p-accent);margin:16px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--p-border-strong)">${title}</div>` + arr.map(renderGroup).join('') : '';
+  const html = sub('Общи документи · за всички етапи', buckets.common)
+    + sub('Етап 1 · Приемане и планиране', buckets.e1)
+    + sub('Етап 2 · Изпълнение', buckets.e2);
   return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи за периода <span style="font-weight:600;color:var(--p-text3);font-size:12px">· текущ одит · качете веднъж</span></div><div style="padding:12px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Документи за текущия период. Качете всеки веднъж тук — присвоява се автоматично на всички тестове, където е необходим, вместо да се качва поотделно. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
-    <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени. <span style="color:var(--p-text3)">Пилотът обхваща раздел G; при разширяване към другите раздели каталогът се допълва.</span></div>
+    <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени. <span style="color:var(--p-text3)">Групирани по етап и раздел.</span></div>
     ${html}
   </div></div>`;
 }
