@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816152433"></script>
-<script src="pd-spec.js?v=20260816152433"></script>
-<script src="pd-details.js?v=20260816152433"></script>
-<script src="test-details.js?v=20260816152433"></script>
+<script src="questions.js?v=20260816160903"></script>
+<script src="pd-spec.js?v=20260816160903"></script>
+<script src="pd-details.js?v=20260816160903"></script>
+<script src="test-details.js?v=20260816160903"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5797,7 +5797,9 @@ function b10AiInner(code) {
     const ok = aiInputOk(code, inp);
     const nm = `<span class="ndoc-nm">${i + 1}. ${escHtml(inp.label)}</span>`;
     const desc = `<span class="ndoc-src">${escHtml(inp.desc || defDesc(inp))}</span>`;
-    const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
+    const upCl = inp.type === 'upload' ? gClassify(code, inp.label, code.split('-')[0]) : null;
+    const upCat = upCl && upCl.t === 'client' ? upCl.cat : '';
+    const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs(${upCat ? "'" + upCat + "'" : ''})">Отвори хранилището</button>`;
     if (inp.type === 'upload') {
       const files = testFiles(code, inp.key);
       if (files.length) {
@@ -8488,14 +8490,35 @@ function gClassify(code, name, sec) {
   // раздел-специфичен документ — самостоятелен каноничен запис (дедуплициран по нормализирано име)
   return { t: 'client', cat: docCat(name) };
 }
-// Слот-мап на тест: явен (G/D-10) или изведен от класификатора за останалите Етап 2 раздели.
+// Локални докове на Етап-1/AI тестове (без cfg.docs) — за вписване в единното хранилище
+// със СЪЩИТЕ слот-ключове, които ползват панелите (D-20 → 'e'+n, D-30 → 'g'+n, AI → 101+i).
+function engLocalDocList(code) {
+  const det = testDet(code); if (!det) return null;
+  if (det.d20 && det.d20.data) return det.d20.data.map(d => ({ slot: 'e' + d.n, name: d.name, req: false }));
+  if (det.d30 && det.d30.data) return det.d30.data.map(d => ({ slot: 'g' + d.n, name: d.name, req: false }));
+  if (det.aiInputs) return det.aiInputs.filter(i => i.type === 'upload').map(i => ({ slot: i.key, name: i.label, req: false }));
+  if (det.aiDocs) return det.aiDocs.map((name, i) => ({ slot: AI_DOC_BASE + i, name: name, req: false }));
+  return null;
+}
+function engLocalCodes() {
+  const out = [], tq = window.testQuestions || {};
+  Object.keys(tq).forEach(code => {
+    if (G_SLOTMAP[code]) return;
+    const cfg = testDet(code)[engCfgKey(code)];
+    if (cfg && cfg.docs) return;                 // покрити от engClassifiedCodes (Етап 2)
+    if (engLocalDocList(code)) out.push(code);
+  });
+  return out;
+}
+// Слот-мап на тест: явен (G/D-10), изведен от cfg.docs (Етап 2) или от локалните докове (Етап 1/AI).
 function engSlotMap(code) {
   if (G_SLOTMAP[code]) return G_SLOTMAP[code];
   const cfg = testDet(code)[engCfgKey(code)];
-  if (!cfg || !cfg.docs) return null;
   const sec = code.split('-')[0], m = {};
-  cfg.docs.forEach(d => { m[engDocKey(code, d.n)] = gClassify(code, d.name, sec); });
-  return m;
+  if (cfg && cfg.docs) { cfg.docs.forEach(d => { m[engDocKey(code, d.n)] = gClassify(code, d.name, sec); }); return m; }
+  const local = engLocalDocList(code);
+  if (local && local.length) { local.forEach(d => { m[d.slot] = gClassify(code, d.name, sec); }); return m; }
+  return null;
 }
 function engClassifiedCodes() {
   const out = [], tq = window.testQuestions || {};
@@ -8521,6 +8544,15 @@ function engCatalog() {
       if (cl.t !== 'client' || seen.has(cl.cat)) return;
       // всеки раздел-специфичен документ се обявява поотделно, с реалното си име
       push(cl.cat, 'Раздел ' + sec + ' · ' + secName(sec), d.name, d.req === true);
+    });
+  });
+  // Локални докове на Етап-1/AI тестове — също се вписват в каталога (клиентски)
+  engLocalCodes().forEach(code => {
+    const sec = code.split('-')[0];
+    (engLocalDocList(code) || []).forEach(d => {
+      const cl = gClassify(code, d.name, sec);
+      if (cl.t !== 'client' || seen.has(cl.cat)) return;
+      push(cl.cat, 'Раздел ' + sec + ' · ' + secName(sec), d.name, !!d.req);
     });
   });
   _engCatalog = list;
@@ -8574,7 +8606,7 @@ function gEngSync(code) {
   if (!Object.keys(testUploads[code]).length) delete testUploads[code];
   try { testUploadsPersist(); } catch (e) {}
 }
-function gEngSyncAll() { const set = {}; Object.keys(G_SLOTMAP).forEach(c => set[c] = 1); engClassifiedCodes().forEach(c => set[c] = 1); Object.keys(set).forEach(gEngSync); }
+function gEngSyncAll() { const set = {}; Object.keys(G_SLOTMAP).forEach(c => set[c] = 1); engClassifiedCodes().forEach(c => set[c] = 1); engLocalCodes().forEach(c => set[c] = 1); Object.keys(set).forEach(gEngSync); }
 
 // Пре-рендиране на активния изглед след промяна в хранилището
 function gRefreshActiveG() {
@@ -8590,7 +8622,7 @@ function entShowEngDocs(focusCat) {
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Документи на ангажимента' }]);
   m.innerHTML = `<div class="ent-page" id="eng-docs-page">
     <div class="ent-h"><div><h1>Документи на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · качете веднъж · ползват се от всички тестове</div></div></div>
-    ${pdEngRepoCard()}
+    ${pdEngRepoCard(focusCat)}
     ${gEngRepoCard(focusCat)}
   </div>`;
   if (focusCat) {
@@ -8607,11 +8639,12 @@ function entShowEngDocs(focusCat) {
 // Постоянно досие в единното хранилище — ползва СЪЩИЯ pdUploads store като ПД екраните
 function engPdAdd(code, key, files) { if (typeof pdAddFiles === 'function') pdAddFiles(code, key, files); if (document.getElementById('eng-docs-page')) entShowEngDocs(); }
 function engPdRemove(code, key, i) { if (typeof pdRemoveFile === 'function') pdRemoveFile(code, key, i); if (document.getElementById('eng-docs-page')) entShowEngDocs(); }
-function pdEngRepoCard() {
+function pdEngRepoCard(focusCat) {
   if (!window.pdSpec) return '';
   const codes = Object.keys(pdSpec);
   let reqDone = 0, reqTot = 0, groups = '';
   codes.forEach(code => {
+    const hasFocus = !!focusCat && String(focusCat).indexOf('pd_' + code + '_') === 0;
     const spec = pdSpec[code];
     const docs = (typeof pdDocs === 'function') ? pdDocs(code) : (spec.docs || []);
     let filled = 0, total = 0;
@@ -8624,9 +8657,9 @@ function pdEngRepoCard() {
       const label = (typeof pdDocLabel === 'function') ? pdDocLabel(d.name) : d.name;
       const fl = has ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, j) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="engPdRemove('${code}','${key}',${j})">✕</button></div>`).join('') + '</div>' : '';
       const st = has ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${escHtml(d.level || '')}${d.level ? ' · ' : ''}Липсва</span>`;
-      return `<div class="pd-slot${has ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(label)}</span>${st}</div>${fl}<div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="engPdAdd('${code}','${key}',this.files)"></label></div></div>`;
+      return `<div class="pd-slot${has ? ' filled' : ''}" data-cat="pd_${code}_${key}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(label)}</span>${st}</div>${fl}<div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="engPdAdd('${code}','${key}',this.files)"></label></div></div>`;
     }).join('');
-    groups += `<details style="margin-bottom:6px"><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${code} · ${escHtml(spec.name)} <span style="font-weight:600;color:var(--p-text3)">— ${filled}/${total} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
+    groups += `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${code} · ${escHtml(spec.name)} <span style="font-weight:600;color:var(--p-text3)">— ${filled}/${total} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
   });
   return `<div class="sh-card" id="pd-engrepo" style="margin-bottom:16px"><div class="ent-card-h">🗂 Постоянно досие <span style="font-weight:600;color:var(--p-text3);font-size:12px">· пренася се между години</span></div><div style="padding:12px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Постоянните документи (устав, счетоводна политика, сметкоплан, договори, свързани лица…) се качват веднъж и се ползват във всички периоди и тестове. Същите файлове се виждат и в екраните на Постоянното досие.</div>
@@ -29540,7 +29573,7 @@ function pdSlot(code, key, label, isOther) {
     ? `<button class="btn btn-secondary btn-sm" onclick="pdShowChecklist('${code}','${key}')">Чеклист · ${pdClProgressText(code, key)}</button>` : '';
   const nm = `<span class="ndoc-nm">${label}</span>`;
   const rmDoc = `<button class="btn btn-secondary btn-sm" title="Премахни документа от списъка" onclick="pdRemoveExampleDoc('${code}','${key}')">✕</button>`;
-  const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
+  const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('pd_${code}_${key}')">Отвори хранилището</button>`;
   if (filled) {
     const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="pdRemoveFile('${code}','${key}',${i});return false">✕</a>`).join(' · ');
     return `<div class="ndoc ok${isOther ? ' other' : ''}"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${repo}${rmDoc}</span></div>`;
