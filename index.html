@@ -3881,10 +3881,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816105111"></script>
-<script src="pd-spec.js?v=20260816105111"></script>
-<script src="pd-details.js?v=20260816105111"></script>
-<script src="test-details.js?v=20260816105111"></script>
+<script src="questions.js?v=20260816105854"></script>
+<script src="pd-spec.js?v=20260816105854"></script>
+<script src="pd-details.js?v=20260816105854"></script>
+<script src="test-details.js?v=20260816105854"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -30026,7 +30026,10 @@ function testWpSections(code) {
   const conclQ = testConclQ(def);
   const conclChip = conclQ && ans[conclQ.n] ? escHtml(ans[conclQ.n]) : '';
   const conclText = notes.concl ? escHtml(notes.concl) : '';
-  const aiDet = testDet(code), aiOn = !!aiDet.aiPrompt;
+  const aiDet = testDet(code);
+  // Етап 2: в прегледа/работния документ НЕ се включва секцията „AI асистент — входни документи и инструкция"
+  const __isS2 = !!(window.testQuestions && testQuestions[code] && testQuestions[code].phase === '2. Изпълнение');
+  const aiOn = !!aiDet.aiPrompt && !__isS2;
   let n = 0;
   const secP = ++n, secS = ++n, secB40 = aiDet.budget ? ++n : 0, secB50 = aiDet.discussion ? ++n : 0, secC10 = aiDet.understanding ? ++n : 0, secC20 = aiDet.c20 ? ++n : 0, secC30 = aiDet.c30 ? ++n : 0, secC40 = aiDet.c40 ? ++n : 0, secC50 = aiDet.c50 ? ++n : 0, secC60 = aiDet.c60 ? ++n : 0, secD10 = aiDet.d10 ? ++n : 0, secD20 = aiDet.d20 ? ++n : 0, secD30 = aiDet.d30 ? ++n : 0, secG00 = aiDet.g00 ? ++n : 0, secG05 = aiDet.g05 ? ++n : 0, secG10 = aiDet.g10 ? ++n : 0, secG20 = aiDet.g20 ? ++n : 0, secG30 = aiDet.g30 ? ++n : 0, secH00 = aiDet.h00 ? ++n : 0, secH10 = aiDet.h10 ? ++n : 0, secI00 = aiDet.i00 ? ++n : 0, secI10 = aiDet.i10 ? ++n : 0, secI20 = aiDet.i20 ? ++n : 0, secI30 = aiDet.i30 ? ++n : 0, secJ00 = aiDet.j00 ? ++n : 0, secJ10 = aiDet.j10 ? ++n : 0, secJ20 = aiDet.j20 ? ++n : 0, secJ30 = aiDet.j30 ? ++n : 0, secK00 = aiDet.k00 ? ++n : 0, secK20 = aiDet.k20 ? ++n : 0, secK30 = aiDet.k30 ? ++n : 0, secL00 = aiDet.l00 ? ++n : 0, secL10 = aiDet.l10 ? ++n : 0, secL20 = aiDet.l20 ? ++n : 0, secL30 = aiDet.l30 ? ++n : 0, secM00 = aiDet.m00 ? ++n : 0, secM20 = aiDet.m20 ? ++n : 0, secM30 = aiDet.m30 ? ++n : 0, secN00 = aiDet.n00 ? ++n : 0, secN10 = aiDet.n10 ? ++n : 0, secN20 = aiDet.n20 ? ++n : 0, secN30 = aiDet.n30 ? ++n : 0, secO00 = aiDet.o00 ? ++n : 0, secO10 = aiDet.o10 ? ++n : 0, secO20 = aiDet.o20 ? ++n : 0, secO30 = aiDet.o30 ? ++n : 0, secP00 = aiDet.p00 ? ++n : 0, secP10 = aiDet.p10 ? ++n : 0, secP20 = aiDet.p20 ? ++n : 0, secP30 = aiDet.p30 ? ++n : 0, secQ00 = aiDet.q00 ? ++n : 0, secQ10 = aiDet.q10 ? ++n : 0, secQ20 = aiDet.q20 ? ++n : 0, secQ30 = aiDet.q30 ? ++n : 0, secR00 = aiDet.r00 ? ++n : 0, secR10 = aiDet.r10 ? ++n : 0, secR20 = aiDet.r20 ? ++n : 0, secR30 = aiDet.r30 ? ++n : 0, secS00 = aiDet.s00 ? ++n : 0, secS20 = aiDet.s20 ? ++n : 0, secS30 = aiDet.s30 ? ++n : 0, secT00 = aiDet.t00 ? ++n : 0, secT10 = aiDet.t10 ? ++n : 0, secT20 = aiDet.t20 ? ++n : 0, secT30 = aiDet.t30 ? ++n : 0, secU00 = aiDet.u00 ? ++n : 0, secU10 = aiDet.u10 ? ++n : 0, secU20 = aiDet.u20 ? ++n : 0, secU30 = aiDet.u30 ? ++n : 0, secV00 = aiDet.v00 ? ++n : 0, secV10 = aiDet.v10 ? ++n : 0, secV20 = aiDet.v20 ? ++n : 0, secV30 = aiDet.v30 ? ++n : 0, secQ = ++n, secAI = aiOn ? ++n : 0, secD = showDocs ? ++n : 0, secC = ++n, secU = ++n;
   const b40Html = aiDet.budget ? b40WpHtml(code, secB40) : '';
