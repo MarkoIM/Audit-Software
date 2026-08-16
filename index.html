@@ -3918,10 +3918,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816171952"></script>
-<script src="pd-spec.js?v=20260816171952"></script>
-<script src="pd-details.js?v=20260816171952"></script>
-<script src="test-details.js?v=20260816171952"></script>
+<script src="questions.js?v=20260816173435"></script>
+<script src="pd-spec.js?v=20260816173435"></script>
+<script src="pd-details.js?v=20260816173435"></script>
+<script src="test-details.js?v=20260816173435"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -29620,7 +29620,7 @@ function entShowDashboard() {
     let t = 0, d = 0; ph.sections.forEach(s => s.wds.forEach(w => { t++; if (w.status === 'done') d++; }));
     totWd += t; doneWd += d;
     const pct = t ? Math.round(d / t * 100) : 0;
-    return `<tr class="click" onclick="entShowSection('${ph.sections[0].code}')"><td>Етап ${i + 1} · ${ph.name}</td><td class="r num">${ph.sections.length}</td><td class="r num">${d}/${t}</td><td><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td><span class="ent-badge ${ph.status}"><span class="d"></span>${entStatusLabel(ph.status)}</span></td></tr>`;
+    return `<tr class="click" onclick="entShowSection('${ph.sections[0].code}')"><td>Етап ${i + 1} · ${ph.name}</td><td class="r num">${ph.sections.length}</td><td><span class="ent-badge ${ph.status}"><span class="d"></span>${entStatusLabel(ph.status)}</span></td></tr>`;
   }).join('');
   const pdDone = permanentFile.filter(d => d.status === 'done').length;
   const secCount = auditPhases.reduce((a, p) => a + p.sections.length, 0);
@@ -29633,7 +29633,7 @@ function entShowDashboard() {
       <div class="ent-kpi"><div class="l">Раздели</div><div class="v">${secCount}</div></div>
     </div>
     <div class="sh-card"><div class="ent-card-h">Прогрес по етапи</div>
-      <table class="ent-tbl"><thead><tr><th>Етап</th><th class="r">Раздели</th><th class="r">Завършени РД</th><th>Прогрес</th><th>Статус</th></tr></thead><tbody>${phaseRows}</tbody></table>
+      <table class="ent-tbl"><thead><tr><th>Етап</th><th class="r">Раздели</th><th>Статус</th></tr></thead><tbody>${phaseRows}</tbody></table>
     </div>
     <div class="sh-card"><div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center">Екип по ангажимента${hasPerm('assign_team') ? '<button class="btn btn-secondary btn-sm" onclick="openEngTeamModal()">Управление на екипа</button>' : ''}</div>
       <div class="et-summary">${engTeamSummary()}</div>
@@ -29663,14 +29663,14 @@ function entShowSection(code) {
     const badge = (!docs && window.testQuestions && testQuestions[w.code] && typeof testStatusBadge === 'function')
       ? testStatusBadge(w.code)
       : `<span class="ent-badge ${w.status || 'pending'}"><span class="d"></span>${entStatusLabel(w.status)}</span>`;
-    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${escHtml(nm)}</td><td class="num">${escHtml(std)}</td><td><span class="ent-kind${kind === 'AI' ? ' ai' : ''}">${kind}</span></td><td class="r num">${filled}</td><td style="min-width:90px"><div class="ent-prog"><i style="width:${pct}%"></i></div></td><td>${badge}</td></tr>`;
+    return `<tr class="click" onclick="entShowWd('${w.code}')"><td><span class="ent-idx">${w.code}</span></td><td>${escHtml(nm)}</td><td class="num">${escHtml(std)}</td><td><span class="ent-kind${kind === 'AI' ? ' ai' : ''}">${kind}</span></td><td>${badge}</td></tr>`;
   }).join('');
   const engLink = (code === 'G' && typeof entShowEngDocs === 'function') ? `<div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 16px;font-size:12.5px;color:var(--p-text2)">📁 Документите се качват централно веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват автоматично на тестовете от този раздел.</div></div>` : '';
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>${sec.code} · ${sec.name}</h1><div class="sub">${pd ? 'Постоянно досие' : ('Етап ' + phaseN + ' · ' + phaseName)} · ${(sec.wds || []).length} работни документа</div></div><span class="ent-badge ${sec.status || 'pending'}"><span class="d"></span>${entStatusLabel(sec.status)}</span></div>
     ${engLink}
     <div class="sh-card"><div class="ent-card-h">Работни документи</div>
-      <table class="ent-tbl"><thead><tr><th>Индекс</th><th>Работен документ</th><th>Стандарт</th><th>Тип</th><th class="r">Попълнени</th><th>Прогрес</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="ent-tbl"><thead><tr><th>Индекс</th><th>Работен документ</th><th>Стандарт</th><th>Тип</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table>
     </div></div>`;
 }
 
