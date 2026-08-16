@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816125359"></script>
-<script src="pd-spec.js?v=20260816125359"></script>
-<script src="pd-details.js?v=20260816125359"></script>
-<script src="test-details.js?v=20260816125359"></script>
+<script src="questions.js?v=20260816134443"></script>
+<script src="pd-spec.js?v=20260816134443"></script>
+<script src="pd-details.js?v=20260816134443"></script>
+<script src="test-details.js?v=20260816134443"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -28664,14 +28664,15 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
 
   const card = isAi ? renderAiQuestions(code, def) : renderDescriptiveQuestions(code, def);
 
-  // Етап 2 — корпоративен изглед (тематичен слой .corp); останалите етапи остават непроменени
+  // Корпоративен изглед (тематичен слой .corp) — Етап 1 и Етап 2; Етап 3 остава непроменен
   const isStage2 = def.phase === '2. Изпълнение';
+  const useCorp = isStage2 || def.phase === '1. Приемане и планиране';
   const corpHead = `<div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} — ${escHtml(def.test)}</h1><div class="corp-sub">${escHtml(subtitle)} · ${escHtml(clientName)} · Одит ${year}</div></div></div>`;
 
   main.innerHTML = `
-    <div class="${isStage2 ? 'corp' : ''}" style="width:100%;padding:24px 32px;max-width:1280px">
+    <div class="${useCorp ? 'corp' : ''}" style="width:100%;padding:24px 32px;max-width:1280px">
       ${iosBreadcrumb(breadcrumbItems)}
-      ${isStage2 ? corpHead : `<div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
+      ${useCorp ? corpHead : `<div style="font-size:22px;font-weight:800;color:var(--p-text1);letter-spacing:-.5px;margin-bottom:4px">${code} — ${def.test}</div>
       <div style="font-size:13px;color:var(--p-text2);margin-bottom:18px;font-weight:500">${subtitle} · ${clientName} · Одит ${year}</div>`}
       ${infoStrip}
       ${testDetailCards(code)}
@@ -28838,7 +28839,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).v30) v30Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
-  try { if (isStage2) { corpEnhance(); corpObserve(); } } catch (e) {}
+  try { if (useCorp) { corpEnhance(); corpObserve(); } } catch (e) {}
 }
 
 function renderAiQuestions(code, def) {
@@ -28860,9 +28861,9 @@ function renderAiQuestions(code, def) {
     </div>`).join('');
   return `
     <div class="sh-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
-        <div style="font-size:14px;font-weight:700;color:var(--p-text1)">Параметри на AI теста</div>
-        <span id="${code}-progress" style="font-size:11px;font-weight:700;color:var(--p-text3)"></span>
+      <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Параметри на AI теста</span>
+        <span id="${code}-progress" style="font-size:11px;font-weight:700;color:var(--p-text3);text-transform:none;letter-spacing:0"></span>
       </div>
       <div style="padding:4px 18px 8px">${qs}</div>
       <div style="padding:0 18px 16px">
@@ -28902,9 +28903,9 @@ function renderDescriptiveQuestions(code, def) {
   }).join('');
   return `
     <div class="sh-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--p-border);background:var(--p-surface2)">
-        <div style="font-size:14px;font-weight:700;color:var(--p-text1)">Въпроси</div>
-        <span id="${code}-progress" style="font-size:11px;font-weight:700;color:var(--p-text3)"></span>
+      <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Въпроси</span>
+        <span id="${code}-progress" style="font-size:11px;font-weight:700;color:var(--p-text3);text-transform:none;letter-spacing:0"></span>
       </div>
       <div style="padding:4px 18px 14px">${rows}</div>
       <div id="${code}-conclusion" style="display:none;margin:0 18px 16px;padding:11px 14px;border-radius:8px;background:var(--p-green-bg);font-size:13px;font-weight:700;color:var(--p-green)"></div>
@@ -29668,9 +29669,9 @@ function renderPdDetail(code, name, year, clientName, breadcrumbItems, backActio
         <table class="ent-tbl"><thead><tr><th style="width:170px">Стандарт</th><th>Връзка с етапа</th></tr></thead>
         <tbody>${det.standards.map(s => `<tr><td><span class="ent-idx">${s.code}</span></td><td style="color:var(--p-text2)">${s.relation}</td></tr>`).join('')}</tbody></table>
       </div>` : '';
-  m.innerHTML = `<div class="ent-page">
+  m.innerHTML = `<div class="ent-page corp">
     ${iosBreadcrumb(breadcrumbItems)}
-    <div class="ent-h"><div><h1>${code} · ${spec.name}</h1><div class="sub">${sub} · Постоянно досие</div></div></div>
+    <div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} · ${spec.name}</h1><div class="corp-sub">${sub} · Постоянно досие</div></div></div>
     <div class="sh-card"><div class="ent-card-h">Цел и съдържание</div>
       <div class="pd-purpose">${purpose}</div></div>
     ${stdHtml}
