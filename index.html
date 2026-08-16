@@ -1421,8 +1421,12 @@
   .corp .d10-stat.warnv .v { color: var(--p-amber); }
   /* Таблици — data-grid стил (само хоризонтални линии + hover) */
   .corp .b50-att th { background: var(--p-surface); border: none; border-bottom: 1px solid var(--p-border-strong); font-size: 10px; padding: 9px 11px; }
-  .corp .b50-att td { border: none; border-bottom: 1px solid var(--p-border); padding: 9px 11px; }
+  .corp .b50-att td { border: none; border-bottom: 1px solid var(--p-border); padding: 8px 10px; }
   .corp .b50-att tbody tr:hover td { background: var(--p-surface2); }
+  /* Клетки за въвеждане — input-стил (както в g-tests-view) */
+  .corp .b50-att input, .corp .b50-att select, .corp .b50-att textarea { background: var(--p-surface2); border: 1px solid var(--p-border); border-radius: 5px; transition: border-color .12s, background .12s; }
+  .corp .b50-att input:hover, .corp .b50-att select:hover, .corp .b50-att textarea:hover { border-color: var(--p-accent); background: var(--p-surface); }
+  .corp .b50-att input:focus, .corp .b50-att select:focus, .corp .b50-att textarea:focus { border-color: var(--p-accent); background: var(--p-surface); outline: 1px solid var(--p-accent); outline-offset: -1px; }
   /* Документи — по-чисти слотове */
   .corp .pd-slot { border-radius: 8px; padding: 12px 14px; }
   .corp .pd-slot.filled { border-color: var(--p-green); }
@@ -3877,10 +3881,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816102735"></script>
-<script src="pd-spec.js?v=20260816102735"></script>
-<script src="pd-details.js?v=20260816102735"></script>
-<script src="test-details.js?v=20260816102735"></script>
+<script src="questions.js?v=20260816105111"></script>
+<script src="pd-spec.js?v=20260816105111"></script>
+<script src="pd-details.js?v=20260816105111"></script>
+<script src="test-details.js?v=20260816105111"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5481,8 +5485,66 @@ function testDetailCards(code) {
 }
 // Корпоративни разделители за подредбата на панелите на Етап 2 (само визуални)
 function corpDivider(title, sub) { return `<div class="corp-div"><span class="corp-dt">${title}</span><span class="corp-dsub">${sub}</span><span class="corp-dl"></span></div>`; }
-function corpPrepDiv() { return corpDivider('Подготовка на теста', 'изпълнете стъпките по ред'); }
+function corpPrepDiv() { return corpDivider('Подготовка на теста', 'изпълнете стъпки 1 → 2 → 3'); }
 function corpResDiv() { return corpDivider('Резултат от теста', 'генериран автоматично · редактируем'); }
+
+// Изнася генериращите контроли (Генерирай + Изтегли Excel + бележка) от картата с документи
+// в отделна стъпка 3 „Генерирайте теста" — БЕЗ да променя съдържанието (само премества елементите).
+// Извиква се след рендер и при пре-рендер (чрез наблюдател). Идемпотентно.
+function corpEnhance() {
+  const preps = document.querySelectorAll('.corp .corp-prep');
+  preps.forEach(prep => {
+    if (prep.querySelector('.corp-gencard')) return;                 // вече изнесено
+    const genBtn = prep.querySelector('button[onclick*="Generate("]');
+    if (!genBtn) return;
+    const btnRow = genBtn.parentElement; if (!btnRow) return;
+    const moved = []; let n = btnRow;
+    while (n) { moved.push(n); n = n.nextElementSibling; }            // бутоните + бележка/подсказка след тях
+    const card = document.createElement('div'); card.className = 'sh-card corp-gencard'; card.style.marginBottom = '16px';
+    const hd = document.createElement('div'); hd.className = 'ent-card-h'; hd.textContent = 'Генерирайте теста';
+    const bd = document.createElement('div'); bd.style.padding = '14px 16px';
+    moved.forEach(el => bd.appendChild(el));
+    card.appendChild(hd); card.appendChild(bd);
+    prep.appendChild(card);                                          // след „Попълнете параметрите" → стъпка 3
+    // Excel бутонът → реално сваляне на файл (1:1 с g-tests-view)
+    const xls = card.querySelector('button[onclick*="ExcelInfo("]');
+    if (xls) { const m = (xls.getAttribute('onclick') || '').match(/ExcelInfo\('([^']+)'\)/); if (m) xls.setAttribute('onclick', "corpExcelDownload('" + m[1] + "')"); }
+  });
+}
+// Реално (визуално) сваляне на Excel — сглобява файл от текущите резултатни таблици на теста
+function corpExcelDownload(code) {
+  const def = (typeof testEffectiveDef === 'function') ? testEffectiveDef(code) : {};
+  const x = (typeof engCfgKey === 'function') ? engCfgKey(code) : code.toLowerCase().replace('-', '');
+  const scope = document.querySelector('.corp .corp-result') || document.getElementById(x + '-panel') || document;
+  const lines = [];
+  lines.push('АудитПро — ' + code + ' · ' + (def.test || ''));
+  lines.push('Клиент: ' + (iosCurrentClient || '') + '\tПериод: Одит ' + (iosCurrentYear || ''));
+  lines.push('');
+  scope.querySelectorAll('table').forEach(tbl => {
+    const card = tbl.closest('.sh-card'), hd = card && card.querySelector('.ent-card-h');
+    if (hd) lines.push(hd.textContent.trim());
+    tbl.querySelectorAll('tr').forEach(tr => {
+      const cells = [...tr.querySelectorAll('th,td')].map(td => { const f = td.querySelector('input,select,textarea'); const v = f ? (f.value || '') : td.textContent; return String(v).replace(/\s+/g, ' ').trim(); });
+      if (cells.some(c => c !== '')) lines.push(cells.join('\t'));
+    });
+    lines.push('');
+  });
+  try {
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = code.replace('-', '_') + '.xls';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 600);
+  } catch (e) {}
+  const note = document.getElementById(x + '-excel-note'); if (note) note.textContent = 'Excel файлът е свален (демонстрация).';
+}
+// Наблюдател — прилага corpEnhance и след пре-рендер на панел (идемпотентно)
+var __corpObs = null;
+function corpObserve() {
+  if (__corpObs || typeof MutationObserver === 'undefined') return;
+  const main = document.getElementById('ios-main'); if (!main) return;
+  __corpObs = new MutationObserver(() => { try { corpEnhance(); } catch (e) {} });
+  __corpObs.observe(main, { childList: true, subtree: true });
+}
 
 // AI асистент за описателен тест: показва се, когато testDetails дефинира aiPrompt.
 // Дава до 4 входни документа (псевдо-ключове 101..104) + готова инструкция + демо генериране.
@@ -28821,6 +28883,7 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
   if (testDet(code).v30) v30Recalc(code);
   if (testDet(code).aiInputs) b10AiAuto(code);
   qProgress(code);
+  try { if (isStage2) { corpEnhance(); corpObserve(); } } catch (e) {}
 }
 
 function renderAiQuestions(code, def) {
