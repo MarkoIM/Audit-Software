@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816124502"></script>
-<script src="pd-spec.js?v=20260816124502"></script>
-<script src="pd-details.js?v=20260816124502"></script>
-<script src="test-details.js?v=20260816124502"></script>
+<script src="questions.js?v=20260816125359"></script>
+<script src="pd-spec.js?v=20260816125359"></script>
+<script src="pd-details.js?v=20260816125359"></script>
+<script src="test-details.js?v=20260816125359"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5683,7 +5683,7 @@ function corpWpSection(code, secN) {
   const res = host.querySelector('.corp-result');
   if (!res) return '';
   // прилагаме ръчните редакции/добавени редове (corpc-/corpx-) и върху офскрийн копието
-  try { host.className = 'corp'; document.body.appendChild(host); corpTables(); } catch (e) {}
+  try { host.className = 'corp'; host.style.cssText = 'position:absolute;left:-99999px;top:0;width:1200px;visibility:hidden'; document.body.appendChild(host); corpTables(); } catch (e) {}
   // премахваме контролите, специфични за редактиране
   res.querySelectorAll('.corp-addrow, .corp-genfile, button, label').forEach(el => el.remove());
   res.querySelectorAll('input, select, textarea').forEach(el => {
