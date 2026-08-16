@@ -1471,6 +1471,13 @@
   .ndoc-x { color: var(--p-text3); text-decoration: none; padding: 0 4px; font-size: 12px; }
   .ndoc-x:hover { color: #d92d20; }
   @media (max-width: 760px) { .ndoc { flex-wrap: wrap; } .ndoc-nm { min-width: 100%; } }
+  /* Визуализация на генерирания Excel файл (както в g-tests-view) */
+  .corp .corp-genfile { display: inline-flex; align-items: center; gap: 11px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--p-border-strong); border-radius: 8px; background: var(--p-surface2); }
+  .corp .corp-genfile .xls { width: 32px; height: 32px; border-radius: 6px; background: var(--p-green-bg); color: var(--p-green); font-size: 10px; font-weight: 800; display: grid; place-items: center; flex: none; }
+  .corp .corp-genfile .fmeta { display: flex; flex-direction: column; gap: 1px; }
+  .corp .corp-genfile .fnm { font-size: 12.5px; font-weight: 600; color: var(--p-text1); }
+  .corp .corp-genfile .fsz { font-size: 11px; color: var(--p-text3); }
+  .corp .corp-genfile .btn { margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -3897,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816111444"></script>
-<script src="pd-spec.js?v=20260816111444"></script>
-<script src="pd-details.js?v=20260816111444"></script>
-<script src="test-details.js?v=20260816111444"></script>
+<script src="questions.js?v=20260816112259"></script>
+<script src="pd-spec.js?v=20260816112259"></script>
+<script src="pd-details.js?v=20260816112259"></script>
+<script src="test-details.js?v=20260816112259"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5510,22 +5517,41 @@ function corpResDiv() { return corpDivider('Резултат от теста', '
 function corpEnhance() {
   const preps = document.querySelectorAll('.corp .corp-prep');
   preps.forEach(prep => {
-    if (prep.querySelector('.corp-gencard')) return;                 // вече изнесено
-    const genBtn = prep.querySelector('button[onclick*="Generate("]');
-    if (!genBtn) return;
-    const btnRow = genBtn.parentElement; if (!btnRow) return;
-    const moved = []; let n = btnRow;
-    while (n) { moved.push(n); n = n.nextElementSibling; }            // бутоните + бележка/подсказка след тях
-    const card = document.createElement('div'); card.className = 'sh-card corp-gencard'; card.style.marginBottom = '16px';
-    const hd = document.createElement('div'); hd.className = 'ent-card-h'; hd.textContent = 'Генерирайте теста';
-    const bd = document.createElement('div'); bd.style.padding = '14px 16px';
-    moved.forEach(el => bd.appendChild(el));
-    card.appendChild(hd); card.appendChild(bd);
-    prep.appendChild(card);                                          // след „Попълнете параметрите" → стъпка 3
-    // Excel бутонът → реално сваляне на файл (1:1 с g-tests-view)
-    const xls = card.querySelector('button[onclick*="ExcelInfo("]');
-    if (xls) { const m = (xls.getAttribute('onclick') || '').match(/ExcelInfo\('([^']+)'\)/); if (m) xls.setAttribute('onclick', "corpExcelDownload('" + m[1] + "')"); }
+    let card = prep.querySelector('.corp-gencard');
+    if (!card) {
+      const genBtn = prep.querySelector('button[onclick*="Generate("]');
+      if (!genBtn) return;
+      const btnRow = genBtn.parentElement; if (!btnRow) return;
+      const moved = []; let n = btnRow;
+      while (n) { moved.push(n); n = n.nextElementSibling; }            // бутоните + бележка/подсказка след тях
+      card = document.createElement('div'); card.className = 'sh-card corp-gencard'; card.style.marginBottom = '16px';
+      const hd = document.createElement('div'); hd.className = 'ent-card-h'; hd.textContent = 'Генерирайте теста';
+      const bd = document.createElement('div'); bd.className = 'corp-gencard-b'; bd.style.padding = '14px 16px';
+      moved.forEach(el => bd.appendChild(el));
+      card.appendChild(hd); card.appendChild(bd);
+      prep.appendChild(card);                                          // след „Попълнете параметрите" → стъпка 3
+      // Excel бутонът → реално сваляне на файл (1:1 с g-tests-view)
+      const xls = card.querySelector('button[onclick*="ExcelInfo("]');
+      if (xls) { const m = (xls.getAttribute('onclick') || '').match(/ExcelInfo\('([^']+)'\)/); if (m) xls.setAttribute('onclick', "corpExcelDownload('" + m[1] + "')"); }
+    }
+    // Визуализация на генерирания Excel файл (чип) след „Генерирай" — синхронизира се със състоянието
+    const gb = card.querySelector('button[onclick*="Generate("]');
+    const cm = gb && (gb.getAttribute('onclick') || '').match(/Generate\('([^']+)'\)/);
+    if (cm) corpSyncGenFile(card, cm[1]);
   });
+}
+// Показва/скрива визуалния чип за генерирания Excel файл според състоянието на теста
+function corpSyncGenFile(card, code) {
+  const x = (typeof engCfgKey === 'function') ? engCfgKey(code) : code.toLowerCase().replace('-', '');
+  const gen = ((((window.testAnswers || {})[code]) || {})[x + '-generated']) === '1';
+  const bd = card.querySelector('.corp-gencard-b') || card.lastElementChild;
+  let chip = card.querySelector('.corp-genfile');
+  if (gen && !chip && bd) {
+    chip = document.createElement('div'); chip.className = 'corp-genfile';
+    const fname = code.replace('-', '_') + '.xlsx';
+    chip.innerHTML = '<span class="xls">XLS</span><span class="fmeta"><span class="fnm">' + fname + '</span><span class="fsz">генериран · готов за преглед</span></span><button class="btn btn-secondary btn-sm" onclick="corpExcelDownload(\'' + code + '\')">⬇ Изтегли</button>';
+    bd.appendChild(chip);
+  } else if (!gen && chip) { chip.remove(); }
 }
 // Реално (визуално) сваляне на Excel — сглобява файл от текущите резултатни таблици на теста
 function corpExcelDownload(code) {
