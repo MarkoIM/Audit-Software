@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816151155"></script>
-<script src="pd-spec.js?v=20260816151155"></script>
-<script src="pd-details.js?v=20260816151155"></script>
-<script src="test-details.js?v=20260816151155"></script>
+<script src="questions.js?v=20260816152433"></script>
+<script src="pd-spec.js?v=20260816152433"></script>
+<script src="pd-details.js?v=20260816152433"></script>
+<script src="test-details.js?v=20260816152433"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5797,19 +5797,20 @@ function b10AiInner(code) {
     const ok = aiInputOk(code, inp);
     const nm = `<span class="ndoc-nm">${i + 1}. ${escHtml(inp.label)}</span>`;
     const desc = `<span class="ndoc-src">${escHtml(inp.desc || defDesc(inp))}</span>`;
+    const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
     if (inp.type === 'upload') {
       const files = testFiles(code, inp.key);
       if (files.length) {
         const chips = files.map((f, j) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="b10RemoveFile('${code}',${inp.key},${j});return false">✕</a>`).join(' · ');
-        return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label></span></div>`;
+        return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
       }
-      return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${desc}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label></span></div>`;
+      return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${desc}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
     }
     const open = inp.type === 'test'
       ? `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${inp.code}')">Отвори ${escHtml(inp.code)}</button>`
       : `<button class="btn btn-secondary btn-sm" onclick="entShowSection('${inp.section}')">Отвори Раздел ${escHtml(inp.section)}</button>`;
     const badge = ok ? '<span class="ndoc-badge auto">наличен</span>' : '<span class="ndoc-badge miss">липсва</span>';
-    return `<div class="ndoc ${ok ? 'auto' : 'miss'}"><span class="ndoc-ic">🔗</span>${nm}${desc}${badge}<span class="ndoc-act">${open}</span></div>`;
+    return `<div class="ndoc ${ok ? 'auto' : 'miss'}"><span class="ndoc-ic">🔗</span>${nm}${desc}${badge}<span class="ndoc-act">${open} ${repo}</span></div>`;
   }).join('');
   const hasUpload = inputs.some(inp => inp.type === 'upload');
   const intro = hasUpload
@@ -8656,21 +8657,22 @@ function gDocSlotHtml(code, slot, d) {
   const m = (engSlotMap(code) || {})[slot];
   const tt = d.note ? ` title="${escHtml(d.note)}"` : '';
   const nm = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}</span>`;
-  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}</div>`;
+  const repo = (cat) => `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs(${cat ? "'" + cat + "'" : ''})">Отвори хранилището</button>`;
+  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}<span class="ndoc-act">${repo('')}</span></div>`;
   if (m.t !== 'client') {
     const info = gInternalInfo(m.ref), ready = gInternalReady(m.ref);
     const label = ready ? 'Свързан автоматично' : 'Ще се свърже автоматично';
-    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span></div>`;
+    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span><span class="ndoc-act">${repo('')}</span></div>`;
   }
   const has = gRepoHas(m.cat), out = gOptedOut(code, slot);
   if (has && !out) {
     const files = (engDocs[m.cat] || []).map(f => escHtml(f.name)).join(', ');
-    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">Хранилище · ${files}</span><span class="ndoc-badge ok">Присвоен</span><span class="ndoc-act"><a href="#" class="ndoc-x" title="Премахни от този тест" onclick="gOptOut('${code}','${slot}',true);return false">✕</a></span></div>`;
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">Хранилище · ${files}</span><span class="ndoc-badge ok">Присвоен</span><span class="ndoc-act">${repo(m.cat)} <a href="#" class="ndoc-x" title="Премахни от този тест" onclick="gOptOut('${code}','${slot}',true);return false">✕</a></span></div>`;
   }
   if (has && out) {
-    return `<div class="ndoc"><span class="ndoc-ic">○</span>${nm}<span class="ndoc-src">в хранилището · не е присвоен</span><span class="ndoc-act"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои</button></span></div>`;
+    return `<div class="ndoc"><span class="ndoc-ic">○</span>${nm}<span class="ndoc-src">в хранилището · не е присвоен</span><span class="ndoc-act"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои</button> ${repo(m.cat)}</span></div>`;
   }
-  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('${m.cat}')">Отвори хранилището</button></span></div>`;
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> ${repo(m.cat)}</span></div>`;
 }
 
 // Генеричен компактен ред „Необходими документи и данни" (единен изглед за всички етапи).
@@ -8688,11 +8690,12 @@ function ndocRow(code, slot) {
   const files = testFiles(code, slot);
   const nm = `<span class="ndoc-nm">${d.n ? escHtml(String(d.n)) + '. ' : ''}${escHtml(d.name)}</span>`;
   const src = d.src ? `<span class="ndoc-src">${escHtml(d.src)}</span>` : '';
+  const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
   if (files.length) {
     const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="ndocRemove('${code}','${slot}',${i});return false">✕</a>`).join(' · ');
-    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label></span></div>`;
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
   }
-  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${src}<span class="ndoc-badge miss">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label></span></div>`;
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${src}<span class="ndoc-badge miss">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
 }
 function ndocAdd(code, slot, files) { testAddFiles(code, slot, files); ndocRefreshSlot(code, slot); }
 function ndocRemove(code, slot, i) { testRemoveFile(code, slot, i); ndocRefreshSlot(code, slot); }
@@ -29537,11 +29540,12 @@ function pdSlot(code, key, label, isOther) {
     ? `<button class="btn btn-secondary btn-sm" onclick="pdShowChecklist('${code}','${key}')">Чеклист · ${pdClProgressText(code, key)}</button>` : '';
   const nm = `<span class="ndoc-nm">${label}</span>`;
   const rmDoc = `<button class="btn btn-secondary btn-sm" title="Премахни документа от списъка" onclick="pdRemoveExampleDoc('${code}','${key}')">✕</button>`;
+  const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
   if (filled) {
     const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="pdRemoveFile('${code}','${key}',${i});return false">✕</a>`).join(' · ');
-    return `<div class="ndoc ok${isOther ? ' other' : ''}"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${rmDoc}</span></div>`;
+    return `<div class="ndoc ok${isOther ? ' other' : ''}"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${repo}${rmDoc}</span></div>`;
   }
-  return `<div class="ndoc miss${isOther ? ' other' : ''}"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${rmDoc}</span></div>`;
+  return `<div class="ndoc miss${isOther ? ' other' : ''}"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${repo}${rmDoc}</span></div>`;
 }
 function pdDocRemoved(code, i, name) {
   if (pdIsHidden(code, name)) return true;                 // статично скрит (pd-details hideDocs)
@@ -29582,11 +29586,12 @@ function pdCustomSlot(code, ci, c) {
   const filled = c.files.length > 0;
   const nm = `<span class="ndoc-nm">${escHtml(c.name)}</span>`;
   const rmDoc = `<button class="btn btn-secondary btn-sm" title="Премахни документа" onclick="pdRemoveCustomDoc('${code}',${ci})">✕</button>`;
+  const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
   if (filled) {
     const chips = c.files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="pdRemoveCustomFile('${code}',${ci},${i});return false">✕</a>`).join(' · ');
-    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${rmDoc}</span></div>`;
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${repo}${rmDoc}</span></div>`;
   }
-  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${rmDoc}</span></div>`;
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${repo}${rmDoc}</span></div>`;
 }
 function pdIsHidden(code, name) {
   const d = (window.pdDetails && pdDetails[code]);
