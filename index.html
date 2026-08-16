@@ -1435,6 +1435,22 @@
   /* Бутони — акцент */
   .corp .btn-primary { background: var(--p-accent); border-color: var(--p-accent); }
   .corp .btn-primary:hover { background: var(--p-accent-2, var(--p-accent)); filter: brightness(1.08); }
+  /* Разделители „Подготовка на теста" / „Резултат от теста" (както в g-tests-view) */
+  .corp .corp-div { display: flex; align-items: center; gap: 14px; margin: 24px 0 14px; }
+  .corp .corp-dt { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--p-text2); white-space: nowrap; }
+  .corp .corp-dsub { font-size: 12px; color: var(--p-text3); white-space: nowrap; }
+  .corp .corp-dl { flex: 1; height: 1px; background: var(--p-border-strong); }
+  /* Подготовка — номерирани стъпки (кръгче в заглавието на всяка карта) */
+  .corp .corp-prep { counter-reset: corpstep; }
+  .corp .corp-prep > .sh-card > .ent-card-h,
+  .corp .corp-prep > .sh-card > .sh-card-header { position: relative; padding-left: 54px; }
+  .corp .corp-prep > .sh-card > .ent-card-h::before,
+  .corp .corp-prep > .sh-card > .sh-card-header::before {
+    counter-increment: corpstep; content: counter(corpstep);
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border-radius: 50%; background: var(--p-accent); color: #fff;
+    font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
 </style>
 </head>
 <body>
@@ -3861,10 +3877,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260815184206"></script>
-<script src="pd-spec.js?v=20260815184206"></script>
-<script src="pd-details.js?v=20260815184206"></script>
-<script src="test-details.js?v=20260815184206"></script>
+<script src="questions.js?v=20260816102735"></script>
+<script src="pd-spec.js?v=20260816102735"></script>
+<script src="pd-details.js?v=20260816102735"></script>
+<script src="test-details.js?v=20260816102735"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5463,6 +5479,10 @@ function testDetailCards(code) {
         <tbody>${det.standards.map(s => `<tr><td><span class="ent-idx">${s.code}</span></td><td style="color:var(--p-text2)">${s.relation || ''}</td></tr>`).join('')}</tbody></table></div>` : '';
   return purposeCard + stdCard;
 }
+// Корпоративни разделители за подредбата на панелите на Етап 2 (само визуални)
+function corpDivider(title, sub) { return `<div class="corp-div"><span class="corp-dt">${title}</span><span class="corp-dsub">${sub}</span><span class="corp-dl"></span></div>`; }
+function corpPrepDiv() { return corpDivider('Подготовка на теста', 'изпълнете стъпките по ред'); }
+function corpResDiv() { return corpDivider('Резултат от теста', 'генериран автоматично · редактируем'); }
 
 // AI асистент за описателен тест: показва се, когато testDetails дефинира aiPrompt.
 // Дава до 4 входни документа (псевдо-ключове 101..104) + готова инструкция + демо генериране.
@@ -8579,7 +8599,7 @@ function g00PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g00Compute(code), gen = ans['g00-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g00-summary">${g00SummaryInner(code, c)}</div></div>`;
   const body = g00LeadCard(code, c) + g00RefsCard(code, c) + g00ChecksCard(code, c) + g00ConclCard(code, c);
-  return summary + g00ParamsCard(code, c) + g00DocsCard(code, c) + g00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + g00DocsCard(code, c) + g00ParamsCard(code, c) + '</div>' + g00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testG00Panel(code) {
   const det = testDet(code);
@@ -8902,7 +8922,7 @@ function h00PanelInner(code) {
   const c = h00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="h00-summary">${h00SummaryInner(code, c)}</div></div>`;
   const body = h00LeadCard(code, c) + h00CmpCard(code, c) + h00RefsCard(code, c) + h00ChecksCard(code, c) + h00ConclCard(code, c);
-  return summary + h00ParamsCard(code, c) + h00DocsCard(code, c) + h00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + h00DocsCard(code, c) + h00ParamsCard(code, c) + '</div>' + h00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testH00Panel(code) {
   const det = testDet(code);
@@ -9250,7 +9270,7 @@ function h10PanelInner(code) {
   const c = h10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="h10-summary">${h10SummaryInner(code, c)}</div></div>`;
   const body = h10PopCard(code, c) + h10ItemsCard(code, c) + h10IndicatorsCard(code, c) + h10ExcCard(code, c) + h10ChecksCard(code, c) + h10ConclCard(code, c);
-  return summary + h10ParamsCard(code, c) + h10DocsCard(code, c) + h10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + h10DocsCard(code, c) + h10ParamsCard(code, c) + '</div>' + h10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testH10Panel(code) {
   const det = testDet(code);
@@ -9582,7 +9602,7 @@ function i00PanelInner(code) {
   const c = i00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="i00-summary">${i00SummaryInner(code, c)}</div></div>`;
   const body = i00LeadCard(code, c) + i00CmpCard(code, c) + i00RefsCard(code, c) + i00ChecksCard(code, c) + i00ConclCard(code, c);
-  return summary + i00ParamsCard(code, c) + i00DocsCard(code, c) + i00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + i00DocsCard(code, c) + i00ParamsCard(code, c) + '</div>' + i00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testI00Panel(code) {
   const det = testDet(code);
@@ -9932,7 +9952,7 @@ function i10PanelInner(code) {
   const c = i10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="i10-summary">${i10SummaryInner(code, c)}</div></div>`;
   const body = i10PopCard(code, c) + i10ItemsCard(code, c) + i10IndicatorsCard(code, c) + i10ExcCard(code, c) + i10ChecksCard(code, c) + i10ConclCard(code, c);
-  return summary + i10ParamsCard(code, c) + i10DocsCard(code, c) + i10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + i10DocsCard(code, c) + i10ParamsCard(code, c) + '</div>' + i10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testI10Panel(code) {
   const det = testDet(code);
@@ -10221,7 +10241,7 @@ function i20PanelInner(code) {
   const c = i20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="i20-summary">${i20SummaryInner(code, c)}</div></div>`;
   const body = i20DataCard(code, c) + i20CmpCard(code, c) + i20DevCard(code, c) + i20ChecksCard(code, c) + i20ConclCard(code, c);
-  return summary + i20ParamsCard(code, c) + i20DocsCard(code, c) + i20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + i20DocsCard(code, c) + i20ParamsCard(code, c) + '</div>' + i20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testI20Panel(code) {
   const det = testDet(code);
@@ -10588,7 +10608,7 @@ function i30PanelInner(code) {
   const c = i30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="i30-summary">${i30SummaryInner(code, c)}</div></div>`;
   const body = i30PopCard(code, c) + i30SelCard(code, c) + i30ResCard(code, c) + i30ProjCard(code, c) + i30ChecksCard(code, c) + i30ConclCard(code, c);
-  return summary + i30ParamsCard(code, c) + i30DocsCard(code, c) + i30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + i30DocsCard(code, c) + i30ParamsCard(code, c) + '</div>' + i30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testI30Panel(code) {
   const det = testDet(code);
@@ -10953,7 +10973,7 @@ function j00PanelInner(code) {
   const c = j00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="j00-summary">${j00SummaryInner(code, c)}</div></div>`;
   const body = j00LeadCard(code, c) + j00CmpCard(code, c) + j00ClsCard(code, c) + j00RefsCard(code, c) + j00ChecksCard(code, c) + j00ConclCard(code, c);
-  return summary + j00ParamsCard(code, c) + j00DocsCard(code, c) + j00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + j00DocsCard(code, c) + j00ParamsCard(code, c) + '</div>' + j00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testJ00Panel(code) {
   const det = testDet(code);
@@ -11304,7 +11324,7 @@ function j10PanelInner(code) {
   const c = j10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="j10-summary">${j10SummaryInner(code, c)}</div></div>`;
   const body = j10PopCard(code, c) + j10ItemsCard(code, c) + j10IndicatorsCard(code, c) + j10ExcCard(code, c) + j10ChecksCard(code, c) + j10ConclCard(code, c);
-  return summary + j10ParamsCard(code, c) + j10DocsCard(code, c) + j10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + j10DocsCard(code, c) + j10ParamsCard(code, c) + '</div>' + j10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testJ10Panel(code) {
   const det = testDet(code);
@@ -11593,7 +11613,7 @@ function j20PanelInner(code) {
   const c = j20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="j20-summary">${j20SummaryInner(code, c)}</div></div>`;
   const body = j20DataCard(code, c) + j20CmpCard(code, c) + j20DevCard(code, c) + j20ChecksCard(code, c) + j20ConclCard(code, c);
-  return summary + j20ParamsCard(code, c) + j20DocsCard(code, c) + j20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + j20DocsCard(code, c) + j20ParamsCard(code, c) + '</div>' + j20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testJ20Panel(code) {
   const det = testDet(code);
@@ -11954,7 +11974,7 @@ function j30PanelInner(code) {
   const c = j30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="j30-summary">${j30SummaryInner(code, c)}</div></div>`;
   const body = j30PopCard(code, c) + j30SelCard(code, c) + j30ResCard(code, c) + j30ProjCard(code, c) + j30ChecksCard(code, c) + j30ConclCard(code, c);
-  return summary + j30ParamsCard(code, c) + j30DocsCard(code, c) + j30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + j30DocsCard(code, c) + j30ParamsCard(code, c) + '</div>' + j30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testJ30Panel(code) {
   const det = testDet(code);
@@ -12316,7 +12336,7 @@ function k00PanelInner(code) {
   const c = k00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="k00-summary">${k00SummaryInner(code, c)}</div></div>`;
   const body = k00LeadCard(code, c) + k00CmpCard(code, c) + k00ClsCard(code, c) + k00RefsCard(code, c) + k00ChecksCard(code, c) + k00ConclCard(code, c);
-  return summary + k00ParamsCard(code, c) + k00DocsCard(code, c) + k00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + k00DocsCard(code, c) + k00ParamsCard(code, c) + '</div>' + k00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testK00Panel(code) {
   const det = testDet(code);
@@ -12634,7 +12654,7 @@ function k20PanelInner(code) {
   const c = k20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="k20-summary">${k20SummaryInner(code, c)}</div></div>`;
   const body = k20DataCard(code, c) + k20CmpCard(code, c) + k20CoeffCard(code, c) + k20DevCard(code, c) + k20ChecksCard(code, c) + k20ConclCard(code, c);
-  return summary + k20ParamsCard(code, c) + k20DocsCard(code, c) + k20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + k20DocsCard(code, c) + k20ParamsCard(code, c) + '</div>' + k20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testK20Panel(code) {
   const det = testDet(code);
@@ -13008,7 +13028,7 @@ function k30PanelInner(code) {
   const c = k30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="k30-summary">${k30SummaryInner(code, c)}</div></div>`;
   const body = k30PopCard(code, c) + k30SelCard(code, c) + k30ResCard(code, c) + k30ProjCard(code, c) + k30ChecksCard(code, c) + k30ConclCard(code, c);
-  return summary + k30ParamsCard(code, c) + k30DocsCard(code, c) + k30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + k30DocsCard(code, c) + k30ParamsCard(code, c) + '</div>' + k30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testK30Panel(code) {
   const det = testDet(code);
@@ -13370,7 +13390,7 @@ function l00PanelInner(code) {
   const c = l00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="l00-summary">${l00SummaryInner(code, c)}</div></div>`;
   const body = l00LeadCard(code, c) + l00CmpCard(code, c) + l00AgeCard(code, c) + l00RefsCard(code, c) + l00ChecksCard(code, c) + l00ConclCard(code, c);
-  return summary + l00ParamsCard(code, c) + l00DocsCard(code, c) + l00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + l00DocsCard(code, c) + l00ParamsCard(code, c) + '</div>' + l00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testL00Panel(code) {
   const det = testDet(code);
@@ -13727,7 +13747,7 @@ function l10PanelInner(code) {
   const c = l10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="l10-summary">${l10SummaryInner(code, c)}</div></div>`;
   const body = l10PopCard(code, c) + l10ItemsCard(code, c) + l10IndicatorsCard(code, c) + l10ExcCard(code, c) + l10CorCard(code, c) + l10ChecksCard(code, c) + l10ConclCard(code, c);
-  return summary + l10ParamsCard(code, c) + l10DocsCard(code, c) + l10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + l10DocsCard(code, c) + l10ParamsCard(code, c) + '</div>' + l10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testL10Panel(code) {
   const det = testDet(code);
@@ -14033,7 +14053,7 @@ function l20PanelInner(code) {
   const c = l20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="l20-summary">${l20SummaryInner(code, c)}</div></div>`;
   const body = l20CmpCard(code, c) + l20AgeCard(code, c) + l20DevCard(code, c) + l20ChecksCard(code, c) + l20ConclCard(code, c);
-  return summary + l20ParamsCard(code, c) + l20DocsCard(code, c) + l20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + l20DocsCard(code, c) + l20ParamsCard(code, c) + '</div>' + l20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testL20Panel(code) {
   const det = testDet(code);
@@ -14342,7 +14362,7 @@ function m20PanelInner(code) {
   const c = m20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="m20-summary">${m20SummaryInner(code, c)}</div></div>`;
   const body = m20CmpCard(code, c) + m20RatioCard(code, c) + m20DevCard(code, c) + m20ChecksCard(code, c) + m20ConclCard(code, c);
-  return summary + m20ParamsCard(code, c) + m20DocsCard(code, c) + m20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + m20DocsCard(code, c) + m20ParamsCard(code, c) + '</div>' + m20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testM20Panel(code) {
   const det = testDet(code);
@@ -14712,7 +14732,7 @@ function l30PanelInner(code) {
   const c = l30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="l30-summary">${l30SummaryInner(code, c)}</div></div>`;
   const body = l30PopCard(code, c) + l30SelCard(code, c) + l30ResCard(code, c) + l30ProjCard(code, c) + l30ChecksCard(code, c) + l30ConclCard(code, c);
-  return summary + l30ParamsCard(code, c) + l30DocsCard(code, c) + l30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + l30DocsCard(code, c) + l30ParamsCard(code, c) + '</div>' + l30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testL30Panel(code) {
   const det = testDet(code);
@@ -15096,7 +15116,7 @@ function m30PanelInner(code) {
   const c = m30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="m30-summary">${m30SummaryInner(code, c)}</div></div>`;
   const body = m30PopCard(code, c) + m30SelCard(code, c) + m30ResCard(code, c) + m30ProjCard(code, c) + m30ChecksCard(code, c) + m30ConclCard(code, c);
-  return summary + m30ParamsCard(code, c) + m30DocsCard(code, c) + m30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + m30DocsCard(code, c) + m30ParamsCard(code, c) + '</div>' + m30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testM30Panel(code) {
   const det = testDet(code);
@@ -15475,7 +15495,7 @@ function m00PanelInner(code) {
   const c = m00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="m00-summary">${m00SummaryInner(code, c)}</div></div>`;
   const body = m00LeadCard(code, c) + m00CmpCard(code, c) + m00DetailCard(code, c) + m00RefsCard(code, c) + m00ChecksCard(code, c) + m00ConclCard(code, c);
-  return summary + m00ParamsCard(code, c) + m00DocsCard(code, c) + m00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + m00DocsCard(code, c) + m00ParamsCard(code, c) + '</div>' + m00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testM00Panel(code) {
   const det = testDet(code);
@@ -15869,7 +15889,7 @@ function v30PanelInner(code) {
   const c = v30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="v30-summary">${v30SummaryInner(code, c)}</div></div>`;
   const body = v30PopCard(code, c) + v30SelCard(code, c) + v30ResCard(code, c) + v30ProjCard(code, c) + v30ChecksCard(code, c) + v30ConclCard(code, c);
-  return summary + v30ParamsCard(code, c) + v30DocsCard(code, c) + v30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + v30DocsCard(code, c) + v30ParamsCard(code, c) + '</div>' + v30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testV30Panel(code) {
   const det = testDet(code);
@@ -16176,7 +16196,7 @@ function v20PanelInner(code) {
   const c = v20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="v20-summary">${v20SummaryInner(code, c)}</div></div>`;
   const body = v20CmpCard(code, c) + v20RatioCard(code, c) + v20DevCard(code, c) + v20ChecksCard(code, c) + v20ConclCard(code, c);
-  return summary + v20ParamsCard(code, c) + v20DocsCard(code, c) + v20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + v20DocsCard(code, c) + v20ParamsCard(code, c) + '</div>' + v20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testV20Panel(code) {
   const det = testDet(code);
@@ -16499,7 +16519,7 @@ function v10PanelInner(code) {
   const c = v10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="v10-summary">${v10SummaryInner(code, c)}</div></div>`;
   const body = v10PopCard(code, c) + v10ItemsCard(code, c) + v10ExcCard(code, c) + v10CorCard(code, c) + v10ChecksCard(code, c) + v10ConclCard(code, c);
-  return summary + v10ParamsCard(code, c) + v10DocsCard(code, c) + v10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + v10DocsCard(code, c) + v10ParamsCard(code, c) + '</div>' + v10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testV10Panel(code) {
   const det = testDet(code);
@@ -16822,7 +16842,7 @@ function v00PanelInner(code) {
   const c = v00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="v00-summary">${v00SummaryInner(code, c)}</div></div>`;
   const body = v00LeadCard(code, c) + v00CmpCard(code, c) + v00RefsCard(code, c) + v00ChecksCard(code, c) + v00ConclCard(code, c);
-  return summary + v00ParamsCard(code, c) + v00DocsCard(code, c) + v00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + v00DocsCard(code, c) + v00ParamsCard(code, c) + '</div>' + v00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testV00Panel(code) {
   const det = testDet(code);
@@ -17188,7 +17208,7 @@ function u30PanelInner(code) {
   const c = u30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="u30-summary">${u30SummaryInner(code, c)}</div></div>`;
   const body = u30PopCard(code, c) + u30SelCard(code, c) + u30ResCard(code, c) + u30ProjCard(code, c) + u30ChecksCard(code, c) + u30ConclCard(code, c);
-  return summary + u30ParamsCard(code, c) + u30DocsCard(code, c) + u30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + u30DocsCard(code, c) + u30ParamsCard(code, c) + '</div>' + u30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testU30Panel(code) {
   const det = testDet(code);
@@ -17494,7 +17514,7 @@ function u20PanelInner(code) {
   const c = u20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="u20-summary">${u20SummaryInner(code, c)}</div></div>`;
   const body = u20CmpCard(code, c) + u20RatioCard(code, c) + u20DevCard(code, c) + u20ChecksCard(code, c) + u20ConclCard(code, c);
-  return summary + u20ParamsCard(code, c) + u20DocsCard(code, c) + u20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + u20DocsCard(code, c) + u20ParamsCard(code, c) + '</div>' + u20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testU20Panel(code) {
   const det = testDet(code);
@@ -17830,7 +17850,7 @@ function u10PanelInner(code) {
   const c = u10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="u10-summary">${u10SummaryInner(code, c)}</div></div>`;
   const body = u10PopCard(code, c) + u10ItemsCard(code, c) + u10IndicatorsCard(code, c) + u10ExcCard(code, c) + u10CorCard(code, c) + u10ChecksCard(code, c) + u10ConclCard(code, c);
-  return summary + u10ParamsCard(code, c) + u10DocsCard(code, c) + u10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + u10DocsCard(code, c) + u10ParamsCard(code, c) + '</div>' + u10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testU10Panel(code) {
   const det = testDet(code);
@@ -18153,7 +18173,7 @@ function u00PanelInner(code) {
   const c = u00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="u00-summary">${u00SummaryInner(code, c)}</div></div>`;
   const body = u00LeadCard(code, c) + u00CmpCard(code, c) + u00RefsCard(code, c) + u00ChecksCard(code, c) + u00ConclCard(code, c);
-  return summary + u00ParamsCard(code, c) + u00DocsCard(code, c) + u00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + u00DocsCard(code, c) + u00ParamsCard(code, c) + '</div>' + u00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testU00Panel(code) {
   const det = testDet(code);
@@ -18525,7 +18545,7 @@ function t30PanelInner(code) {
   const c = t30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="t30-summary">${t30SummaryInner(code, c)}</div></div>`;
   const body = t30PopCard(code, c) + t30SelCard(code, c) + t30ResCard(code, c) + t30ProjCard(code, c) + t30ChecksCard(code, c) + t30ConclCard(code, c);
-  return summary + t30ParamsCard(code, c) + t30DocsCard(code, c) + t30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + t30DocsCard(code, c) + t30ParamsCard(code, c) + '</div>' + t30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testT30Panel(code) {
   const det = testDet(code);
@@ -18837,7 +18857,7 @@ function t20PanelInner(code) {
   const c = t20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="t20-summary">${t20SummaryInner(code, c)}</div></div>`;
   const body = t20CmpCard(code, c) + t20RatioCard(code, c) + t20DevCard(code, c) + t20ChecksCard(code, c) + t20ConclCard(code, c);
-  return summary + t20ParamsCard(code, c) + t20DocsCard(code, c) + t20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + t20DocsCard(code, c) + t20ParamsCard(code, c) + '</div>' + t20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testT20Panel(code) {
   const det = testDet(code);
@@ -19177,7 +19197,7 @@ function t10PanelInner(code) {
   const c = t10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="t10-summary">${t10SummaryInner(code, c)}</div></div>`;
   const body = t10PopCard(code, c) + t10ItemsCard(code, c) + t10IndicatorsCard(code, c) + t10ExcCard(code, c) + t10CorCard(code, c) + t10ChecksCard(code, c) + t10ConclCard(code, c);
-  return summary + t10ParamsCard(code, c) + t10DocsCard(code, c) + t10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + t10DocsCard(code, c) + t10ParamsCard(code, c) + '</div>' + t10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testT10Panel(code) {
   const det = testDet(code);
@@ -19490,7 +19510,7 @@ function t00PanelInner(code) {
   const c = t00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="t00-summary">${t00SummaryInner(code, c)}</div></div>`;
   const body = t00LeadCard(code, c) + t00CmpCard(code, c) + t00RefsCard(code, c) + t00ChecksCard(code, c) + t00ConclCard(code, c);
-  return summary + t00ParamsCard(code, c) + t00DocsCard(code, c) + t00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + t00DocsCard(code, c) + t00ParamsCard(code, c) + '</div>' + t00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testT00Panel(code) {
   const det = testDet(code);
@@ -19854,7 +19874,7 @@ function s30PanelInner(code) {
   const c = s30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="s30-summary">${s30SummaryInner(code, c)}</div></div>`;
   const body = s30PopCard(code, c) + s30SelCard(code, c) + s30ResCard(code, c) + s30ProjCard(code, c) + s30ChecksCard(code, c) + s30ConclCard(code, c);
-  return summary + s30ParamsCard(code, c) + s30DocsCard(code, c) + s30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + s30DocsCard(code, c) + s30ParamsCard(code, c) + '</div>' + s30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testS30Panel(code) {
   const det = testDet(code);
@@ -20165,7 +20185,7 @@ function s20PanelInner(code) {
   const c = s20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="s20-summary">${s20SummaryInner(code, c)}</div></div>`;
   const body = s20CmpCard(code, c) + s20RatioCard(code, c) + s20DevCard(code, c) + s20ChecksCard(code, c) + s20ConclCard(code, c);
-  return summary + s20ParamsCard(code, c) + s20DocsCard(code, c) + s20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + s20DocsCard(code, c) + s20ParamsCard(code, c) + '</div>' + s20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testS20Panel(code) {
   const det = testDet(code);
@@ -20484,7 +20504,7 @@ function s00PanelInner(code) {
   const c = s00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="s00-summary">${s00SummaryInner(code, c)}</div></div>`;
   const body = s00LeadCard(code, c) + s00CmpCard(code, c) + s00RefsCard(code, c) + s00ChecksCard(code, c) + s00ConclCard(code, c);
-  return summary + s00ParamsCard(code, c) + s00DocsCard(code, c) + s00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + s00DocsCard(code, c) + s00ParamsCard(code, c) + '</div>' + s00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testS00Panel(code) {
   const det = testDet(code);
@@ -20857,7 +20877,7 @@ function r30PanelInner(code) {
   const c = r30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="r30-summary">${r30SummaryInner(code, c)}</div></div>`;
   const body = r30PopCard(code, c) + r30SelCard(code, c) + r30ResCard(code, c) + r30ProjCard(code, c) + r30ChecksCard(code, c) + r30ConclCard(code, c);
-  return summary + r30ParamsCard(code, c) + r30DocsCard(code, c) + r30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + r30DocsCard(code, c) + r30ParamsCard(code, c) + '</div>' + r30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testR30Panel(code) {
   const det = testDet(code);
@@ -21167,7 +21187,7 @@ function r20PanelInner(code) {
   const c = r20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="r20-summary">${r20SummaryInner(code, c)}</div></div>`;
   const body = r20CmpCard(code, c) + r20RatioCard(code, c) + r20DevCard(code, c) + r20ChecksCard(code, c) + r20ConclCard(code, c);
-  return summary + r20ParamsCard(code, c) + r20DocsCard(code, c) + r20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + r20DocsCard(code, c) + r20ParamsCard(code, c) + '</div>' + r20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testR20Panel(code) {
   const det = testDet(code);
@@ -21502,7 +21522,7 @@ function r10PanelInner(code) {
   const c = r10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="r10-summary">${r10SummaryInner(code, c)}</div></div>`;
   const body = r10PopCard(code, c) + r10ItemsCard(code, c) + r10IndicatorsCard(code, c) + r10ExcCard(code, c) + r10CorCard(code, c) + r10ChecksCard(code, c) + r10ConclCard(code, c);
-  return summary + r10ParamsCard(code, c) + r10DocsCard(code, c) + r10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + r10DocsCard(code, c) + r10ParamsCard(code, c) + '</div>' + r10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testR10Panel(code) {
   const det = testDet(code);
@@ -21824,7 +21844,7 @@ function r00PanelInner(code) {
   const c = r00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="r00-summary">${r00SummaryInner(code, c)}</div></div>`;
   const body = r00LeadCard(code, c) + r00CmpCard(code, c) + r00RefsCard(code, c) + r00ChecksCard(code, c) + r00ConclCard(code, c);
-  return summary + r00ParamsCard(code, c) + r00DocsCard(code, c) + r00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + r00DocsCard(code, c) + r00ParamsCard(code, c) + '</div>' + r00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testR00Panel(code) {
   const det = testDet(code);
@@ -22198,7 +22218,7 @@ function q30PanelInner(code) {
   const c = q30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="q30-summary">${q30SummaryInner(code, c)}</div></div>`;
   const body = q30PopCard(code, c) + q30SelCard(code, c) + q30ResCard(code, c) + q30ProjCard(code, c) + q30ChecksCard(code, c) + q30ConclCard(code, c);
-  return summary + q30ParamsCard(code, c) + q30DocsCard(code, c) + q30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + q30DocsCard(code, c) + q30ParamsCard(code, c) + '</div>' + q30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testQ30Panel(code) {
   const det = testDet(code);
@@ -22508,7 +22528,7 @@ function q20PanelInner(code) {
   const c = q20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="q20-summary">${q20SummaryInner(code, c)}</div></div>`;
   const body = q20CmpCard(code, c) + q20RatioCard(code, c) + q20DevCard(code, c) + q20ChecksCard(code, c) + q20ConclCard(code, c);
-  return summary + q20ParamsCard(code, c) + q20DocsCard(code, c) + q20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + q20DocsCard(code, c) + q20ParamsCard(code, c) + '</div>' + q20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testQ20Panel(code) {
   const det = testDet(code);
@@ -22850,7 +22870,7 @@ function q10PanelInner(code) {
   const c = q10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="q10-summary">${q10SummaryInner(code, c)}</div></div>`;
   const body = q10PopCard(code, c) + q10ItemsCard(code, c) + q10IndicatorsCard(code, c) + q10ExcCard(code, c) + q10CorCard(code, c) + q10ChecksCard(code, c) + q10ConclCard(code, c);
-  return summary + q10ParamsCard(code, c) + q10DocsCard(code, c) + q10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + q10DocsCard(code, c) + q10ParamsCard(code, c) + '</div>' + q10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testQ10Panel(code) {
   const det = testDet(code);
@@ -23186,7 +23206,7 @@ function q00PanelInner(code) {
   const c = q00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="q00-summary">${q00SummaryInner(code, c)}</div></div>`;
   const body = q00LeadCard(code, c) + q00CmpCard(code, c) + q00RefsCard(code, c) + q00ChecksCard(code, c) + q00ConclCard(code, c);
-  return summary + q00ParamsCard(code, c) + q00DocsCard(code, c) + q00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + q00DocsCard(code, c) + q00ParamsCard(code, c) + '</div>' + q00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testQ00Panel(code) {
   const det = testDet(code);
@@ -23557,7 +23577,7 @@ function p30PanelInner(code) {
   const c = p30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="p30-summary">${p30SummaryInner(code, c)}</div></div>`;
   const body = p30PopCard(code, c) + p30SelCard(code, c) + p30ResCard(code, c) + p30ProjCard(code, c) + p30ChecksCard(code, c) + p30ConclCard(code, c);
-  return summary + p30ParamsCard(code, c) + p30DocsCard(code, c) + p30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + p30DocsCard(code, c) + p30ParamsCard(code, c) + '</div>' + p30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testP30Panel(code) {
   const det = testDet(code);
@@ -23866,7 +23886,7 @@ function p20PanelInner(code) {
   const c = p20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="p20-summary">${p20SummaryInner(code, c)}</div></div>`;
   const body = p20CmpCard(code, c) + p20RatioCard(code, c) + p20DevCard(code, c) + p20ChecksCard(code, c) + p20ConclCard(code, c);
-  return summary + p20ParamsCard(code, c) + p20DocsCard(code, c) + p20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + p20DocsCard(code, c) + p20ParamsCard(code, c) + '</div>' + p20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testP20Panel(code) {
   const det = testDet(code);
@@ -24214,7 +24234,7 @@ function p10PanelInner(code) {
   const c = p10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="p10-summary">${p10SummaryInner(code, c)}</div></div>`;
   const body = p10PopCard(code, c) + p10ItemsCard(code, c) + p10DiscCard(code, c) + p10IndicatorsCard(code, c) + p10ExcCard(code, c) + p10CorCard(code, c) + p10ChecksCard(code, c) + p10ConclCard(code, c);
-  return summary + p10ParamsCard(code, c) + p10DocsCard(code, c) + p10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + p10DocsCard(code, c) + p10ParamsCard(code, c) + '</div>' + p10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testP10Panel(code) {
   const det = testDet(code);
@@ -24545,7 +24565,7 @@ function p00PanelInner(code) {
   const c = p00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="p00-summary">${p00SummaryInner(code, c)}</div></div>`;
   const body = p00LeadCard(code, c) + p00CmpCard(code, c) + p00RefsCard(code, c) + p00ChecksCard(code, c) + p00ConclCard(code, c);
-  return summary + p00ParamsCard(code, c) + p00DocsCard(code, c) + p00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + p00DocsCard(code, c) + p00ParamsCard(code, c) + '</div>' + p00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testP00Panel(code) {
   const det = testDet(code);
@@ -24915,7 +24935,7 @@ function o30PanelInner(code) {
   const c = o30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="o30-summary">${o30SummaryInner(code, c)}</div></div>`;
   const body = o30PopCard(code, c) + o30SelCard(code, c) + o30ResCard(code, c) + o30ProjCard(code, c) + o30ChecksCard(code, c) + o30ConclCard(code, c);
-  return summary + o30ParamsCard(code, c) + o30DocsCard(code, c) + o30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + o30DocsCard(code, c) + o30ParamsCard(code, c) + '</div>' + o30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testO30Panel(code) {
   const det = testDet(code);
@@ -25227,7 +25247,7 @@ function o20PanelInner(code) {
   const c = o20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="o20-summary">${o20SummaryInner(code, c)}</div></div>`;
   const body = o20CmpCard(code, c) + o20RatioCard(code, c) + o20DevCard(code, c) + o20ChecksCard(code, c) + o20ConclCard(code, c);
-  return summary + o20ParamsCard(code, c) + o20DocsCard(code, c) + o20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + o20DocsCard(code, c) + o20ParamsCard(code, c) + '</div>' + o20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testO20Panel(code) {
   const det = testDet(code);
@@ -25588,7 +25608,7 @@ function o10PanelInner(code) {
   const c = o10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="o10-summary">${o10SummaryInner(code, c)}</div></div>`;
   const body = o10PopCard(code, c) + o10ItemsCard(code, c) + o10RecalcCard(code, c) + o10IndicatorsCard(code, c) + o10ExcCard(code, c) + o10CorCard(code, c) + o10ChecksCard(code, c) + o10ConclCard(code, c);
-  return summary + o10ParamsCard(code, c) + o10DocsCard(code, c) + o10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + o10DocsCard(code, c) + o10ParamsCard(code, c) + '</div>' + o10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testO10Panel(code) {
   const det = testDet(code);
@@ -25925,7 +25945,7 @@ function o00PanelInner(code) {
   const c = o00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="o00-summary">${o00SummaryInner(code, c)}</div></div>`;
   const body = o00LeadCard(code, c) + o00CmpCard(code, c) + o00RefsCard(code, c) + o00ChecksCard(code, c) + o00ConclCard(code, c);
-  return summary + o00ParamsCard(code, c) + o00DocsCard(code, c) + o00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + o00DocsCard(code, c) + o00ParamsCard(code, c) + '</div>' + o00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testO00Panel(code) {
   const det = testDet(code);
@@ -26296,7 +26316,7 @@ function n30PanelInner(code) {
   const c = n30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="n30-summary">${n30SummaryInner(code, c)}</div></div>`;
   const body = n30PopCard(code, c) + n30SelCard(code, c) + n30ResCard(code, c) + n30ProjCard(code, c) + n30ChecksCard(code, c) + n30ConclCard(code, c);
-  return summary + n30ParamsCard(code, c) + n30DocsCard(code, c) + n30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + n30DocsCard(code, c) + n30ParamsCard(code, c) + '</div>' + n30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testN30Panel(code) {
   const det = testDet(code);
@@ -26616,7 +26636,7 @@ function n20PanelInner(code) {
   const c = n20Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="n20-summary">${n20SummaryInner(code, c)}</div></div>`;
   const body = n20CmpCard(code, c) + n20AgeCard(code, c) + n20DevCard(code, c) + n20ChecksCard(code, c) + n20ConclCard(code, c);
-  return summary + n20ParamsCard(code, c) + n20DocsCard(code, c) + n20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + n20DocsCard(code, c) + n20ParamsCard(code, c) + '</div>' + n20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testN20Panel(code) {
   const det = testDet(code);
@@ -26959,7 +26979,7 @@ function n10PanelInner(code) {
   const c = n10Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="n10-summary">${n10SummaryInner(code, c)}</div></div>`;
   const body = n10PopCard(code, c) + n10ItemsCard(code, c) + n10IndicatorsCard(code, c) + n10ExcCard(code, c) + n10CorCard(code, c) + n10ChecksCard(code, c) + n10ConclCard(code, c);
-  return summary + n10ParamsCard(code, c) + n10DocsCard(code, c) + n10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + n10DocsCard(code, c) + n10ParamsCard(code, c) + '</div>' + n10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testN10Panel(code) {
   const det = testDet(code);
@@ -27258,7 +27278,7 @@ function n00PanelInner(code) {
   const ans = testAnswers[code] || {}, c = n00Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="n00-summary">${n00SummaryInner(code, c)}</div></div>`;
   const body = n00LeadCard(code, c) + n00RefsCard(code, c) + n00ChecksCard(code, c) + n00ConclCard(code, c);
-  return summary + n00ParamsCard(code, c) + n00DocsCard(code, c) + n00PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + n00DocsCard(code, c) + n00ParamsCard(code, c) + '</div>' + n00PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testN00Panel(code) {
   const det = testDet(code);
@@ -27517,7 +27537,7 @@ function g05PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g05Compute(code), gen = ans['g05-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g05-summary">${g05SummaryInner(code, c)}</div></div>`;
   const body = g05ApproachCard(code, c) + g05MatrixCard() + g05ProgramCard(code, c) + g05ChecksCard(code, c) + g05ConclCard(code, c);
-  return summary + g05DecisionsCard(code, c) + g05InputsCard(code, c) + g05PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + g05InputsCard(code, c) + g05DecisionsCard(code, c) + '</div>' + g05PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testG05Panel(code) {
   const det = testDet(code);
@@ -27828,7 +27848,7 @@ function g10PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g10Compute(code), gen = ans['g10-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g10-summary">${g10SummaryInner(code, c)}</div></div>`;
   const body = g10PopCard(code, c) + g10ItemsCard(code, c) + g10ExcCard(code, c) + g10ChecksCard(code, c) + g10ConclCard(code, c);
-  return summary + g10ParamsCard(code, c) + g10DocsCard(code, c) + g10PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + g10DocsCard(code, c) + g10ParamsCard(code, c) + '</div>' + g10PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testG10Panel(code) {
   const det = testDet(code);
@@ -28118,7 +28138,7 @@ function g20PanelInner(code) {
   const ans = testAnswers[code] || {}, c = g20Compute(code), gen = ans['g20-generated'] === '1';
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g20-summary">${g20SummaryInner(code, c)}</div></div>`;
   const body = g20DataCard(code, c) + g20CmpCard(code, c) + g20DevCard(code, c) + g20ChecksCard(code, c) + g20ConclCard(code, c);
-  return summary + g20ParamsCard(code, c) + g20DocsCard(code, c) + g20PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + g20DocsCard(code, c) + g20ParamsCard(code, c) + '</div>' + g20PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testG20Panel(code) {
   const det = testDet(code);
@@ -28497,7 +28517,7 @@ function g30PanelInner(code) {
   const c = g30Compute(code);
   const summary = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на теста</div><div style="padding:12px 14px" id="g30-summary">${g30SummaryInner(code, c)}</div></div>`;
   const body = g30PopCard(code, c) + g30DesignCard(code, c) + g30SelCard(code, c) + g30ResCard(code, c) + g30EvalCard(code, c) + g30ChecksCard(code, c) + g30ConclCard(code, c);
-  return summary + g30ParamsCard(code, c) + g30DocsCard(code, c) + g30PromptCard(code, c) + body;
+  return corpPrepDiv() + '<div class="corp-prep">' + g30DocsCard(code, c) + g30ParamsCard(code, c) + '</div>' + g30PromptCard(code, c) + corpResDiv() + '<div class="corp-result">' + summary + body + '</div>';
 }
 function testG30Panel(code) {
   const det = testDet(code);
