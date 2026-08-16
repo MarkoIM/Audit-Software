@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816134443"></script>
-<script src="pd-spec.js?v=20260816134443"></script>
-<script src="pd-details.js?v=20260816134443"></script>
-<script src="test-details.js?v=20260816134443"></script>
+<script src="questions.js?v=20260816141517"></script>
+<script src="pd-spec.js?v=20260816141517"></script>
+<script src="pd-details.js?v=20260816141517"></script>
+<script src="test-details.js?v=20260816141517"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5727,18 +5727,12 @@ function testAiPanel(code) {
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
-  const slots = docs.map((d, i) => {
-    const key = AI_DOC_BASE + i;
-    return `<div style="margin-top:10px">
-      <div class="q-note-label">${i + 1}. ${escHtml(d)}</div>
-      <div id="tup-${code}-${key}">${testUploadWidget(code, key)}</div>
-    </div>`;
-  }).join('');
+  const slots = docs.map((d, i) => ndocSlot(code, AI_DOC_BASE + i, { n: i + 1, name: d })).join('');
   return `<div class="sh-card" style="margin-bottom:16px">
     <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>AI асистент — чернова на стратегията</span><span class="ai-badge">AI</span></div>
     <div style="padding:14px 16px">
       <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:6px">${escHtml(det.aiIntro || 'Приложете наличните документи и стартирайте AI, за да се генерира чернова на цялостната одиторска стратегия. Черновата се преглежда и одобрява от отговорния одитор/партньор.')}</div>
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-top:12px;margin-bottom:2px">Входни документи (до ${docs.length})</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-top:12px;margin-bottom:2px">Необходими документи и данни</div>
       ${slots}
       <details style="margin-top:14px">
         <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
@@ -7412,11 +7406,7 @@ function d10ConclText(code, c) {
 
 function d10DocsCards(code) {
   const det = testDet(code);
-  const slots = (det.d10.docs || []).map(d =>
-    (typeof gDocSlotHtml === 'function' && (G_SLOTMAP[code] || {})['d' + d.n])
-      ? gDocSlotHtml(code, 'd' + d.n, Object.assign({ req: true }, d))
-      : (function () { const up = d10HasFile(code, 'd' + d.n); return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">Задължителен · ${up ? 'Качен' : 'Липсва'}</span></div><div style="margin-top:8px" id="tup-${code}-d${d.n}">${testUploadWidget2(code, 'd' + d.n)}</div></div>`; })()
-  ).join('');
+  const slots = (det.d10.docs || []).map(d => ndocSlot(code, 'd' + d.n, Object.assign({ req: true }, d))).join('');
   return slots + `<div style="font-size:11px;color:var(--p-text3);margin-top:8px">Документите се качват веднъж в <a href="#" onclick="entShowEngDocs();return false" style="color:var(--p-accent);font-weight:700">Документи на ангажимента</a> и се присвояват тук. Извличането започва след „Генерирай теста".</div>`;
 }
 function d10SummaryInner(code, c) {
@@ -7822,10 +7812,7 @@ function d20ConclText(c) {
 
 function d20DocsCards(code) {
   const det = testDet(code);
-  return (det.d20.data || []).map(d => {
-    const up = d10HasFile(code, 'e' + d.n);
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${up ? 'Налична' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">Източник: ${escHtml(d.src)}</div><div style="margin-top:8px" id="tup-${code}-e${d.n}">${testUploadWidget2(code, 'e' + d.n)}</div></div>`;
-  }).join('');
+  return (det.d20.data || []).map(d => ndocSlot(code, 'e' + d.n, { n: d.n, name: d.name, src: d.src })).join('');
 }
 function d20ParamsTable(code, c) {
   c = c || d20Compute(code);
@@ -7933,7 +7920,7 @@ function testPerfMatPanel(code) {
   if (!det.d20) return '';
   const c = d20Compute(code);
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d20-summary">${d20SummaryInner(code, c)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими данни и документи</div><div style="padding:12px 14px">${d20DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d20Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d20Analyze('${code}')">Обнови анализа</button></div></div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d20DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d20Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d20Analyze('${code}')">Обнови анализа</button></div></div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d20ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на процента</div><div style="padding:12px 14px">${d20FactorsTable(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на съществеността за изпълнение</div><div style="padding:12px 14px" id="d20-calc">${d20CalcInner(code, c)}</div></div>
@@ -8131,10 +8118,7 @@ function d30ConclText(c) {
 
 function d30DocsCards(code) {
   const det = testDet(code);
-  return (det.d30.data || []).map(d => {
-    const up = d10HasFile(code, 'g' + d.n);
-    return `<div class="pd-slot${up ? ' filled' : ''}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${d.n}. ${escHtml(d.name)}</span><span class="pd-slot-count">${up ? 'Налична' : 'Липсва'}</span></div><div style="font-size:11px;color:var(--p-text3);margin-top:4px">Източник: ${escHtml(d.src)}</div><div style="margin-top:8px" id="tup-${code}-g${d.n}">${testUploadWidget2(code, 'g' + d.n)}</div></div>`;
-  }).join('');
+  return (det.d30.data || []).map(d => ndocSlot(code, 'g' + d.n, { n: d.n, name: d.name, src: d.src })).join('');
 }
 function d30ParamsTable(code, c) {
   c = c || d30Compute(code);
@@ -8250,7 +8234,7 @@ function testTrivialPanel(code) {
   if (!det.d30) return '';
   const c = d30Compute(code);
   return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими данни и документи</div><div style="padding:12px 14px">${d30DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d30DocsCards(code)}<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d30ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на прага</div><div style="padding:12px 14px">${d30FactorsTable(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на прага за ясно незначителни неточности</div><div style="padding:12px 14px" id="d30-calc">${d30CalcInner(code, c)}</div></div>
@@ -8685,6 +8669,31 @@ function gDocSlotHtml(code, slot, d) {
   }
   return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> <button class="btn btn-secondary btn-sm" onclick="entShowEngDocs('${m.cat}')">Отвори хранилището</button></span></div>`;
 }
+
+// Генеричен компактен ред „Необходими документи и данни" (единен изглед за всички етапи).
+// Ако документът е свързан с централното хранилище → присвоява се оттам (gDocSlotHtml, както Етап 2);
+// иначе локален компактен ред със СЪЩИЯ ключ за качване (логиката/gating остават непроменени).
+window.__ndocDefs = window.__ndocDefs || {};
+function ndocIdKey(code, slot) { return (code + '-' + String(slot)).replace(/[^a-zA-Z0-9_-]/g, '_'); }
+function ndocSlot(code, slot, d) {
+  if (typeof gDocSlotHtml === 'function' && (engSlotMap(code) || {})[slot]) return gDocSlotHtml(code, slot, d);
+  __ndocDefs[code + '::' + slot] = { n: d.n, name: d.name, src: d.src || '', req: !!d.req };
+  return `<div id="nds-${ndocIdKey(code, slot)}">${ndocRow(code, slot)}</div>`;
+}
+function ndocRow(code, slot) {
+  const d = __ndocDefs[code + '::' + slot]; if (!d) return '';
+  const files = testFiles(code, slot);
+  const nm = `<span class="ndoc-nm">${d.n ? escHtml(String(d.n)) + '. ' : ''}${escHtml(d.name)}</span>`;
+  const src = d.src ? `<span class="ndoc-src">${escHtml(d.src)}</span>` : '';
+  if (files.length) {
+    const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="ndocRemove('${code}','${slot}',${i});return false">✕</a>`).join(' · ');
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label></span></div>`;
+  }
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${src}<span class="ndoc-badge miss">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label></span></div>`;
+}
+function ndocAdd(code, slot, files) { testAddFiles(code, slot, files); ndocRefreshSlot(code, slot); }
+function ndocRemove(code, slot, i) { testRemoveFile(code, slot, i); ndocRefreshSlot(code, slot); }
+function ndocRefreshSlot(code, slot) { const el = document.getElementById('nds-' + ndocIdKey(code, slot)); if (el) el.innerHTML = ndocRow(code, slot); }
 
 // Централна карта „Документи на ангажимента" (показва се в горната част на раздел G)
 function gEngRepoCard(focusCat) {
@@ -9360,7 +9369,7 @@ function h10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="h10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="h10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="h10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="h10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="h10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -10030,7 +10039,7 @@ function i10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="i10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="i10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -10352,7 +10361,7 @@ function i20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="i20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="i20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -10673,7 +10682,7 @@ function i30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="i30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="i30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="i30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="i30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="i30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -11392,7 +11401,7 @@ function j10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="j10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="j10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -11708,7 +11717,7 @@ function j20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="j20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="j20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -12024,7 +12033,7 @@ function j30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="j30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="j30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="j30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="j30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="j30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -12726,7 +12735,7 @@ function k20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="k20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="k20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="k20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -13064,7 +13073,7 @@ function k30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="k30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="k30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="k30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="k30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="k30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -13778,7 +13787,7 @@ function l10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="l10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="l10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -14115,7 +14124,7 @@ function l20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="l20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="l20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -14419,7 +14428,7 @@ function m20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="m20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="m20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="m20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="m20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="m20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -14752,7 +14761,7 @@ function l30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="l30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="l30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="l30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="l30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="l30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -15131,7 +15140,7 @@ function m30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="m30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="m30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="m30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="m30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="m30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -15897,7 +15906,7 @@ function v30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="v30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="v30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -16235,7 +16244,7 @@ function v20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="v20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="v20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -16535,7 +16544,7 @@ function v10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="v10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="v10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="v10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="v10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="v10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -17202,7 +17211,7 @@ function u30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="u30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="u30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -17540,7 +17549,7 @@ function u20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="u20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="u20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -17840,7 +17849,7 @@ function u10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="u10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="u10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="u10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="u10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="u10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -18525,7 +18534,7 @@ function t30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="t30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="t30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -18867,7 +18876,7 @@ function t20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="t20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="t20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -19174,7 +19183,7 @@ function t10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="t10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="t10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="t10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="t10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="t10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -19840,7 +19849,7 @@ function s30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="s30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="s30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="s30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="s30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="s30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -20182,7 +20191,7 @@ function s20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="s20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="s20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="s20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="s20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="s20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -20833,7 +20842,7 @@ function r30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="r30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="r30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -21173,7 +21182,7 @@ function r20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="r20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="r20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -21476,7 +21485,7 @@ function r10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="r10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="r10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="r10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="r10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="r10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -22160,7 +22169,7 @@ function q30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="q30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="q30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -22501,7 +22510,7 @@ function q20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="q20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="q20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни областите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -22804,7 +22813,7 @@ function q10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="q10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="q10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="q10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="q10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="q10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -23506,7 +23515,7 @@ function p30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="p30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="p30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -23845,7 +23854,7 @@ function p20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="p20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="p20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни групите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -24146,7 +24155,7 @@ function p10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="p10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="p10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="p10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="p10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="p10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -24846,7 +24855,7 @@ function o30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="o30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="o30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -25191,7 +25200,7 @@ function o20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="o20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="o20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни групите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -25504,7 +25513,7 @@ function o10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="o10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="o10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="o10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="o10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="o10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -26211,7 +26220,7 @@ function n30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="n30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="n30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -26560,7 +26569,7 @@ function n20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="n20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="n20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни групите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -26871,7 +26880,7 @@ function n10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="n10Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="n10Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="n10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="n10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="n10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">Тестът ще попълни таблиците с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -27749,7 +27758,7 @@ function g10DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g10Generate('${code}')">Изпълни автоматичен тест</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g10Generate('${code}')">Обнови резултата</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g10ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g10-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="g10-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -28064,7 +28073,7 @@ function g20DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g20Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g20Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g20ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g20-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="g20-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -28378,7 +28387,7 @@ function g30DocsCard(code, c) {
   const genBtn = `<button class="btn btn-primary btn-sm" onclick="g30Generate('${code}')">Изпълни автоматичен анализ</button>`;
   const updBtn = gen ? ` <button class="btn btn-secondary btn-sm" onclick="g30Generate('${code}')">Обнови анализа</button>` : '';
   const xlsBtn = ` <button class="btn btn-secondary btn-sm" onclick="g30ExcelInfo('${code}')">⬇ Изтегли Excel (.xlsx)</button>`;
-  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и входни данни</div><div style="padding:12px 14px" id="g30-docs">
+  return `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px" id="g30-docs">
     ${slots}
     <div style="margin-top:12px">${genBtn}${updBtn}${xlsBtn}</div>
     <div style="font-size:11px;color:var(--p-text3);margin-top:6px">AI ще попълни обектите с наличната информация; всяко поле може да се редактира или коригира от одитора.</div>
@@ -29521,20 +29530,15 @@ function pdFileRow(code, key, f, i) {
 function pdSlot(code, key, label, isOther) {
   const files = pdSlotFiles(code, key);
   const filled = files.length > 0;
-  const filesHtml = filled ? `<div class="pd-slot-files">` + files.map((f, i) => pdFileRow(code, key, f, i)).join('') + `</div>` : '';
   const clBtn = pdClData(code, key)
     ? `<button class="btn btn-secondary btn-sm" onclick="pdShowChecklist('${code}','${key}')">Чеклист · ${pdClProgressText(code, key)}</button>` : '';
-  return `<div class="pd-slot${filled ? ' filled' : ''}${isOther ? ' other' : ''}">
-    <div class="pd-slot-head">
-      <span class="pd-slot-dot"></span>
-      <span class="pd-slot-name">${label}</span>
-      ${filled ? `<span class="pd-slot-count">${files.length} файл${files.length === 1 ? '' : 'а'}</span>` : ''}
-      ${clBtn}
-      <label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>
-      <button class="btn btn-secondary btn-sm" title="Премахни документа от списъка" onclick="pdRemoveExampleDoc('${code}','${key}')">✕</button>
-    </div>
-    ${filesHtml}
-  </div>`;
+  const nm = `<span class="ndoc-nm">${label}</span>`;
+  const rmDoc = `<button class="btn btn-secondary btn-sm" title="Премахни документа от списъка" onclick="pdRemoveExampleDoc('${code}','${key}')">✕</button>`;
+  if (filled) {
+    const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="pdRemoveFile('${code}','${key}',${i});return false">✕</a>`).join(' · ');
+    return `<div class="ndoc ok${isOther ? ' other' : ''}"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${rmDoc}</span></div>`;
+  }
+  return `<div class="ndoc miss${isOther ? ' other' : ''}"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act">${clBtn}<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddFiles('${code}','${key}',this.files)"></label>${rmDoc}</span></div>`;
 }
 function pdDocRemoved(code, i, name) {
   if (pdIsHidden(code, name)) return true;                 // статично скрит (pd-details hideDocs)
@@ -29573,18 +29577,13 @@ function pdRemoveCustomFile(code, ci, fi) {
 }
 function pdCustomSlot(code, ci, c) {
   const filled = c.files.length > 0;
-  const filesHtml = filled ? `<div class="pd-slot-files">` + c.files.map((f, i) =>
-    `<div class="pd-file"><svg class="ico" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><span class="nm">${f.name}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="pdRemoveCustomFile('${code}',${ci},${i})">✕</button></div>`).join('') + `</div>` : '';
-  return `<div class="pd-slot${filled ? ' filled' : ''}">
-    <div class="pd-slot-head">
-      <span class="pd-slot-dot"></span>
-      <span class="pd-slot-name">${escHtml(c.name)}</span>
-      ${filled ? `<span class="pd-slot-count">${c.files.length} файл${c.files.length === 1 ? '' : 'а'}</span>` : ''}
-      <label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>
-      <button class="btn btn-secondary btn-sm" title="Премахни документа" onclick="pdRemoveCustomDoc('${code}',${ci})">✕</button>
-    </div>
-    ${filesHtml}
-  </div>`;
+  const nm = `<span class="ndoc-nm">${escHtml(c.name)}</span>`;
+  const rmDoc = `<button class="btn btn-secondary btn-sm" title="Премахни документа" onclick="pdRemoveCustomDoc('${code}',${ci})">✕</button>`;
+  if (filled) {
+    const chips = c.files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="pdRemoveCustomFile('${code}',${ci},${i});return false">✕</a>`).join(' · ');
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${rmDoc}</span></div>`;
+  }
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="pdAddCustomFiles('${code}',${ci},this.files)"></label>${rmDoc}</span></div>`;
 }
 function pdIsHidden(code, name) {
   const d = (window.pdDetails && pdDetails[code]);
@@ -29677,7 +29676,7 @@ function renderPdDetail(code, name, year, clientName, breadcrumbItems, backActio
     ${stdHtml}
     <div class="sh-card">
       <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Документи в досието</span>
+        <span>Необходими документи и данни</span>
         <span id="pd-progress" style="font-weight:700;color:var(--p-text3);text-transform:none;letter-spacing:0">${pdCountText(code)}</span>
       </div>
       <div style="padding:14px 16px" id="pd-slots">${renderPdSlots(code)}</div>
