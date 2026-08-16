@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816120329"></script>
-<script src="pd-spec.js?v=20260816120329"></script>
-<script src="pd-details.js?v=20260816120329"></script>
-<script src="test-details.js?v=20260816120329"></script>
+<script src="questions.js?v=20260816124502"></script>
+<script src="pd-spec.js?v=20260816124502"></script>
+<script src="pd-details.js?v=20260816124502"></script>
+<script src="test-details.js?v=20260816124502"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5660,6 +5660,54 @@ function corpDelRow(code, ti, xr) {
   for (let r = xr; r < n - 1; r++) for (let ci = 0; ci < 40; ci++) { const s = corpXKey(ti, r + 1, ci); setAnswer(code, corpXKey(ti, r, ci), (s in ans) ? ans[s] : ''); }
   for (let ci = 0; ci < 40; ci++) { const k = corpXKey(ti, n - 1, ci); if (k in ans) setAnswer(code, k, ''); }
   setAnswer(code, 'corpn-' + ti, String(n - 1)); corpTables();
+}
+// ── Преглед на Етап 2: генерира се ДИРЕКТНО от структурата на панела (1:1) ──
+// Така прегледът винаги съдържа всички таблици/секции на теста, без ръчна поддръжка
+// на отделни резюмета. Резултатната част на панела се клонира, въвеждаемите полета
+// се превръщат в текст, бутоните/качванията се премахват, таблиците стават документни.
+var CORP_S2_KEYS = ['g00', 'g05', 'g10', 'g20', 'g30', 'h00', 'h10', 'i00', 'i10', 'i20', 'i30', 'j00', 'j10', 'j20', 'j30', 'k00', 'k20', 'k30', 'l00', 'l10', 'l20', 'l30', 'm00', 'm20', 'm30', 'n00', 'n10', 'n20', 'n30', 'o00', 'o10', 'o20', 'o30', 'p00', 'p10', 'p20', 'p30', 'q00', 'q10', 'q20', 'q30', 'r00', 'r10', 'r20', 'r30', 's00', 's20', 's30', 't00', 't10', 't20', 't30', 'u00', 'u10', 'u20', 'u30', 'v00', 'v10', 'v20', 'v30'];
+function corpPanelInner(code) {
+  const det = testDet(code);
+  for (let i = 0; i < CORP_S2_KEYS.length; i++) {
+    const k = CORP_S2_KEYS[i];
+    if (det[k] && typeof window[k + 'PanelInner'] === 'function') { try { return window[k + 'PanelInner'](code); } catch (e) { return ''; } }
+  }
+  return '';
+}
+// Изгражда една wp-секция за Етап 2 тест от резултатната част на панела
+function corpWpSection(code, secN) {
+  const inner = corpPanelInner(code);
+  if (!inner) return '';
+  const host = document.createElement('div');
+  host.innerHTML = inner;
+  const res = host.querySelector('.corp-result');
+  if (!res) return '';
+  // прилагаме ръчните редакции/добавени редове (corpc-/corpx-) и върху офскрийн копието
+  try { host.className = 'corp'; document.body.appendChild(host); corpTables(); } catch (e) {}
+  // премахваме контролите, специфични за редактиране
+  res.querySelectorAll('.corp-addrow, .corp-genfile, button, label').forEach(el => el.remove());
+  res.querySelectorAll('input, select, textarea').forEach(el => {
+    let v = '';
+    if (el.tagName === 'SELECT') { const o = el.querySelector('option[selected]') || el.options[el.selectedIndex]; v = o ? o.textContent : ''; }
+    else if (el.tagName === 'TEXTAREA') { v = el.value || el.textContent || ''; }
+    else { const a = el.getAttribute('value'); v = (a != null) ? a : (el.value || ''); }
+    el.replaceWith(document.createTextNode((v && String(v).trim()) ? v : '—'));
+  });
+  res.querySelectorAll('table').forEach(t => { t.className = 'wp-std'; t.removeAttribute('style'); });
+  res.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  const heading = escHtml((testEffectiveDef(code) || {}).test || code);
+  let out = `<div class="wp-sec"><h3><span class="n">${secN}.</span>${heading}</h3>`;
+  const kids = [...res.children];
+  kids.forEach(card => {
+    if (card.classList && card.classList.contains('sh-card')) {
+      const h = card.querySelector('.ent-card-h'); const title = h ? h.textContent.trim() : '';
+      if (h) h.remove();
+      out += (title ? `<div class="wp-text" style="font-weight:700;margin:12px 0 5px">${escHtml(title)}</div>` : '') + card.innerHTML.trim();
+    } else { out += card.outerHTML; }
+  });
+  out += `</div>`;
+  try { if (host.parentNode) host.parentNode.removeChild(host); } catch (e) {}
+  return out;
 }
 // Наблюдател — прилага corpEnhance и след пре-рендер на панел (идемпотентно)
 var __corpObs = null;
@@ -29830,6 +29878,19 @@ function pdExportCss() {
     + '.b40pdf .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:8.5px;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
     + '.b40pdf .pill.ok{background:#e7f6ec;color:#1a7f3c;}.b40pdf .pill.warn{background:#fdf3e3;color:#9a6700;}.b40pdf .pill.bad{background:#fde8e6;color:#c0392b;}.b40pdf .pill.mut{background:#eef1f5;color:#5b6472;}'
     + '.b40pdf tr.total td{background:#243450;color:#fff;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+    // Стилове за елементите на Етап 2 панелите, пренесени 1:1 в прегледа/PDF
+    + '.wp-std th{padding:8px 11px;border:1px solid var(--p-border);background:var(--p-surface2);color:var(--navy);font-weight:700;text-align:left;font-size:11px;}'
+    + '.d10-stats{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 8px;}'
+    + '.d10-stat{flex:1 1 130px;border:1px solid var(--p-border);border-radius:6px;padding:7px 11px;background:var(--p-surface2);}'
+    + '.d10-stat .k{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-text3);margin-bottom:2px;}'
+    + '.d10-stat .v{font-size:14px;font-weight:800;color:var(--navy);}.d10-stat.warnv .v{color:#9a6700;}'
+    + '.d10-lvl{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:4px;background:#fff;color:var(--p-text2);border:1px solid var(--p-border);margin-left:4px;}'
+    + '.b50-checks{display:flex;flex-direction:column;gap:4px;margin:4px 0;}'
+    + '.b50-chk{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;color:var(--p-text2);padding:5px 9px;border:1px solid var(--p-border);border-radius:5px;background:var(--p-surface2);break-inside:avoid;}'
+    + '.b50-chk .ic{font-weight:700;flex:none;}'
+    + '.b50-chk.ok .ic{color:#1f7a44;}.b50-chk.warn .ic,.b50-chk.rev .ic,.b50-chk.fix .ic{color:#9a6700;}.b50-chk.bad .ic,.b50-chk.crit .ic,.b50-chk.high .ic{color:#b42318;}'
+    + '.b40-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;margin:6px 0;}'
+    + '.b40-f{font-size:11.5px;color:var(--p-text2);}.b40-f.span{grid-column:1/-1;}.b40-fl{display:block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--p-text3);margin-bottom:2px;}'
     + '@page{size:A4;margin:15mm 15mm 18mm;}';
 }
 function pdExportPdf(code) {
@@ -29950,66 +30011,66 @@ function testWpSections(code) {
   const d10Html = aiDet.d10 ? d10WpHtml(code, secD10) : '';
   const d20Html = aiDet.d20 ? d20WpHtml(code, secD20) : '';
   const d30Html = aiDet.d30 ? d30WpHtml(code, secD30) : '';
-  const g00Html = aiDet.g00 ? g00WpHtml(code, secG00) : '';
-  const g05Html = aiDet.g05 ? g05WpHtml(code, secG05) : '';
-  const g10Html = aiDet.g10 ? g10WpHtml(code, secG10) : '';
-  const g20Html = aiDet.g20 ? g20WpHtml(code, secG20) : '';
-  const g30Html = aiDet.g30 ? g30WpHtml(code, secG30) : '';
-  const h00Html = aiDet.h00 ? h00WpHtml(code, secH00) : '';
-  const h10Html = aiDet.h10 ? h10WpHtml(code, secH10) : '';
-  const i00Html = aiDet.i00 ? i00WpHtml(code, secI00) : '';
-  const i10Html = aiDet.i10 ? i10WpHtml(code, secI10) : '';
-  const i20Html = aiDet.i20 ? i20WpHtml(code, secI20) : '';
-  const i30Html = aiDet.i30 ? i30WpHtml(code, secI30) : '';
-  const j00Html = aiDet.j00 ? j00WpHtml(code, secJ00) : '';
-  const j10Html = aiDet.j10 ? j10WpHtml(code, secJ10) : '';
-  const j20Html = aiDet.j20 ? j20WpHtml(code, secJ20) : '';
-  const j30Html = aiDet.j30 ? j30WpHtml(code, secJ30) : '';
-  const k00Html = aiDet.k00 ? k00WpHtml(code, secK00) : '';
-  const k20Html = aiDet.k20 ? k20WpHtml(code, secK20) : '';
-  const k30Html = aiDet.k30 ? k30WpHtml(code, secK30) : '';
-  const l00Html = aiDet.l00 ? l00WpHtml(code, secL00) : '';
-  const l10Html = aiDet.l10 ? l10WpHtml(code, secL10) : '';
-  const l20Html = aiDet.l20 ? l20WpHtml(code, secL20) : '';
-  const l30Html = aiDet.l30 ? l30WpHtml(code, secL30) : '';
-  const m00Html = aiDet.m00 ? m00WpHtml(code, secM00) : '';
-  const m20Html = aiDet.m20 ? m20WpHtml(code, secM20) : '';
-  const m30Html = aiDet.m30 ? m30WpHtml(code, secM30) : '';
-  const n00Html = aiDet.n00 ? n00WpHtml(code, secN00) : '';
-  const n10Html = aiDet.n10 ? n10WpHtml(code, secN10) : '';
-  const n20Html = aiDet.n20 ? n20WpHtml(code, secN20) : '';
-  const n30Html = aiDet.n30 ? n30WpHtml(code, secN30) : '';
-  const o00Html = aiDet.o00 ? o00WpHtml(code, secO00) : '';
-  const o10Html = aiDet.o10 ? o10WpHtml(code, secO10) : '';
-  const o20Html = aiDet.o20 ? o20WpHtml(code, secO20) : '';
-  const o30Html = aiDet.o30 ? o30WpHtml(code, secO30) : '';
-  const p00Html = aiDet.p00 ? p00WpHtml(code, secP00) : '';
-  const p10Html = aiDet.p10 ? p10WpHtml(code, secP10) : '';
-  const p20Html = aiDet.p20 ? p20WpHtml(code, secP20) : '';
-  const p30Html = aiDet.p30 ? p30WpHtml(code, secP30) : '';
-  const q00Html = aiDet.q00 ? q00WpHtml(code, secQ00) : '';
-  const q10Html = aiDet.q10 ? q10WpHtml(code, secQ10) : '';
-  const q20Html = aiDet.q20 ? q20WpHtml(code, secQ20) : '';
-  const q30Html = aiDet.q30 ? q30WpHtml(code, secQ30) : '';
-  const r00Html = aiDet.r00 ? r00WpHtml(code, secR00) : '';
-  const r10Html = aiDet.r10 ? r10WpHtml(code, secR10) : '';
-  const r20Html = aiDet.r20 ? r20WpHtml(code, secR20) : '';
-  const r30Html = aiDet.r30 ? r30WpHtml(code, secR30) : '';
-  const s00Html = aiDet.s00 ? s00WpHtml(code, secS00) : '';
-  const s20Html = aiDet.s20 ? s20WpHtml(code, secS20) : '';
-  const s30Html = aiDet.s30 ? s30WpHtml(code, secS30) : '';
-  const t00Html = aiDet.t00 ? t00WpHtml(code, secT00) : '';
-  const t10Html = aiDet.t10 ? t10WpHtml(code, secT10) : '';
-  const t20Html = aiDet.t20 ? t20WpHtml(code, secT20) : '';
-  const t30Html = aiDet.t30 ? t30WpHtml(code, secT30) : '';
-  const u00Html = aiDet.u00 ? u00WpHtml(code, secU00) : '';
-  const u10Html = aiDet.u10 ? u10WpHtml(code, secU10) : '';
-  const u20Html = aiDet.u20 ? u20WpHtml(code, secU20) : '';
-  const u30Html = aiDet.u30 ? u30WpHtml(code, secU30) : '';
-  const v00Html = aiDet.v00 ? v00WpHtml(code, secV00) : '';
-  const v10Html = aiDet.v10 ? v10WpHtml(code, secV10) : '';
-  const v20Html = aiDet.v20 ? v20WpHtml(code, secV20) : '';
-  const v30Html = aiDet.v30 ? v30WpHtml(code, secV30) : '';
+  const g00Html = aiDet.g00 ? corpWpSection(code, secG00) : '';
+  const g05Html = aiDet.g05 ? corpWpSection(code, secG05) : '';
+  const g10Html = aiDet.g10 ? corpWpSection(code, secG10) : '';
+  const g20Html = aiDet.g20 ? corpWpSection(code, secG20) : '';
+  const g30Html = aiDet.g30 ? corpWpSection(code, secG30) : '';
+  const h00Html = aiDet.h00 ? corpWpSection(code, secH00) : '';
+  const h10Html = aiDet.h10 ? corpWpSection(code, secH10) : '';
+  const i00Html = aiDet.i00 ? corpWpSection(code, secI00) : '';
+  const i10Html = aiDet.i10 ? corpWpSection(code, secI10) : '';
+  const i20Html = aiDet.i20 ? corpWpSection(code, secI20) : '';
+  const i30Html = aiDet.i30 ? corpWpSection(code, secI30) : '';
+  const j00Html = aiDet.j00 ? corpWpSection(code, secJ00) : '';
+  const j10Html = aiDet.j10 ? corpWpSection(code, secJ10) : '';
+  const j20Html = aiDet.j20 ? corpWpSection(code, secJ20) : '';
+  const j30Html = aiDet.j30 ? corpWpSection(code, secJ30) : '';
+  const k00Html = aiDet.k00 ? corpWpSection(code, secK00) : '';
+  const k20Html = aiDet.k20 ? corpWpSection(code, secK20) : '';
+  const k30Html = aiDet.k30 ? corpWpSection(code, secK30) : '';
+  const l00Html = aiDet.l00 ? corpWpSection(code, secL00) : '';
+  const l10Html = aiDet.l10 ? corpWpSection(code, secL10) : '';
+  const l20Html = aiDet.l20 ? corpWpSection(code, secL20) : '';
+  const l30Html = aiDet.l30 ? corpWpSection(code, secL30) : '';
+  const m00Html = aiDet.m00 ? corpWpSection(code, secM00) : '';
+  const m20Html = aiDet.m20 ? corpWpSection(code, secM20) : '';
+  const m30Html = aiDet.m30 ? corpWpSection(code, secM30) : '';
+  const n00Html = aiDet.n00 ? corpWpSection(code, secN00) : '';
+  const n10Html = aiDet.n10 ? corpWpSection(code, secN10) : '';
+  const n20Html = aiDet.n20 ? corpWpSection(code, secN20) : '';
+  const n30Html = aiDet.n30 ? corpWpSection(code, secN30) : '';
+  const o00Html = aiDet.o00 ? corpWpSection(code, secO00) : '';
+  const o10Html = aiDet.o10 ? corpWpSection(code, secO10) : '';
+  const o20Html = aiDet.o20 ? corpWpSection(code, secO20) : '';
+  const o30Html = aiDet.o30 ? corpWpSection(code, secO30) : '';
+  const p00Html = aiDet.p00 ? corpWpSection(code, secP00) : '';
+  const p10Html = aiDet.p10 ? corpWpSection(code, secP10) : '';
+  const p20Html = aiDet.p20 ? corpWpSection(code, secP20) : '';
+  const p30Html = aiDet.p30 ? corpWpSection(code, secP30) : '';
+  const q00Html = aiDet.q00 ? corpWpSection(code, secQ00) : '';
+  const q10Html = aiDet.q10 ? corpWpSection(code, secQ10) : '';
+  const q20Html = aiDet.q20 ? corpWpSection(code, secQ20) : '';
+  const q30Html = aiDet.q30 ? corpWpSection(code, secQ30) : '';
+  const r00Html = aiDet.r00 ? corpWpSection(code, secR00) : '';
+  const r10Html = aiDet.r10 ? corpWpSection(code, secR10) : '';
+  const r20Html = aiDet.r20 ? corpWpSection(code, secR20) : '';
+  const r30Html = aiDet.r30 ? corpWpSection(code, secR30) : '';
+  const s00Html = aiDet.s00 ? corpWpSection(code, secS00) : '';
+  const s20Html = aiDet.s20 ? corpWpSection(code, secS20) : '';
+  const s30Html = aiDet.s30 ? corpWpSection(code, secS30) : '';
+  const t00Html = aiDet.t00 ? corpWpSection(code, secT00) : '';
+  const t10Html = aiDet.t10 ? corpWpSection(code, secT10) : '';
+  const t20Html = aiDet.t20 ? corpWpSection(code, secT20) : '';
+  const t30Html = aiDet.t30 ? corpWpSection(code, secT30) : '';
+  const u00Html = aiDet.u00 ? corpWpSection(code, secU00) : '';
+  const u10Html = aiDet.u10 ? corpWpSection(code, secU10) : '';
+  const u20Html = aiDet.u20 ? corpWpSection(code, secU20) : '';
+  const u30Html = aiDet.u30 ? corpWpSection(code, secU30) : '';
+  const v00Html = aiDet.v00 ? corpWpSection(code, secV00) : '';
+  const v10Html = aiDet.v10 ? corpWpSection(code, secV10) : '';
+  const v20Html = aiDet.v20 ? corpWpSection(code, secV20) : '';
+  const v30Html = aiDet.v30 ? corpWpSection(code, secV30) : '';
   const aiInputsList = aiDet.aiInputs || (aiDet.aiDocs || []).map((d, i) => ({ type: 'upload', key: AI_DOC_BASE + i, label: d }));
   const aiDocRows = aiOn ? aiInputsList.map((inp, i) => {
     let val;
