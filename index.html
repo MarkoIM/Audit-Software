@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816163156"></script>
-<script src="pd-spec.js?v=20260816163156"></script>
-<script src="pd-details.js?v=20260816163156"></script>
-<script src="test-details.js?v=20260816163156"></script>
+<script src="questions.js?v=20260816164804"></script>
+<script src="pd-spec.js?v=20260816164804"></script>
+<script src="pd-details.js?v=20260816164804"></script>
+<script src="test-details.js?v=20260816164804"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8415,11 +8415,11 @@ function engDocsPersist() { try { localStorage.setItem(engKey('auditpro_eng_docs
 
 // Каталог на клиентските документи за раздел G (качват се веднъж)
 const G_DOC_CATALOG = [
-  { id: 'ov',      grp: 'Ядрени счетоводни',       name: 'Оборотна ведомост (текущ и предходен период)', req: true },
-  { id: 'gk',      grp: 'Ядрени счетоводни',       name: 'Главна книга / аналитична справка за НМА', req: true },
-  { id: 'gfo',     grp: 'Ядрени счетоводни',       name: 'Проект на ГФО, пояснения и счетоводна политика', req: true },
-  { id: 'compare', grp: 'Ядрени счетоводни',       name: 'Сравнителни данни / предходен период / бюджет / модел', req: false },
-  { id: 'policy',  grp: 'Ядрени счетоводни',       name: 'Счетоводна политика', req: false },
+  { id: 'ov',      grp: 'Общи счетоводни документи',       name: 'Оборотна ведомост (текущ и предходен период)', req: true },
+  { id: 'gk',      grp: 'Общи счетоводни документи',       name: 'Главна книга / аналитична справка за НМА', req: true },
+  { id: 'gfo',     grp: 'Общи счетоводни документи',       name: 'Проект на ГФО, пояснения и счетоводна политика', req: true },
+  { id: 'compare', grp: 'Общи счетоводни документи',       name: 'Сравнителни данни / предходен период / бюджет / модел', req: false },
+  { id: 'policy',  grp: 'Общи счетоводни документи',       name: 'Счетоводна политика', req: false },
   { id: 'reg_nma', grp: 'Раздел G · Нематериални активи',   name: 'Регистър / инвентарна книга на НМА', req: true },
   { id: 'amort',   grp: 'Раздел G · Нематериални активи',   name: 'Амортизационен план на НМА', req: true },
   { id: 'moves',   grp: 'Раздел G · Нематериални активи',   name: 'Данни за придобивания, отписвания, лицензи и обезценки', req: false },
@@ -8461,7 +8461,8 @@ const SEC_NAMES = {
   J: 'Инвестиции и финансови инструменти', K: 'Материални запаси', L: 'Търговски и други вземания',
   M: 'Парични средства', N: 'Търговски и други задължения', O: 'Заеми и лизинги',
   P: 'Провизии и условни задължения', Q: 'Данъци', R: 'Собствен капитал и резерви',
-  S: 'Приходи', T: 'Разходи за дейността', U: 'Разходи за персонал', V: 'Финансови приходи и разходи'
+  S: 'Приходи', T: 'Разходи за дейността', U: 'Разходи за персонал', V: 'Финансови приходи и разходи',
+  X: 'Приключващи процедури', Y: 'Преглед, контрол на качеството и комуникация', Z: 'Одиторски доклад и финализиране'
 };
 function secName(sec) { return SEC_NAMES[sec] || ('Раздел ' + sec); }
 // Нормализиране на име на документ → стабилен каноничен ключ (за дедупликация „документ по документ")
@@ -8527,7 +8528,8 @@ function engClassifiedCodes() {
   const out = [], tq = window.testQuestions || {};
   Object.keys(tq).forEach(code => {
     if (ENG_EXPLICIT[code] || code.split('-')[0] === 'G') return;
-    if (!tq[code] || tq[code].phase !== '2. Изпълнение') return;
+    // Етап 2 и Етап 3 (когато бъде билднат) — тестове с cfg.docs влизат в каталога
+    if (!tq[code] || !/^[23]\./.test(tq[code].phase || '')) return;
     const cfg = testDet(code)[engCfgKey(code)];
     if (cfg && cfg.docs) out.push(code);
   });
@@ -8744,14 +8746,20 @@ function gEngRepoCard(focusCat) {
   const groups = {}, order = [];
   cat.forEach(d => { if (!groups[d.grp]) { groups[d.grp] = []; order.push(d.grp); } groups[d.grp].push(d); });
   const reqAll = cat.filter(d => d.req), reqDone = reqAll.filter(d => gRepoHas(d.id)).length;
-  // Класифициране на групите (разделите) по етап; „Ядрени счетоводни" → общи (за всички етапи)
+  // Класифициране на групите (разделите) по етап; „Общи счетоводни документи" → общи (за всички етапи)
   const secLetter = (grp) => { const m = grp.match(/Раздел\s+(\S+)/); return m ? m[1] : ''; };
-  const stageOf = (grp) => { if (grp === 'Ядрени счетоводни') return 'common'; return 'ABCD'.indexOf(secLetter(grp)) !== -1 ? 'e1' : 'e2'; };
-  const buckets = { common: [], e1: [], e2: [] };
+  const stageOf = (grp) => {
+    if (grp === 'Общи счетоводни документи') return 'common';
+    const s = secLetter(grp);
+    if ('ABCD'.indexOf(s) !== -1) return 'e1';
+    if ('XYZ'.indexOf(s) !== -1) return 'e3';   // Етап 3 · Приключване и докладване
+    return 'e2';
+  };
+  const buckets = { common: [], e1: [], e2: [], e3: [] };
   order.forEach(g => buckets[stageOf(g)].push(g));
   // Разделите се подреждат азбучно (по буквата на раздела); документите остават както са
   const bySec = (a, b) => secLetter(a).localeCompare(secLetter(b));
-  buckets.e1.sort(bySec); buckets.e2.sort(bySec);
+  buckets.e1.sort(bySec); buckets.e2.sort(bySec); buckets.e3.sort(bySec);
   const renderGroup = (g) => {
     const items = groups[g];
     const hasFocus = !!focusCat && items.some(d => d.id === focusCat);
@@ -8768,7 +8776,8 @@ function gEngRepoCard(focusCat) {
   const sub = (title, arr) => arr.length ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--p-accent);margin:16px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--p-border-strong)">${title}</div>` + arr.map(renderGroup).join('') : '';
   const html = sub('Общи документи · за всички етапи', buckets.common)
     + sub('Етап 1 · Приемане и планиране', buckets.e1)
-    + sub('Етап 2 · Изпълнение', buckets.e2);
+    + sub('Етап 2 · Изпълнение', buckets.e2)
+    + sub('Етап 3 · Приключване и докладване', buckets.e3);
   return `<div class="sh-card" id="g-engrepo" style="margin-bottom:16px"><div class="ent-card-h">📁 Документи за периода <span style="font-weight:600;color:var(--p-text3);font-size:12px">· текущ одит · качете веднъж</span></div><div style="padding:12px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);margin-bottom:4px">Документи за текущия период. Качете всеки веднъж тук — присвоява се автоматично на всички тестове, където е необходим, вместо да се качва поотделно. Вътрешните входове (водещи листове, същественост, оценка на риска, резултати от други тестове) се свързват автоматично.</div>
     <div style="font-size:11.5px;color:var(--p-text3);margin-bottom:6px">Задължителни документи: <b>${reqDone}/${reqAll.length}</b> качени. <span style="color:var(--p-text3)">Групирани по етап и раздел.</span></div>
@@ -28729,6 +28738,8 @@ function renderQuestionScreen(code, year, clientName, breadcrumbItems, backActio
 
   // Корпоративен изглед (тематичен слой .corp) — Етап 1 и Етап 2; Етап 3 остава непроменен
   const isStage2 = def.phase === '2. Изпълнение';
+  // Корп изглед: Етап 1 и 2. Етап 3 е готов за включване — при започване на Етап 3
+  // сменете проверката на /^[123]\./.test(def.phase || '') (цялата база вече е подготвена).
   const useCorp = isStage2 || def.phase === '1. Приемане и планиране';
   const corpHead = `<div class="corp-head"><div class="corp-head-main"><h1 class="corp-title">${code} — ${escHtml(def.test)}</h1><div class="corp-sub">${escHtml(subtitle)} · ${escHtml(clientName)} · Одит ${year}</div></div></div>`;
 
