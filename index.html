@@ -3904,10 +3904,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816141517"></script>
-<script src="pd-spec.js?v=20260816141517"></script>
-<script src="pd-details.js?v=20260816141517"></script>
-<script src="test-details.js?v=20260816141517"></script>
+<script src="questions.js?v=20260816144721"></script>
+<script src="pd-spec.js?v=20260816144721"></script>
+<script src="pd-details.js?v=20260816144721"></script>
+<script src="test-details.js?v=20260816144721"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5794,26 +5794,25 @@ function b10StrategyPanel(code) {
 function b10AiInner(code) {
   const det = testDet(code), inputs = det.aiInputs || [];
   const complete = aiInputsComplete(code);
-  const chip = (ok) => ok ? '<span class="b40-flag ok">✓ наличен</span>' : '<span class="b40-flag warn">⚠ липсва</span>';
-  const upWidget = (key) => {
-    const files = testFiles(code, key);
-    const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="b10RemoveFile('${code}',${key},${i})">✕</button></div>`).join('') + '</div>' : '';
-    return `<label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${key},this.files)"></label>${fl}`;
-  };
-  const ctrl = (inp) => {
-    if (inp.type === 'upload') return upWidget(inp.key);
-    if (inp.type === 'test') return `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${inp.code}')">Отвори ${escHtml(inp.code)}</button>`;
-    if (inp.type === 'section') return `<button class="btn btn-secondary btn-sm" onclick="entShowSection('${inp.section}')">Отвори Раздел ${escHtml(inp.section)}</button>`;
-    return '';
-  };
   const defDesc = (inp) => inp.type === 'test' ? ('Взема се автоматично от тест ' + inp.code + '.') : (inp.type === 'section' ? ('Взема се автоматично от Раздел ' + inp.section + '.') : 'Качете документа.');
+  // Компактни редове „Необходими документи и данни" (единен изглед като Етап 2/ПД)
   const rows = inputs.map((inp, i) => {
     const ok = aiInputOk(code, inp);
-    return `<div class="b10-ai-in">
-      <div class="b10-ai-in-h"><span class="b40-card-n">${i + 1}</span><b>${escHtml(inp.label)}</b> ${chip(ok)}</div>
-      <div class="b10-ai-in-d">${escHtml(inp.desc || defDesc(inp))}</div>
-      <div style="margin-top:8px">${ctrl(inp)}</div>
-    </div>`;
+    const nm = `<span class="ndoc-nm">${i + 1}. ${escHtml(inp.label)}</span>`;
+    const desc = `<span class="ndoc-src">${escHtml(inp.desc || defDesc(inp))}</span>`;
+    if (inp.type === 'upload') {
+      const files = testFiles(code, inp.key);
+      if (files.length) {
+        const chips = files.map((f, j) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="b10RemoveFile('${code}',${inp.key},${j});return false">✕</a>`).join(' · ');
+        return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label></span></div>`;
+      }
+      return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${desc}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label></span></div>`;
+    }
+    const open = inp.type === 'test'
+      ? `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${inp.code}')">Отвори ${escHtml(inp.code)}</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="entShowSection('${inp.section}')">Отвори Раздел ${escHtml(inp.section)}</button>`;
+    const badge = ok ? '<span class="ndoc-badge auto">наличен</span>' : '<span class="ndoc-badge miss">липсва</span>';
+    return `<div class="ndoc ${ok ? 'auto' : 'miss'}"><span class="ndoc-ic">🔗</span>${nm}${desc}${badge}<span class="ndoc-act">${open}</span></div>`;
   }).join('');
   const hasUpload = inputs.some(inp => inp.type === 'upload');
   const intro = hasUpload
@@ -5821,6 +5820,7 @@ function b10AiInner(code) {
     : 'Черновата се <b>генерира автоматично</b>, след като бъдат попълнени посочените тестове по-долу. Можете и сами да я генерирате по всяко време с бутона, дори някой източник да липсва.';
   return `<div style="padding:14px 16px">
     <div style="font-size:12.5px;color:var(--p-text2);line-height:1.6;margin-bottom:12px">${intro}</div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-top:6px;margin-bottom:2px">Необходими документи и данни</div>
     ${rows}
     <details style="margin-top:14px">
       <summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary>
