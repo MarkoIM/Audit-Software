@@ -526,6 +526,15 @@
   .ent-firm { display: flex; align-items: center; gap: 7px; background: none; border: 1px solid var(--p-border); border-radius: 20px; padding: 6px 13px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--p-text1); }
   .ent-firm:hover { background: var(--p-surface2); border-color: var(--p-border-strong); }
   .ent-firm svg { color: var(--p-text3); flex-shrink: 0; }
+  /* Кредитен пил + екран */
+  .ent-credits { display: inline-flex; align-items: center; gap: 6px; background: var(--p-accent-bg); color: var(--p-accent); border: 1px solid transparent; border-radius: 20px; padding: 6px 12px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; }
+  .ent-credits:hover { border-color: var(--p-accent); }
+  .ent-credits svg { flex-shrink: 0; }
+  .cr-big { margin: 2px 0 8px; }
+  .cr-big .cr-num { font-size: 30px; font-weight: 800; color: var(--p-text1); letter-spacing: -.5px; }
+  .cr-big .cr-unit { font-size: 13px; color: var(--p-text3); font-weight: 600; }
+  .cr-actions { white-space: nowrap; }
+  .cr-actions input { padding: 5px 7px; border: 1px solid var(--p-border); border-radius: 6px; font: inherit; font-size: 12px; }
 
   .ent-page { width: 100%; padding: 24px 28px; max-width: 1000px; }
   .ent-h { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
@@ -3918,10 +3927,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260817095231"></script>
-<script src="pd-spec.js?v=20260817095231"></script>
-<script src="pd-details.js?v=20260817095231"></script>
-<script src="test-details.js?v=20260817095231"></script>
+<script src="questions.js?v=20260817105924"></script>
+<script src="pd-spec.js?v=20260817105924"></script>
+<script src="pd-details.js?v=20260817105924"></script>
+<script src="test-details.js?v=20260817105924"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -3958,6 +3967,7 @@ const PERMS = [
   { k: 'edit_wp',        l: 'Редакция на работни документи' },
   { k: 'approve',        l: 'Одобрение и подпис' },
   { k: 'export',         l: 'Експорт на документи' },
+  { k: 'manage_credits', l: 'Управление на кредити' },
 ];
 // Роля по конкретен ангажимент (за подписите и видимостта).
 const ENG_ROLES = [
@@ -4034,6 +4044,82 @@ function userInitials(u) { return (u && (u.initials || clInitials(u.name))) || '
 function userSignName(u) { u = u || currentUser(); return (u.name || '') + (u.title ? ' · ' + u.title : ''); }
 function seatsUsed() { return Object.values(users).filter(u => u.status !== 'inactive').length; }
 function adminCount() { return Object.values(users).filter(u => u.role === 'admin' && u.status !== 'inactive').length; }
+
+// ══════════════════════════════════════════════════════════════════════
+// КРЕДИТНА СИСТЕМА (AI тестове) — пул на дружеството + баланс по акаунт.
+// Всеки AI тест струва creditPrice() кредита (конфигурируемо, по подр. 15),
+// таксува се при ВСЯКО изпълнение; при неуспех — без такса.
+// Разпределя се от роля с права `manage_credits` (админ по подразбиране).
+// ══════════════════════════════════════════════════════════════════════
+if (typeof firm.credits !== 'number') firm.credits = 1000;        // пул на дружеството (демо)
+if (typeof firm.creditPrice !== 'number') firm.creditPrice = 15;  // цена на AI тест
+for (const id in users) { if (typeof users[id].credits !== 'number') users[id].credits = 200; }
+try { persistUsers(); persistFirm(); } catch (e) {}
+window.creditLog = (function () { try { return JSON.parse(localStorage.getItem('auditpro_credit_log') || 'null') || { ledger: [], grants: [] }; } catch (e) { return { ledger: [], grants: [] }; } })();
+function persistCreditLog() { try { localStorage.setItem('auditpro_credit_log', JSON.stringify(creditLog)); } catch (e) {} }
+function creditNow() { try { return new Date().toISOString(); } catch (e) { return ''; } }
+function creditFmtWhen(iso) { if (!iso) return ''; try { const d = new Date(iso); return d.toLocaleDateString('bg-BG') + ' ' + d.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+function creditPrice() { return (firm && typeof firm.creditPrice === 'number') ? firm.creditPrice : 15; }
+function creditPool() { return (firm && typeof firm.credits === 'number') ? firm.credits : 0; }
+function creditBalance(u) { u = u || currentUser(); return (u && typeof u.credits === 'number') ? u.credits : 0; }
+function creditCharge(u, code, amt) { u = u || currentUser(); amt = (amt == null) ? creditPrice() : amt; u.credits = (u.credits || 0) - amt; try { persistUsers(); } catch (e) {} creditLog.ledger.push({ uid: u.id, name: u.name, code: code, amt: amt, at: creditNow() }); persistCreditLog(); creditRefreshPill(); }
+function creditGrant(toUid, amt) { if (!users[toUid]) return false; const a = Math.max(0, Math.round(+amt || 0)); if (!a || a > creditPool()) return false; const by = currentUser(); firm.credits -= a; users[toUid].credits = (users[toUid].credits || 0) + a; try { persistFirm(); persistUsers(); } catch (e) {} creditLog.grants.push({ by: by ? by.id : '', byName: by ? by.name : '', to: toUid, toName: users[toUid].name, amt: a, at: creditNow() }); persistCreditLog(); return true; }
+function creditRevoke(fromUid, amt) { if (!users[fromUid]) return false; const a = Math.max(0, Math.round(+amt || 0)); const have = users[fromUid].credits || 0; const take = Math.min(a, have); if (!take) return false; const by = currentUser(); users[fromUid].credits = have - take; firm.credits = (firm.credits || 0) + take; try { persistFirm(); persistUsers(); } catch (e) {} creditLog.grants.push({ by: by ? by.id : '', byName: by ? by.name : '', to: fromUid, toName: users[fromUid].name, amt: -take, at: creditNow() }); persistCreditLog(); return true; }
+function creditTopUp(amt) { const a = Math.max(0, Math.round(+amt || 0)); firm.credits = (firm.credits || 0) + a; try { persistFirm(); } catch (e) {} }
+function creditSetPrice(n) { firm.creditPrice = Math.max(0, Math.round(+n || 0)); try { persistFirm(); } catch (e) {} }
+// Гейт преди AI изпълнение: проверка на баланс + потвърждение с цената; таксува при потвърждение.
+function creditRun(code) {
+  const price = creditPrice(), me = currentUser(), bal = creditBalance(me);
+  if (bal < price) { alert('Недостатъчно кредити за този AI тест.\nНужни: ' + price + ' · Налични: ' + bal + '.\n\nПоискай кредити от администратор (роля „Управление на кредити").'); return false; }
+  if (typeof confirm === 'function' && !confirm('Този AI тест ще струва ' + price + ' кредита.\nБаланс след изпълнение: ' + (bal - price) + ' кредита.\n\nДа продължи ли?')) return false;
+  creditCharge(me, code, price);
+  return true;
+}
+function creditPillHtml() {
+  return `<button class="ent-credits" id="ent-credits-pill" onclick="entShowCredits()" title="Кредити за AI тестове · щракни за детайли">`
+    + `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5"/></svg>`
+    + `<b>${creditBalance()}</b> кред.</button>`;
+}
+function creditRefreshPill() { const el = document.getElementById('ent-credits-pill'); if (el) el.outerHTML = creditPillHtml(); }
+// Екран „Кредити" — личен изглед + (за роля manage_credits) управление на пула и разпределяне.
+function entShowCredits() {
+  const m = entMainTop(); entSetActive(null);
+  entCrumbs([{ l: 'Кредити за AI' }]);
+  const me = currentUser(), canManage = hasPerm('manage_credits');
+  const personal = `<div class="sh-card"><div class="ent-card-h">Моите кредити</div><div class="pf-body">
+      <div class="cr-big"><span class="cr-num">${creditBalance(me)}</span> <span class="cr-unit">кредита</span></div>
+      <div class="pf-hint">Всеки AI тест струва <b>${creditPrice()} кредита</b> при всяко изпълнение. Цената е изписана на всеки таксуващ бутон.</div>
+      ${!canManage ? '<div class="pf-hint">За допълнителни кредити се обърни към администратор (роля „Управление на кредити").</div>' : ''}
+    </div></div>`;
+  let mgmt = '';
+  if (canManage) {
+    const rows = Object.keys(users).filter(id => users[id].status !== 'inactive').map(id => {
+      const u = users[id];
+      return `<tr><td><span class="cm-av">${userInitials(u)}</span><b>${escHtml(u.name)}</b>${id === sessionUid ? ' <span class="pf-you">ти</span>' : ''}<div class="tm-mail">${escHtml(u.email || '')}</div></td>
+        <td class="r"><b>${creditBalance(u)}</b></td>
+        <td class="cr-actions"><input id="cg-${id}" type="number" min="0" placeholder="брой" style="width:78px"> <button class="btn btn-secondary btn-sm" onclick="creditGrantUI('${id}')">Дай</button> <button class="btn btn-secondary btn-sm" onclick="creditRevokeUI('${id}')">Отнеми</button></td></tr>`;
+    }).join('');
+    const led = (creditLog.ledger || []).slice(-12).reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.name || '')} · ${escHtml(e.code || '')} · −${e.amt} кред.</span><span class="tst-logmeta">${creditFmtWhen(e.at)}</span></div>`).join('') || '<div class="pf-hint">Няма разход още.</div>';
+    const gr = (creditLog.grants || []).slice(-12).reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.byName || '')} → ${escHtml(e.toName || '')} · ${e.amt >= 0 ? '+' : ''}${e.amt} кред.</span><span class="tst-logmeta">${creditFmtWhen(e.at)}</span></div>`).join('') || '<div class="pf-hint">Няма разпределяния още.</div>';
+    mgmt = `<div class="sh-card"><div class="ent-card-h">Пул на дружеството</div><div class="pf-body">
+        <div class="cr-big"><span class="cr-num">${creditPool()}</span> <span class="cr-unit">кредита в пула</span></div>
+        <div class="pf-row"><label>Зареди пула (проформа)</label><input id="cr-topup" type="number" min="0" placeholder="брой кредити"><button class="btn btn-secondary btn-sm" onclick="creditTopUpUI()">Зареди</button></div>
+        <div class="pf-row"><label>Цена на AI тест (кредита)</label><input id="cr-price" type="number" min="0" value="${creditPrice()}"><button class="btn btn-secondary btn-sm" onclick="creditSetPriceUI()">Запази цената</button></div>
+      </div></div>
+      <div class="sh-card" style="grid-column:1/-1"><div class="ent-card-h">Разпределяне по акаунти</div>
+        <table class="ent-tbl"><thead><tr><th>Потребител</th><th class="r">Баланс</th><th>Разпредели</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+      <div class="sh-card"><div class="ent-card-h">Разход (последни)</div><div class="pf-body">${led}</div></div>
+      <div class="sh-card"><div class="ent-card-h">Разпределяния (последни)</div><div class="pf-body">${gr}</div></div>`;
+  }
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Кредити за AI</h1><div class="sub">AI тестовете струват кредити · пул на дружеството + баланс по акаунт</div></div></div>
+    <div class="pf-grid">${personal}${mgmt}</div></div>`;
+}
+function creditGrantUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditGrant(uid, v)) { authToast && authToast('Разпределени ' + Math.round(+v) + ' кредита.'); entShowCredits(); creditRefreshPill(); } else { alert('Недостатъчно в пула или невалидна стойност.'); } }
+function creditRevokeUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditRevoke(uid, v)) { entShowCredits(); creditRefreshPill(); } else { alert('Няма достатъчно кредити по акаунта или невалидна стойност.'); } }
+function creditTopUpUI() { const v = (document.getElementById('cr-topup') || {}).value; creditTopUp(v); entShowCredits(); }
+function creditSetPriceUI() { const v = (document.getElementById('cr-price') || {}).value; creditSetPrice(v); entShowCredits(); }
 function nextUserId() { let n = 0; for (const id in users) { const m = /^u(\d+)$/.exec(id); if (m) n = Math.max(n, +m[1]); } return 'u' + (n + 1); }
 function setCurrentUser(uid) { if (users[uid]) { sessionUid = uid; persistSession(); entRenderCtx(); entRenderTree(); entShowDashboard(); } }
 // „Прегледал" в документа = партньор/ревюър по ангажимента (различен от изготвилия).
@@ -5753,7 +5839,7 @@ function testAiPanel(code) {
         <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
       </details>
       <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-        <button class="btn btn-primary" onclick="testRunAiPanel('${code}')">Генерирай чернова с AI</button>
+        <button class="btn btn-primary" onclick="testRunAiPanel('${code}')">Генерирай чернова с AI · ${creditPrice()} кредита</button>
         <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените документи.</span>
       </div>
       <div id="${code}-ai-result" style="display:none;margin-top:14px"></div>
@@ -5772,6 +5858,7 @@ function testRunAiPanel(code) {
     res.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:var(--p-amber-bg);color:var(--p-amber);font-size:13px;font-weight:600">Приложете поне един входен документ, преди да стартирате AI.</div>`;
     return;
   }
+  if (!creditRun(code)) { res.style.display = 'none'; return; }   // такса за AI изпълнение
   res.innerHTML = `<div style="border:1px solid var(--p-border);border-radius:8px;overflow:hidden">
       <div style="padding:10px 14px;background:var(--p-green-bg);color:var(--p-green);font-weight:700;font-size:13px">✓ AI генерира чернова на стратегията (демонстрация)</div>
       <div style="padding:12px 14px;font-size:13px;color:var(--p-text2);line-height:1.6">
@@ -5838,7 +5925,7 @@ function b10AiInner(code) {
     ${rows}</div></div>`;
   const genCard = `<div class="sh-card corp-gencard" style="margin-bottom:16px"><div class="ent-card-h">Генерирайте черновата</div><div style="padding:14px 16px">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Генерирай чернова с AI</button>
+      <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Генерирай чернова с AI · ${creditPrice()} кредита</button>
       <span style="font-size:12px;color:var(--p-text3)">${complete ? 'Всички източници са налични — черновата се генерира автоматично.' : 'Може да генерирате и при липсващи източници.'}</span>
     </div></div></div>`;
   const instrCard = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:14px 16px">
@@ -5857,6 +5944,7 @@ function b10AiAuto(code) { if (testDet(code).aiInputs && aiInputsComplete(code))
 function b10DoGenerate(code) { b10Generate(code, false); }
 function b10Generate(code, auto) {
   const res = document.getElementById('b10-ai-result'); if (!res) return;
+  if (!auto && !creditRun(code)) return;   // такса при явно изпълнение (авто-генерирането не таксува)
   const inputs = testDet(code).aiInputs || [];
   const missing = inputs.filter(inp => !aiInputOk(code, inp)).map(inp => inp.label);
   const used = inputs.map(inp => `${aiInputOk(code, inp) ? '✓' : '—'} ${escHtml(inp.label)}`).join(' · ');
@@ -29081,7 +29169,7 @@ function renderAiQuestions(code, def) {
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-bottom:6px">Инструкция към AI (преглед)</div>
         <div id="${code}-prompt" style="background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:12px;color:var(--p-text2);line-height:1.7;min-height:42px"></div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-          <button class="btn btn-primary" onclick="runAiTest('${code}')">Изпълни с AI</button>
+          <button class="btn btn-primary" onclick="runAiTest('${code}')">Изпълни с AI · ${creditPrice()} кредита</button>
           <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените документи.</span>
         </div>
         <div id="${code}-result" style="display:none;margin-top:14px"></div>
@@ -29269,6 +29357,7 @@ function runAiTest(code) {
     res.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:var(--p-amber-bg);color:var(--p-amber);font-size:13px;font-weight:600">Попълнете всички параметри (липсват ${missing}).</div>`;
     return;
   }
+  if (!creditRun(code)) { res.style.display = 'none'; return; }   // такса за AI изпълнение
   res.innerHTML = `
     <div style="border:1px solid var(--p-border);border-radius:8px;overflow:hidden">
       <div style="padding:10px 14px;background:var(--p-green-bg);color:var(--p-green);font-weight:700;font-size:13px">✓ AI изпълни теста (демонстрация)</div>
@@ -29535,6 +29624,7 @@ function entRenderCtx() {
         + `Проба · PDF заключен</button>`
       : '') +
     `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
+    creditPillHtml() +
     `<button class="ent-firm" onclick="entShowTeam()" title="Дружество и екип · потребители, права, плащане">` +
       `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M15 21V9h3a1 1 0 0 1 1 1v11M9 8h2M9 11h2M9 14h2"/></svg>` +
       `<span class="fnm">Дружество</span>` +
@@ -29833,7 +29923,7 @@ function pdAiPanel(code) {
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-bottom:6px">Инструкция към AI</div>
       <div style="max-height:240px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.65;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-        <button class="btn btn-primary" onclick="pdRunAi('${code}')">Изпълни с AI</button>
+        <button class="btn btn-primary" onclick="pdRunAi('${code}')">Изпълни с AI · ${creditPrice()} кредита</button>
         <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените финансови отчети.</span>
       </div>
       <div id="${code}-pd-airesult" style="display:none;margin-top:14px"></div>
@@ -29849,6 +29939,7 @@ function pdRunAi(code) {
     res.innerHTML = `<div style="padding:10px 14px;border-radius:8px;background:var(--p-amber-bg);color:var(--p-amber);font-size:13px;font-weight:600">Качете поне един финансов отчет, преди да изпълните AI анализа.</div>`;
     return;
   }
+  if (!creditRun(code)) { res.style.display = 'none'; return; }   // такса за AI изпълнение
   const det = (window.pdDetails && pdDetails[code]) || {};
   const outline = (det.aiOutput || []).map(s => `<li>${escHtml(s)}</li>`).join('');
   res.innerHTML = `
