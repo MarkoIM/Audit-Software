@@ -3927,10 +3927,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260817105924"></script>
-<script src="pd-spec.js?v=20260817105924"></script>
-<script src="pd-details.js?v=20260817105924"></script>
-<script src="test-details.js?v=20260817105924"></script>
+<script src="questions.js?v=20260817114429"></script>
+<script src="pd-spec.js?v=20260817114429"></script>
+<script src="pd-details.js?v=20260817114429"></script>
+<script src="test-details.js?v=20260817114429"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4074,6 +4074,12 @@ function creditRun(code) {
   if (typeof confirm === 'function' && !confirm('Този AI тест ще струва ' + price + ' кредита.\nБаланс след изпълнение: ' + (bal - price) + ' кредита.\n\nДа продължи ли?')) return false;
   creditCharge(me, code, price);
   return true;
+}
+// Обвивка за таксуване на генериращ бутон (corpEnhance пренасочва onclick към нея).
+function creditGen(btn) {
+  const code = btn.getAttribute('data-code'), fn = window[btn.getAttribute('data-fn')];
+  if (!creditRun(code)) return;
+  if (typeof fn === 'function') fn(code);
 }
 function creditPillHtml() {
   return `<button class="ent-credits" id="ent-credits-pill" onclick="entShowCredits()" title="Кредити за AI тестове · щракни за детайли">`
@@ -5634,10 +5640,24 @@ function corpEnhance() {
       const xls = card.querySelector('button[onclick*="ExcelInfo("]');
       if (xls) { const m = (xls.getAttribute('onclick') || '').match(/ExcelInfo\('([^']+)'\)/); if (m) xls.setAttribute('onclick', "corpExcelDownload('" + m[1] + "')"); }
     }
-    // Визуализация на генерирания Excel файл (чип) след „Генерирай" — синхронизира се със състоянието
+    // Генериращият бутон → единен етикет „Изпълни автоматичен анализ"/„Обнови анализа" + цена + такса.
+    // (b10DoGenerate се таксува сам вътрешно — не се обвива тук, за да няма двойна такса.)
     const gb = card.querySelector('button[onclick*="Generate("]');
-    const cm = gb && (gb.getAttribute('onclick') || '').match(/Generate\('([^']+)'\)/);
-    if (cm) corpSyncGenFile(card, cm[1]);
+    if (gb && !/b10DoGenerate/.test(gb.getAttribute('onclick') || '')) {
+      if (!gb.getAttribute('data-cgate')) {
+        const om = (gb.getAttribute('onclick') || '').match(/(\w+)\('([^']+)'\)/);
+        if (om) { gb.setAttribute('data-cgate', '1'); gb.setAttribute('data-fn', om[1]); gb.setAttribute('data-code', om[2]); gb.setAttribute('onclick', 'creditGen(this)'); }
+      }
+      const c2 = gb.getAttribute('data-code');
+      if (c2) {
+        const gen = ((((window.testAnswers || {})[c2]) || {})[engCfgKey(c2) + '-generated']) === '1';
+        gb.textContent = (gen ? 'Обнови анализа' : 'Изпълни автоматичен анализ') + ' · ' + creditPrice() + ' кредита';
+      }
+    }
+    // Визуализация на генерирания Excel файл (чип) след „Генерирай" — синхронизира се със състоянието
+    const code2 = gb && gb.getAttribute('data-code');
+    if (code2) corpSyncGenFile(card, code2);
+    else { const cm = gb && (gb.getAttribute('onclick') || '').match(/Generate\('([^']+)'\)/); if (cm) corpSyncGenFile(card, cm[1]); }
   });
   try { corpTables(); } catch (e) {}
 }
@@ -5839,7 +5859,7 @@ function testAiPanel(code) {
         <div style="max-height:260px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
       </details>
       <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-        <button class="btn btn-primary" onclick="testRunAiPanel('${code}')">Генерирай чернова с AI · ${creditPrice()} кредита</button>
+        <button class="btn btn-primary" onclick="testRunAiPanel('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button>
         <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените документи.</span>
       </div>
       <div id="${code}-ai-result" style="display:none;margin-top:14px"></div>
@@ -5925,7 +5945,7 @@ function b10AiInner(code) {
     ${rows}</div></div>`;
   const genCard = `<div class="sh-card corp-gencard" style="margin-bottom:16px"><div class="ent-card-h">Генерирайте черновата</div><div style="padding:14px 16px">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Генерирай чернова с AI · ${creditPrice()} кредита</button>
+      <button class="btn btn-primary" onclick="b10DoGenerate('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button>
       <span style="font-size:12px;color:var(--p-text3)">${complete ? 'Всички източници са налични — черновата се генерира автоматично.' : 'Може да генерирате и при липсващи източници.'}</span>
     </div></div></div>`;
   const instrCard = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Автоматизиран тест — инструкция</div><div style="padding:14px 16px">
@@ -8027,7 +8047,7 @@ function testPerfMatPanel(code) {
   const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d20DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d20ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на процента</div><div style="padding:12px 14px">${d20FactorsTable(code)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="d20Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d20Analyze('${code}')">Обнови анализа</button></div></div>`;
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d20Analyze('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button> <button class="btn btn-secondary btn-sm" onclick="creditRun('${code}')&&d20Analyze('${code}')">Обнови анализа · ${creditPrice()} кредита</button></div></div>`;
   const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d20-summary">${d20SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на съществеността за изпълнение</div><div style="padding:12px 14px" id="d20-calc">${d20CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за същественост за изпълнение</div><div id="d20-proposal">${d20ProposalInner(code, c)}</div></div>
@@ -8343,7 +8363,7 @@ function testTrivialPanel(code) {
   const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d30DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d30ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на прага</div><div style="padding:12px 14px">${d30FactorsTable(code)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="d30Analyze('${code}')">Извърши автоматичен анализ</button> <button class="btn btn-secondary btn-sm" onclick="d30Analyze('${code}')">Обнови анализа</button></div></div>`;
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d30Analyze('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button> <button class="btn btn-secondary btn-sm" onclick="creditRun('${code}')&&d30Analyze('${code}')">Обнови анализа · ${creditPrice()} кредита</button></div></div>`;
   const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на прага за ясно незначителни неточности</div><div style="padding:12px 14px" id="d30-calc">${d30CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за праг</div><div id="d30-proposal">${d30ProposalInner(code, c)}</div></div>
@@ -29169,7 +29189,7 @@ function renderAiQuestions(code, def) {
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-bottom:6px">Инструкция към AI (преглед)</div>
         <div id="${code}-prompt" style="background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:12px;color:var(--p-text2);line-height:1.7;min-height:42px"></div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-          <button class="btn btn-primary" onclick="runAiTest('${code}')">Изпълни с AI · ${creditPrice()} кредита</button>
+          <button class="btn btn-primary" onclick="runAiTest('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button>
           <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените документи.</span>
         </div>
         <div id="${code}-result" style="display:none;margin-top:14px"></div>
@@ -29923,7 +29943,7 @@ function pdAiPanel(code) {
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent);margin-bottom:6px">Инструкция към AI</div>
       <div style="max-height:240px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.65;white-space:pre-wrap">${escHtml(det.aiPrompt)}</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
-        <button class="btn btn-primary" onclick="pdRunAi('${code}')">Изпълни с AI · ${creditPrice()} кредита</button>
+        <button class="btn btn-primary" onclick="pdRunAi('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button>
         <span style="font-size:12px;color:var(--p-text3)">Прилага инструкцията върху приложените финансови отчети.</span>
       </div>
       <div id="${code}-pd-airesult" style="display:none;margin-top:14px"></div>
