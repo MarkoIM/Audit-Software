@@ -3918,10 +3918,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260816173435"></script>
-<script src="pd-spec.js?v=20260816173435"></script>
-<script src="pd-details.js?v=20260816173435"></script>
-<script src="test-details.js?v=20260816173435"></script>
+<script src="questions.js?v=20260817095231"></script>
+<script src="pd-spec.js?v=20260817095231"></script>
+<script src="pd-details.js?v=20260817095231"></script>
+<script src="test-details.js?v=20260817095231"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -30976,7 +30976,10 @@ function saveClientModal() {
 // (демо: 123456) → 3) влизане. „Запомни устройство" пропуска 2FA следващия
 // път. Изход връща на логин екрана. Реалната сигурност идва с backend-а.
 // ══════════════════════════════════════════════════════════════════════
-const AUTH_DEMO_CODE = '123456';
+let authCurrentCode = '';      // текущият 6-цифрен код, „изпратен по имейл" (генерира се при вход)
+function authGenCode() { try { return String(Math.floor(Math.random() * 1000000)).padStart(6, '0'); } catch (e) { return '000000'; } }
+// Проформа „изпращане по имейл" на 6-цифрен код (без бекенд/имейл сървър — кодът се показва като демо подсказка)
+function authSendCode(uid) { authCurrentCode = authGenCode(); const u = users[uid] || {}; authToast('Изпратихме 6-цифрен код на ' + maskEmail(u.email) + '.'); return authCurrentCode; }
 let authStep = 'login';        // 'login' | '2fa'
 let authPendingUid = null;     // потребител, изчакващ потвърждение с код
 
@@ -31011,7 +31014,7 @@ function renderAuth() {
       <label class="auth-remember"><input type="checkbox" id="auth-remember"> Запомни това устройство за 30 дни</label>
       <button class="auth-btn" onclick="authVerify()">Потвърди</button>
       <div class="auth-foot"><span class="auth-link" onclick="authResend()">Изпрати кода отново</span> · <span class="auth-link" onclick="authBack()">Назад</span></div>
-      <div class="auth-demo"><b>Демо код:</b> ${AUTH_DEMO_CODE}</div>
+      <div class="auth-demo"><b>Демо (без имейл сървър):</b> кодът е <b>${authCurrentCode}</b></div>
     </div>`;
     setTimeout(() => { const f = document.getElementById('tfa-0'); if (f) f.focus(); }, 30);
     return;
@@ -31053,6 +31056,7 @@ function authSso() {
 function authProceed(uid) {
   authPendingUid = uid; authError('');
   if (deviceTrusted()) { authComplete(uid); return; }   // доверено устройство → пропуска 2FA
+  authSendCode(uid);                                     // генерира и „изпраща" 6-цифрен код по имейл
   authStep = '2fa'; renderAuth();
 }
 
@@ -31076,11 +31080,12 @@ function authPaste(e) {
   if (t.length === 6) authVerify();
 }
 function authVerify() {
-  if (authCode() !== AUTH_DEMO_CODE) { authError('Грешен код. Демо кодът е ' + AUTH_DEMO_CODE + '.'); authShake(); return; }
+  if (!authCurrentCode) { authError('Няма активен код. Натисни „Изпрати кода отново".'); authShake(); return; }
+  if (authCode() !== authCurrentCode) { authError('Грешен код. Провери 6-цифрения код, изпратен на имейла ти.'); authShake(); return; }
   if ((document.getElementById('auth-remember') || {}).checked) { try { localStorage.setItem('auditpro_trusted_device', '1'); } catch (e) {} }
   authComplete(authPendingUid);
 }
-function authResend() { authToast('Изпратихме нов код (демо: ' + AUTH_DEMO_CODE + ').'); }
+function authResend() { authSendCode(authPendingUid); authError(''); renderAuth(); }
 function authForgot() { authToast('Демо: възстановяване на парола не е активно в прототипа.'); }
 function authBack() { authStep = 'login'; authError(''); renderAuth(); }
 
