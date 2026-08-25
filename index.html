@@ -1524,6 +1524,8 @@
   .ndoc-ic { width: 16px; flex: none; text-align: center; color: var(--p-text3); }
   .ndoc.ok .ndoc-ic { color: var(--p-green); } .ndoc.miss .ndoc-ic { color: var(--p-amber); } .ndoc.auto .ndoc-ic { color: var(--p-accent); }
   .ndoc-nm { flex: 1; color: var(--p-text1); font-weight: 600; min-width: 140px; }
+  .ndoc-fmt { display: block; font-weight: 400; font-size: 10.5px; color: var(--p-text3); letter-spacing: .2px; margin-top: 2px; }
+  .pd-slot-name .ndoc-fmt { display: block; }
   .ndoc-src { color: var(--p-text3); font-size: 11.5px; white-space: nowrap; }
   .ndoc-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
   .ndoc-badge.ok { color: var(--p-green); background: var(--p-green-bg); }
@@ -3980,10 +3982,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825203102"></script>
-<script src="pd-spec.js?v=20260825203102"></script>
-<script src="pd-details.js?v=20260825203102"></script>
-<script src="test-details.js?v=20260825203102"></script>
+<script src="questions.js?v=20260825204817"></script>
+<script src="pd-spec.js?v=20260825204817"></script>
+<script src="pd-details.js?v=20260825204817"></script>
+<script src="test-details.js?v=20260825204817"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -5969,7 +5971,9 @@ function b10AiInner(code) {
   // Компактни редове „Необходими документи и данни" (единен изглед като Етап 2/ПД)
   const rows = inputs.map((inp, i) => {
     const ok = aiInputOk(code, inp);
-    const nm = `<span class="ndoc-nm">${i + 1}. ${escHtml(inp.label)}</span>`;
+    const isUp = inp.type === 'upload';
+    const nm = `<span class="ndoc-nm">${i + 1}. ${escHtml(inp.label)}${isUp ? docFmtHint(inp.label) : ''}</span>`;
+    const acc = docFmtAccept(inp.label);
     const desc = `<span class="ndoc-src">${escHtml(inp.desc || defDesc(inp))}</span>`;
     const upCl = inp.type === 'upload' ? gClassify(code, inp.label, code.split('-')[0]) : null;
     const upCat = upCl && upCl.t === 'client' ? upCl.cat : '';
@@ -5978,9 +5982,9 @@ function b10AiInner(code) {
       const files = testFiles(code, inp.key);
       if (files.length) {
         const chips = files.map((f, j) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="b10RemoveFile('${code}',${inp.key},${j});return false">✕</a>`).join(' · ');
-        return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
+        return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" accept="${acc}" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
       }
-      return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${desc}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
+      return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${desc}<span class="ndoc-badge miss">липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" accept="${acc}" multiple style="display:none" onchange="b10AddFiles('${code}',${inp.key},this.files)"></label> ${repo}</span></div>`;
     }
     const open = inp.type === 'test'
       ? `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${inp.code}')">Отвори ${escHtml(inp.code)}</button>`
@@ -8803,13 +8807,13 @@ function gRefreshActiveG() {
 // Централен екран „Документи на ангажимента" — едно хранилище за целия одит
 // Тяло на стъпка „Документи" в съветника „Стартиране на ангажимента" (пази id=eng-docs-page за re-render хуковете).
 function startupTier1Row(f) {
-  const present = startupDocPresent(f.cat);
+  const present = startupDocPresent(f.cat), acc = docFmtAccept(f.name);
   const files = present ? '<span class="ndoc-src">' + (engDocs[f.cat] || []).map(x => escHtml(x.name)).join(', ') + '</span>' : '';
   const up = (f.id === 'TB')
-    ? `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${present ? 'Замени' : 'Качи'}<input type="file" style="display:none" onchange="startupUploadTb(this.files)"></label>`
-    : `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${present ? 'Замени' : 'Качи'}<input type="file" multiple style="display:none" onchange="startupUploadTier1('${f.cat}',this.files)"></label>`;
+    ? `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${present ? 'Замени' : 'Качи'}<input type="file" accept="${acc}" style="display:none" onchange="startupUploadTb(this.files)"></label>`
+    : `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${present ? 'Замени' : 'Качи'}<input type="file" accept="${acc}" multiple style="display:none" onchange="startupUploadTier1('${f.cat}',this.files)"></label>`;
   const badge = present ? '<span class="ent-badge done"><span class="d"></span>Качен</span>' : '<span class="ent-badge pending"><span class="d"></span>' + escHtml(f.status) + '</span>';
-  return `<div class="ndoc ${present ? 'ok' : (f.mandatory ? 'miss' : '')}"><span class="ndoc-ic">${present ? '✓' : (f.mandatory ? '⬆' : '○')}</span><span class="ndoc-nm" title="${escHtml(f.note)}">${escHtml(f.name)}</span>${files}<span class="ndoc-act">${badge} ${up}</span></div>`;
+  return `<div class="ndoc ${present ? 'ok' : (f.mandatory ? 'miss' : '')}"><span class="ndoc-ic">${present ? '✓' : (f.mandatory ? '⬆' : '○')}</span><span class="ndoc-nm" title="${escHtml(f.note)}">${escHtml(f.name)}${docFmtHint(f.name)}</span>${files}<span class="ndoc-act">${badge} ${up}</span></div>`;
 }
 function startupTier2Row(rep) {
   const provided = startupReportProvided(rep), cats = startupReportCats(rep), n = rep.unlocks.length;
@@ -8817,11 +8821,12 @@ function startupTier2Row(rep) {
   if (startupAcctMatch(rep) === false) {
     return `<div class="ndoc" style="opacity:.62"><span class="ndoc-ic">–</span><span class="ndoc-nm">${escHtml(rep.name)}</span><span class="ndoc-src">раздел ${rep.sec} · няма салда → неприложим</span><span class="ndoc-act"><button class="btn btn-secondary btn-sm" onclick="startupSetSection('${rep.sec}',true);entShowSetup('docs')">Приложим е</button></span></div>`;
   }
-  const up = `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${provided ? 'Замени' : 'Качи'}<input type="file" multiple style="display:none" onchange="startupUploadReport('${rep.id}',this.files)"></label>`;
+  const acc = docFmtAccept(rep.name);
+  const up = `<label class="btn btn-secondary btn-sm" style="cursor:pointer">${provided ? 'Замени' : 'Качи'}<input type="file" accept="${acc}" multiple style="display:none" onchange="startupUploadReport('${rep.id}',this.files)"></label>`;
   const defer = provided ? '' : ` <button class="btn btn-secondary btn-sm" onclick="startupSetSection('${rep.sec}',false);entShowSetup('docs')">Ще добавя по-късно</button>`;
   const files = provided ? '<span class="ndoc-src">' + (engDocs[cats[0]] || []).map(x => escHtml(x.name)).join(', ') + '</span>' : '';
   const badge = provided ? '<span class="ent-badge done"><span class="d"></span>Качена</span>' : '<span class="ent-badge active"><span class="d"></span>' + n + ' теста</span>';
-  return `<div class="ndoc ${provided ? 'ok' : ''}"><span class="ndoc-ic">${provided ? '✓' : '○'}</span><span class="ndoc-nm" title="${escHtml(eff)}">${escHtml(rep.name)} <span style="color:var(--p-text3);font-weight:400">· ${escHtml(eff)}</span></span>${files}<span class="ndoc-act">${badge} ${up}${defer}</span></div>`;
+  return `<div class="ndoc ${provided ? 'ok' : ''}"><span class="ndoc-ic">${provided ? '✓' : '○'}</span><span class="ndoc-nm" title="${escHtml(eff)}">${escHtml(rep.name)}${docFmtHint(rep.name)} <span style="color:var(--p-text3);font-weight:400">· ${escHtml(eff)}</span></span>${files}<span class="ndoc-act">${badge} ${up}${defer}</span></div>`;
 }
 function startupTier2Card() {
   const reps = STARTUP_TIER2.slice().sort((a, b) => b.unlocks.length - a.unlocks.length);
@@ -9328,7 +9333,7 @@ function pdEngRepoCard(focusCat) {
       const label = (typeof pdDocLabel === 'function') ? pdDocLabel(d.name) : d.name;
       const fl = has ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, j) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="engPdRemove('${code}','${key}',${j})">✕</button></div>`).join('') + '</div>' : '';
       const st = has ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${escHtml(d.level || '')}${d.level ? ' · ' : ''}Липсва</span>`;
-      return `<div class="pd-slot${has ? ' filled' : ''}" data-cat="pd_${code}_${key}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(label)}</span>${st}</div>${fl}<div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="engPdAdd('${code}','${key}',this.files)"></label></div></div>`;
+      return `<div class="pd-slot${has ? ' filled' : ''}" data-cat="pd_${code}_${key}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(label)}${docFmtHint(label)}</span>${st}</div>${fl}<div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" accept="${docFmtAccept(label)}" multiple style="display:none" onchange="engPdAdd('${code}','${key}',this.files)"></label></div></div>`;
     }).join('');
     groups += `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${code} · ${escHtml(spec.name)} <span style="font-weight:600;color:var(--p-text3)">— ${filled}/${total} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
   });
@@ -9356,18 +9361,34 @@ function gOptOut(code, slot, val) {
   engDocsPersist(); gEngSync(code); gRefreshActiveG();
 }
 
+// Приложими файлови формати за документ (по вид на документа): структурирани данни → електронна
+// таблица; отчети/политики → документ; външни/правни/потвърждения → документ/скан.
+function docFormats(name) {
+  const s = (name || '').toLowerCase();
+  if (/оборотна ведомост|главна книга|регистър|подкнига|инвентарна книга|складов|наличност|дневник|ведомост|аналитична|разчет|погасителн|амортизац|възрастов|рекапитулац|инвентаризацион|извлечени|калкулац|обороти/.test(s)) return ['.xlsx', '.xls', '.csv'];
+  if (/бюджет|очакван|прогноз|управленски модел/.test(s)) return ['.xlsx', '.csv', '.pdf'];
+  if (/потвърждени|оценит|оценка|експертен доклад|доклад|договор|устав|дружествен|протокол|писмо|деклараци|кореспонденц|решение|заповед|нотариал|скица|\bакт\b|собственост|обезпечени|гаранци|съдебн|лиценз/.test(s)) return ['.pdf', '.docx', '.jpg', '.png'];
+  if (/гфо|финансов отчет|отчет за|пояснени|счетоводна политика|политика|стратегия|програма|меморандум/.test(s)) return ['.pdf', '.docx', '.xlsx'];
+  return ['.pdf', '.xlsx', '.xls', '.csv', '.docx'];
+}
+function docFmtLabel(name) { return 'Формати: ' + docFormats(name).join(' · '); }
+function docFmtAccept(name) { return docFormats(name).join(','); }
+function docFmtHint(name) { return `<span class="ndoc-fmt">${docFmtLabel(name)}</span>`; }
+
 // Рендер на един слот в docs картата на тест: присвояване или авто-връзка
 function gDocSlotHtml(code, slot, d) {
   const m = (engSlotMap(code) || {})[slot];
   const tt = d.note ? ` title="${escHtml(d.note)}"` : '';
-  const nm = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}</span>`;
+  const nmPlain = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}</span>`;
+  const nm = `<span class="ndoc-nm"${tt}>${d.n}. ${escHtml(d.name)}${docFmtHint(d.name)}</span>`;
+  const acc = docFmtAccept(d.name);
   const repo = (cat) => `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs(${cat ? "'" + cat + "'" : ''})">Отвори хранилището</button>`;
   // Документ без връзка към хранилище или взет от друг тест (авто-свързан) — БЕЗ бутон „Отвори хранилището"
-  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nm}</div>`;
+  if (!m) return `<div class="ndoc"><span class="ndoc-ic">•</span>${nmPlain}</div>`;
   if (m.t !== 'client') {
     const info = gInternalInfo(m.ref), ready = gInternalReady(m.ref);
     const label = ready ? 'Свързан автоматично' : 'Ще се свърже автоматично';
-    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nm}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span></div>`;
+    return `<div class="ndoc ${ready ? 'auto' : 'pend'}"><span class="ndoc-ic">🔗</span>${nmPlain}<span class="ndoc-src">${escHtml(info.src)}</span><span class="ndoc-badge auto">${label}</span></div>`;
   }
   const has = gRepoHas(m.cat), out = gOptedOut(code, slot);
   if (has && !out) {
@@ -9377,7 +9398,7 @@ function gDocSlotHtml(code, slot, d) {
   if (has && out) {
     return `<div class="ndoc"><span class="ndoc-ic">○</span>${nm}<span class="ndoc-src">в хранилището · не е присвоен</span><span class="ndoc-act"><button class="btn btn-secondary btn-sm" onclick="gOptOut('${code}','${slot}',false)">Присвои</button> ${repo(m.cat)}</span></div>`;
   }
-  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> ${repo(m.cat)}</span></div>`;
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}<span class="ndoc-src">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-badge miss">Липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" accept="${acc}" multiple style="display:none" onchange="gRepoAdd('${m.cat}',this.files)"></label> ${repo(m.cat)}</span></div>`;
 }
 
 // Генеричен компактен ред „Необходими документи и данни" (единен изглед за всички етапи).
@@ -9393,14 +9414,15 @@ function ndocSlot(code, slot, d) {
 function ndocRow(code, slot) {
   const d = __ndocDefs[code + '::' + slot]; if (!d) return '';
   const files = testFiles(code, slot);
-  const nm = `<span class="ndoc-nm">${d.n ? escHtml(String(d.n)) + '. ' : ''}${escHtml(d.name)}</span>`;
+  const nm = `<span class="ndoc-nm">${d.n ? escHtml(String(d.n)) + '. ' : ''}${escHtml(d.name)}${docFmtHint(d.name)}</span>`;
+  const acc = docFmtAccept(d.name);
   const src = d.src ? `<span class="ndoc-src">${escHtml(d.src)}</span>` : '';
   const repo = `<button class="btn btn-secondary btn-sm" onclick="entShowEngDocs()">Отвори хранилището</button>`;
   if (files.length) {
     const chips = files.map((f, i) => `${escHtml(f.name)} <a href="#" class="ndoc-x" title="Премахни" onclick="ndocRemove('${code}','${slot}',${i});return false">✕</a>`).join(' · ');
-    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
+    return `<div class="ndoc ok"><span class="ndoc-ic">✓</span>${nm}<span class="ndoc-src">${chips}</span><span class="ndoc-badge ok">Качен</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Добави още">+<input type="file" accept="${acc}" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
   }
-  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${src}<span class="ndoc-badge miss">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
+  return `<div class="ndoc miss"><span class="ndoc-ic">⬆</span>${nm}${src}<span class="ndoc-badge miss">${d.req ? 'задължителен · ' : ''}липсва</span><span class="ndoc-act"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи<input type="file" accept="${acc}" multiple style="display:none" onchange="ndocAdd('${code}','${slot}',this.files)"></label> ${repo}</span></div>`;
 }
 function ndocAdd(code, slot, files) { testAddFiles(code, slot, files); ndocRefreshSlot(code, slot); }
 function ndocRemove(code, slot, i) { testRemoveFile(code, slot, i); ndocRefreshSlot(code, slot); }
@@ -9435,7 +9457,7 @@ function gEngRepoCard(focusCat) {
       if (files.length) gFilled++;
       const fl = files.length ? '<div class="pd-slot-files" style="margin-top:6px">' + files.map((f, i) => `<div class="pd-file"><span class="nm">${escHtml(f.name)}</span><span class="sz">${pdFmtSize(f.size)}</span><button class="rm" title="Премахни" onclick="gRepoRemove('${d.id}',${i})">✕</button></div>`).join('') + '</div>' : '';
       const st = files.length ? `<span class="pd-slot-count" style="color:var(--p-green);font-weight:700">✓ Качен</span>` : `<span class="pd-slot-count">${d.req ? 'Задължителен · ' : ''}Липсва</span>`;
-      return `<div class="pd-slot${files.length ? ' filled' : ''}" data-cat="${d.id}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
+      return `<div class="pd-slot${files.length ? ' filled' : ''}" data-cat="${d.id}"><div class="pd-slot-head"><span class="pd-slot-dot"></span><span class="pd-slot-name">${escHtml(d.name)}${docFmtHint(d.name)}</span>${st}</div><div style="margin-top:8px"><label class="btn btn-secondary btn-sm" style="cursor:pointer">Качи документ<input type="file" accept="${docFmtAccept(d.name)}" multiple style="display:none" onchange="gRepoAdd('${d.id}',this.files)"></label></div>${fl}</div>`;
     }).join('');
     return `<details style="margin-bottom:6px"${hasFocus ? ' open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--p-text1);padding:7px 0">${escHtml(g)} <span style="font-weight:600;color:var(--p-text3)">— ${gFilled}/${items.length} качени</span></summary><div style="padding:4px 0 8px">${slots}</div></details>`;
   };
