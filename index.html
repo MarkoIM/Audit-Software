@@ -575,6 +575,29 @@
   .setup-arrow { color: var(--p-text3); font-size: 13px; }
   .setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--p-border); }
   @media (max-width: 720px) { .setup-steps { gap: 4px; } .setup-step { padding: 7px 10px; font-size: 11.5px; } .setup-step .sl { display: none; } }
+  /* Преглед на ангажимента (dashboard) */
+  .dash-kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 16px; }
+  .dash-kpi { border: 1px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); padding: 12px 14px; }
+  .dash-kpi .l { font-size: 11.5px; color: var(--p-text3); font-weight: 600; }
+  .dash-kpi .v { font-size: 22px; font-weight: 700; color: var(--p-text1); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .dash-kpi .v small { font-size: 13px; font-weight: 600; color: var(--p-text3); }
+  .dash-kpi .sub { font-size: 11px; color: var(--p-text3); margin-top: 1px; }
+  .dash-kpi.good .v { color: var(--p-green); } .dash-kpi.warn .v { color: var(--p-amber); }
+  .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .dash-next { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+  .dash-next .msg { font-size: 13.5px; color: var(--p-text1); font-weight: 600; }
+  .dash-mini { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dash-mini span { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--p-bg); border: 1px solid var(--p-border); color: var(--p-text3); }
+  .dash-mini span.ok { color: var(--p-green); border-color: var(--p-green); }
+  .dash-mat { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 14px; }
+  .dash-mat .mt { text-align: center; }
+  .dash-mat .mk { font-size: 11px; color: var(--p-text3); font-weight: 600; }
+  .dash-mat .mv { font-size: 15.5px; font-weight: 700; color: var(--p-text1); font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .dash-att .att-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-top: 1px solid var(--p-border); cursor: pointer; font-size: 13px; }
+  .dash-att .att-row:hover { background: var(--p-accent-bg); }
+  .dash-att .att-row .code { font-weight: 700; color: var(--p-accent); min-width: 52px; }
+  .dash-att .att-empty { padding: 14px 16px; font-size: 13px; color: var(--p-green); }
+  @media (max-width: 900px) { .dash-kpis { grid-template-columns: repeat(2,1fr); } .dash-cols { grid-template-columns: 1fr; } }
   .ent-kpis { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); margin-bottom: 20px; overflow: hidden; }
   .ent-kpi { padding: 13px 16px; border-right: 1px solid var(--p-border); }
   .ent-kpi:last-child { border-right: none; }
@@ -3957,10 +3980,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825132429"></script>
-<script src="pd-spec.js?v=20260825132429"></script>
-<script src="pd-details.js?v=20260825132429"></script>
-<script src="test-details.js?v=20260825132429"></script>
+<script src="questions.js?v=20260825134159"></script>
+<script src="pd-spec.js?v=20260825134159"></script>
+<script src="pd-details.js?v=20260825134159"></script>
+<script src="test-details.js?v=20260825134159"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -30535,28 +30558,87 @@ function entCrumbs(parts) {
   }).join('');
 }
 
+// ── Помощници за „Преглед на ангажимента" (реални статуси, същественост, следваща стъпка) ──
+function dashTestStats() {
+  const tq = window.testQuestions || {}, c = { total: 0, not_started: 0, in_progress: 0, review: 0, returned: 0, reviewed: 0, finalized: 0, na: 0 };
+  Object.keys(tq).forEach(code => { const s = (typeof testStatusOf === 'function') ? testStatusOf(code) : 'not_started'; c[s] = (c[s] || 0) + 1; c.total++; });
+  c.applicable = c.total - c.na;
+  c.done = c.reviewed + c.finalized;
+  c.pct = c.applicable ? Math.round(c.done / c.applicable * 100) : 0;
+  return c;
+}
+function dashSafeFmt(v) { return (v == null || isNaN(v)) ? '—' : (typeof g00Fmt === 'function' ? g00Fmt(v) : String(v)); }
+function dashMateriality() {
+  const r = { m: NaN, pm: NaN, thr: NaN };
+  try { if (typeof d10Compute === 'function') { const x = d10Compute('D-10'); if (x && !isNaN(x.materiality)) r.m = x.materiality; } } catch (e) {}
+  try { if (typeof d20Compute === 'function') { const x = d20Compute('D-20'); if (x && !isNaN(x.pm)) r.pm = x.pm; } } catch (e) {}
+  try { if (typeof d30Compute === 'function') { const x = d30Compute('D-30'); if (x && !isNaN(x.thr)) r.thr = x.thr; } } catch (e) {}
+  return r;
+}
+function dashAttention() {
+  const tq = window.testQuestions || {}, out = [];
+  Object.keys(tq).forEach(code => {
+    const s = (typeof testStatusOf === 'function') ? testStatusOf(code) : '';
+    if (s === 'review' || s === 'returned') {
+      const nm = ((typeof testEffectiveDef === 'function') && (testEffectiveDef(code) || {}).test) || (tq[code] && tq[code].test) || code;
+      out.push({ code, name: nm, status: s });
+    }
+  });
+  out.sort((a, b) => (a.status === b.status ? a.code.localeCompare(b.code) : (a.status === 'returned' ? -1 : 1)));
+  return out;
+}
+function dashNext() {
+  if (typeof engDocsStepDone === 'function' && !engDocsStepDone()) return { msg: 'Качете документите на ангажимента, за да започне пакетът.', btn: 'Към документите', act: "entShowSetup('docs')" };
+  if (typeof engParamsConfirmed === 'function' && !engParamsConfirmed()) return { msg: 'Попълнете и потвърдете данните за ангажимента, за да отключите Вълна 1.', btn: 'Към данните за ангажимента', act: "entShowSetup('data')" };
+  for (let n = 1; n <= 6; n++) { const st = waveState(n); if (st.ready && st.eligible.length > 0) return { msg: 'Вълна ' + n + ' е готова за изпълнение (' + st.eligible.length + ' теста).', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')" }; }
+  const att = dashAttention();
+  if (att.length) return { msg: att.length + ' теста чакат преглед или корекция — вижте „Изисква внимание" по-долу.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')" };
+  for (let n = 2; n <= 6; n++) { const st = waveState(n); if (!st.ready) return { msg: 'Одобрете тестовете от предходната вълна, за да отключите Вълна ' + n + '.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')" }; }
+  return { msg: 'Всички вълни са изпълнени и одобрени.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')", done: true };
+}
 function entShowDashboard() {
   const m = entMainTop();
   entSetActive(document.querySelector('#ent-tree .ent-item[data-k="dash"]'));
   entCrumbs([{ l: iosCurrentClient || 'Клиент' }, { l: 'Преглед' }]);
   const client = iosCurrentClient || Object.keys(clients)[0], year = iosCurrentYear || 2025;
-  let totWd = 0, doneWd = 0;
+  const c = dashTestStats();
+  const pdDone = permanentFile.filter(d => d.status === 'done').length;
   const phaseRows = auditPhases.map((ph, i) => {
-    let t = 0, d = 0; ph.sections.forEach(s => s.wds.forEach(w => { t++; if (w.status === 'done') d++; }));
-    totWd += t; doneWd += d;
-    const pct = t ? Math.round(d / t * 100) : 0;
     return `<tr class="click" onclick="entShowSection('${ph.sections[0].code}')"><td>Етап ${i + 1} · ${ph.name}</td><td class="r num">${ph.sections.length}</td><td><span class="ent-badge ${ph.status}"><span class="d"></span>${entStatusLabel(ph.status)}</span></td></tr>`;
   }).join('');
-  const pdDone = permanentFile.filter(d => d.status === 'done').length;
-  const secCount = auditPhases.reduce((a, p) => a + p.sections.length, 0);
+  // KPI карти по реален статус на тестовете
+  const kpis = `<div class="dash-kpis">
+    <div class="dash-kpi"><div class="l">Работни документи</div><div class="v">${c.applicable}</div><div class="sub">${c.na ? c.na + ' неприложими' : 'приложими за ангажимента'}</div></div>
+    <div class="dash-kpi good"><div class="l">Завършени</div><div class="v">${c.done} <small>/ ${c.applicable}</small></div><div class="sub">${c.pct}% · вкл. ${c.finalized} финализирани</div></div>
+    <div class="dash-kpi warn"><div class="l">За преглед</div><div class="v">${c.review + c.returned}</div><div class="sub">${c.returned} върнати за корекция</div></div>
+    <div class="dash-kpi"><div class="l">В процес</div><div class="v">${c.in_progress}</div><div class="sub">${c.not_started} незапочнати</div></div>
+    <div class="dash-kpi"><div class="l">Постоянно досие</div><div class="v">${pdDone} <small>/ ${permanentFile.length}</small></div><div class="sub">документи</div></div>
+  </div>`;
+  // Следваща стъпка + Същественост (две колони)
+  const nx = dashNext();
+  const s1 = (typeof engDocsStepDone === 'function') && engDocsStepDone();
+  const s2 = (typeof engParamsConfirmed === 'function') && engParamsConfirmed();
+  const nextCard = `<div class="sh-card"><div class="ent-card-h">Следваща стъпка</div><div class="dash-next">
+    <div class="msg">${nx.done ? '✓ ' : '→ '}${escHtml(nx.msg)}</div>
+    <div class="dash-mini"><span class="${s1 ? 'ok' : ''}">${s1 ? '✓' : '○'} Документи</span><span class="${s2 ? 'ok' : ''}">${s2 ? '✓' : '○'} Данни за ангажимента</span><span>Пакетно изпълнение</span></div>
+    <div><button class="btn btn-primary btn-sm" onclick="${nx.act}">${escHtml(nx.btn)}</button></div>
+  </div></div>`;
+  const mat = dashMateriality();
+  const matCard = `<div class="sh-card"><div class="ent-card-h">Същественост</div><div class="dash-mat">
+    <div class="mt"><div class="mk">За ФО (D-10)</div><div class="mv">${dashSafeFmt(mat.m)}</div></div>
+    <div class="mt"><div class="mk">При изпълнение (D-20)</div><div class="mv">${dashSafeFmt(mat.pm)}</div></div>
+    <div class="mt"><div class="mk">Незначителни (D-30)</div><div class="mv">${dashSafeFmt(mat.thr)}</div></div>
+  </div>${isNaN(mat.m) ? '<div style="padding:0 14px 12px;font-size:11px;color:var(--p-text3)">Определя се в раздел D (Същественост) — изпълнете D-10, D-20 и D-30.</div>' : ''}</div>`;
+  // Изисква внимание
+  const att = dashAttention(), attShown = att.slice(0, 8);
+  const attRows = attShown.map(a => `<div class="att-row" onclick="entShowWd('${a.code}')"><span class="code">${a.code}</span><span style="flex:1">${escHtml(a.name)}</span>${testStatusBadge(a.code)}</div>`).join('');
+  const attMore = att.length > attShown.length ? `<div class="att-row" style="cursor:default;color:var(--p-text3)">+ още ${att.length - attShown.length} …</div>` : '';
+  const attCard = `<div class="sh-card dash-att"><div class="ent-card-h">Изисква внимание</div>${att.length ? (attRows + attMore) : '<div class="att-empty">✓ Няма тестове, чакащи преглед или корекция.</div>'}</div>`;
   m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Преглед на ангажимента</h1><div class="sub">${client} · Одит на ГФО за ${year}</div></div><span class="ent-badge active"><span class="d"></span>В процес</span></div>
-    <div class="ent-kpis">
-      <div class="ent-kpi"><div class="l">Завършени РД</div><div class="v">${doneWd} <small>/ ${totWd}</small></div></div>
-      <div class="ent-kpi"><div class="l">Постоянно досие</div><div class="v">${pdDone} <small>/ ${permanentFile.length}</small></div></div>
-      <div class="ent-kpi"><div class="l">Етапи</div><div class="v">${auditPhases.length}</div></div>
-      <div class="ent-kpi"><div class="l">Раздели</div><div class="v">${secCount}</div></div>
-    </div>
+    <div class="ent-h"><div><h1>Преглед на ангажимента</h1><div class="sub">${escHtml(client)} · Одит на ГФО за ${year}</div></div><span class="ent-badge active"><span class="d"></span>В процес</span></div>
+    ${kpis}
+    <div class="dash-cols">${nextCard}${matCard}</div>
+    ${attCard}
     <div class="sh-card"><div class="ent-card-h">Прогрес по етапи</div>
       <table class="ent-tbl"><thead><tr><th>Етап</th><th class="r">Раздели</th><th>Статус</th></tr></thead><tbody>${phaseRows}</tbody></table>
     </div>
