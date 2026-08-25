@@ -563,6 +563,18 @@
   .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
   .eng-secchk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--p-text2); cursor: pointer; }
   @media (max-width: 720px) { .eng-secgrid { grid-template-columns: 1fr; } }
+  /* Съветник „Стартиране на ангажимента" — stepper + footer */
+  .setup-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .setup-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--p-border); border-radius: 999px; background: var(--p-surface); color: var(--p-text2); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .setup-step:hover { border-color: var(--p-accent); }
+  .setup-step .sn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--p-border); color: var(--p-text2); font-size: 11px; font-weight: 700; }
+  .setup-step.cur { border-color: var(--p-accent); background: var(--p-accent-bg); color: var(--p-accent); }
+  .setup-step.cur .sn { background: var(--p-accent); color: #fff; }
+  .setup-step.done { color: var(--p-green); border-color: var(--p-green); }
+  .setup-step.done .sn { background: var(--p-green); color: #fff; }
+  .setup-arrow { color: var(--p-text3); font-size: 13px; }
+  .setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--p-border); }
+  @media (max-width: 720px) { .setup-steps { gap: 4px; } .setup-step { padding: 7px 10px; font-size: 11.5px; } .setup-step .sl { display: none; } }
   .ent-kpis { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); margin-bottom: 20px; overflow: hidden; }
   .ent-kpi { padding: 13px 16px; border-right: 1px solid var(--p-border); }
   .ent-kpi:last-child { border-right: none; }
@@ -3945,10 +3957,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825122118"></script>
-<script src="pd-spec.js?v=20260825122118"></script>
-<script src="pd-details.js?v=20260825122118"></script>
-<script src="test-details.js?v=20260825122118"></script>
+<script src="questions.js?v=20260825132429"></script>
+<script src="pd-spec.js?v=20260825132429"></script>
+<script src="pd-details.js?v=20260825132429"></script>
+<script src="test-details.js?v=20260825132429"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8764,25 +8776,22 @@ function gRefreshActiveG() {
   if (document.getElementById('eng-docs-page') && typeof entShowEngDocs === 'function') entShowEngDocs();
 }
 // Централен екран „Документи на ангажимента" — едно хранилище за целия одит
-function entShowEngDocs(focusCat) {
-  const m = entMainTop();
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="engdocs"]'));
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Документи на ангажимента' }]);
-  m.innerHTML = `<div class="ent-page" id="eng-docs-page">
-    <div class="ent-h"><div><h1>Документи на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · качете веднъж · ползват се от всички тестове</div></div></div>
+// Тяло на стъпка „Документи" в съветника „Стартиране на ангажимента" (пази id=eng-docs-page за re-render хуковете).
+function engDocsBody(focusCat) {
+  return `<div id="eng-docs-page">
+    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
+      <b>Стъпка 1.</b> Качете документите <b>веднъж</b> тук — присвояват се автоматично на всички тестове, които ги ползват. Задължителните (оборотна ведомост, проект на ГФО) отключват пакетното изпълнение.
+    </div></div>
     ${pdEngRepoCard(focusCat)}
     ${gEngRepoCard(focusCat)}
   </div>`;
-  if (focusCat) {
-    const el = document.querySelector('#eng-docs-page [data-cat="' + focusCat + '"]');
-    if (el) {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-      el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px';
-      const prevBg = el.style.background; el.style.background = 'var(--p-accent-bg)';
-      setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; el.style.background = prevBg; } catch (e) {} }, 2800);
-    }
-  }
 }
+function engDocsStepDone() {
+  const ed = window.engDocs || {}; if (Object.keys(ed).some(k => (ed[k] || []).length > 0)) return true;
+  const pu = window.pdUploads || {}; return Object.keys(pu).some(k => { const o = pu[k] || {}; return Object.keys(o).some(s => (o[s] || []).length > 0); });
+}
+// Обратна съвместимост + дълбока връзка „Отвори хранилището" → съветникът, стъпка „Документи".
+function entShowEngDocs(focusCat) { entShowSetup('docs', focusCat); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ВЪЛНА 0 · Данни за ангажимента (глобални параметри) + Пакетно/вълново изпълнение
@@ -8829,10 +8838,8 @@ function engApplyNa() {
   if (changed) { try { persistStatus(); } catch (e) {} }
 }
 
-function entShowEngData() {
-  const m = entMainTop();
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="engdata"]'));
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Данни за ангажимента' }]);
+// Тяло на стъпка „Данни за ангажимента" (глобални параметри) в съветника.
+function engDataBody() {
   const confirmed = engParamsConfirmed();
   const paramRows = ENG_PARAM_DEFS.map(p => {
     const cur = engParamRaw(p.key), usingDef = (cur == null || cur === '');
@@ -8844,12 +8851,10 @@ function entShowEngData() {
   const defInfo = ENG_DEFAULTS_INFO.map(d => `<tr><td class="base">${escHtml(d[0])}</td><td>${escHtml(d[1])}</td></tr>`).join('');
   const sched = (k, ph, type) => `<div class="b40-f"><span class="b40-fl">${escHtml(ph)}</span><input ${type ? 'type="' + type + '"' : ''} value="${escHtml(engParams[k] || '')}" onchange="engDataSetText('${k}',this.value)"></div>`;
   const teamN = Object.keys(window.team || {}).length;
-  m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Данни за ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · Вълна 0 — попълва се веднъж за целия ангажимент</div></div>
-      <span class="ent-badge ${confirmed ? 'done' : 'pending'}"><span class="d"></span>${confirmed ? 'Потвърдена' : 'Незавършена'}</span></div>
-
+  return `
     <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      Тези параметри днес се избират вътре в отделните тестове, но са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: 35 теста тръгват веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
+      <b>Стъпка 2.</b> Тези параметри са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: първата вълна тръгва веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
+      ${confirmed ? '<span class="ent-badge done" style="margin-left:6px"><span class="d"></span>Потвърдена</span>' : ''}
     </div></div>
 
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Глобални параметри</div><div style="padding:12px 14px">
@@ -8871,18 +8876,62 @@ function entShowEngData() {
       </div></div></div>
 
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Стойности по подразбиране (сменят се вътре в теста)</div><div style="padding:12px 14px">
-      <table class="b50-att" style="min-width:520px"><tbody>${defInfo}</tbody></table></div></div>
-
-    <div class="sh-card"><div style="padding:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="engConfirmData()">${confirmed ? '✓ Данните са потвърдени — обнови' : 'Потвърди и отключи Вълна 1'}</button>
-      <a href="#" onclick="entShowBatch();return false" style="color:var(--p-accent);font-weight:700">Към пакетно изпълнение →</a>
-      <div style="font-size:11px;color:var(--p-text3)">Потвърждаването отключва автоматичното изпълнение на първата вълна.</div>
-    </div></div>
-  </div>`;
+      <table class="b50-att" style="min-width:520px"><tbody>${defInfo}</tbody></table></div></div>`;
 }
-function engDataSet(key, val) { engParamSet(key, val); if (key === 'matVariant' || key === 'framework') { /* веригата чете на живо */ } entShowEngData(); }
+function engDataSet(key, val) { engParamSet(key, val); entShowSetup('data'); }
 function engDataSetText(key, val) { engParams[key] = val; engParamsPersist(); }
-function engConfirmData() { engParamSet('confirmed', '1'); engApplyNa(); if (typeof entRenderTree === 'function') entRenderTree(); entShowBatch(); }
+function engConfirmData() { engParamSet('confirmed', '1'); engApplyNa(); if (typeof entRenderTree === 'function') entRenderTree(); entShowSetup('batch'); }
+
+// ── Съветник „Стартиране на ангажимента": Документи → Данни → Пакетно изпълнение ──
+let engSetupStep = 'docs';
+const SETUP_STEPS = [
+  { k: 'docs', n: 1, l: 'Документи' },
+  { k: 'data', n: 2, l: 'Данни за ангажимента' },
+  { k: 'batch', n: 3, l: 'Пакетно изпълнение' }
+];
+function setupStepDone(k) { if (k === 'docs') return engDocsStepDone(); if (k === 'data') return engParamsConfirmed(); return false; }
+function setupStepper(step) {
+  return `<div class="setup-steps">` + SETUP_STEPS.map(s => {
+    const state = s.k === step ? 'cur' : (setupStepDone(s.k) ? 'done' : 'todo');
+    return `<button class="setup-step ${state}" onclick="entShowSetup('${s.k}')"><span class="sn">${(state === 'done') ? '✓' : s.n}</span><span class="sl">${escHtml(s.l)}</span></button>`;
+  }).join('<span class="setup-arrow">→</span>') + `</div>`;
+}
+function setupFooter(step) {
+  const idx = SETUP_STEPS.findIndex(s => s.k === step);
+  const prev = SETUP_STEPS[idx - 1];
+  const left = prev ? `<button class="btn btn-secondary" onclick="entShowSetup('${prev.k}')">← ${escHtml(prev.l)}</button>` : '<span></span>';
+  let right;
+  if (step === 'docs') right = `<button class="btn btn-primary" onclick="entShowSetup('data')">Продължи към данните →</button>`;
+  else if (step === 'data') right = `<button class="btn btn-primary" onclick="engConfirmData()">${engParamsConfirmed() ? 'Потвърди и продължи →' : 'Потвърди и отключи Вълна 1 →'}</button>`;
+  else right = `<button class="btn btn-secondary" onclick="entShowDashboard()">Към прегледа на ангажимента</button>`;
+  return `<div class="setup-footer">${left}${right}</div>`;
+}
+function entShowSetup(step, focusCat) {
+  step = step || engSetupStep || 'docs'; engSetupStep = step;
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="setup"]'));
+  const stepLabel = (SETUP_STEPS.find(s => s.k === step) || {}).l || '';
+  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Стартиране на ангажимента' }, { l: stepLabel }]);
+  const body = step === 'docs' ? engDocsBody(focusCat) : (step === 'data' ? engDataBody() : engBatchBody());
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Стартиране на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · Вълна 0 → пакетно изпълнение</div></div>
+      <button class="ent-credits" onclick="entShowCredits()" style="cursor:pointer"><b>${creditBalance()}</b> кред.</button></div>
+    ${setupStepper(step)}
+    ${body}
+    ${setupFooter(step)}
+  </div>`;
+  if (step === 'docs' && focusCat) {
+    const el = document.querySelector('#eng-docs-page [data-cat="' + focusCat + '"]');
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+      el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px';
+      const prevBg = el.style.background; el.style.background = 'var(--p-accent-bg)';
+      setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; el.style.background = prevBg; } catch (e) {} }, 2800);
+    }
+  }
+}
+// Обратна съвместимост: старите точки за вход отвеждат до съответната стъпка на съветника.
+function entShowEngData() { entShowSetup('data'); }
 
 // ── Вълнов модел ──────────────────────────────────────────────────────────
 const WAVE1_DETAIL_SECS = ['J', 'M', 'O', 'P', 'Q', 'R', 'U', 'V'];   // доказателства на ниво раздел → налични предварително
@@ -8991,16 +9040,16 @@ function waveRun(n) {
   alert('Пакетът приключи: изпълнени ' + okN + ' теста. Прегледайте и одобрете резултатите, за да отключите следващата вълна.');
 }
 
-function entShowBatch() {
-  const m = entMainTop();
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="batch"]'));
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Пакетно изпълнение' }]);
+// Тяло на стъпка „Пакетно изпълнение" в съветника.
+function engBatchBody() {
   const confirmed = engParamsConfirmed();
   const w0 = `<div class="wave-card ${confirmed ? 'done' : 'todo'}">
     <div class="wave-h"><div><span class="wave-n">0</span><b>${WAVE_META[0].name}</b></div>
       <span class="ent-badge ${confirmed ? 'done' : 'pending'}"><span class="d"></span>${confirmed ? 'Потвърдена' : 'Незавършена'}</span></div>
     <div class="wave-desc">${WAVE_META[0].desc}</div>
-    <div class="wave-act"><button class="btn ${confirmed ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="entShowEngData()">${confirmed ? 'Отвори данните за ангажимента' : 'Попълни данните за ангажимента'}</button></div>
+    <div class="wave-act">
+      <button class="btn btn-secondary btn-sm" onclick="entShowSetup('docs')">Документи</button>
+      <button class="btn ${confirmed ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="entShowSetup('data')">${confirmed ? 'Данни за ангажимента' : 'Попълни данните за ангажимента'}</button></div>
   </div>`;
   const waves = [1, 2, 3, 4, 5, 6].map(n => {
     const st = waveState(n);
@@ -9029,15 +9078,16 @@ function entShowBatch() {
     <div class="wave-h"><div><span class="wave-n">✍</span><b>Извън вълните — само одиторът</b></div></div>
     <div class="wave-desc">Тези тестове документират факти и не се генерират: ${outside.join(', ') || 'B-10, B-50'}.</div>
   </div>`;
-  m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Пакетно изпълнение</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · шест вълни с одобрения между тях</div></div>
-      <button class="ent-credits" onclick="entShowCredits()" style="cursor:pointer"><b>${creditBalance()}</b> кред.</button></div>
+  const gate = engParamsConfirmed() ? '' : `<div class="sh-card" style="margin-bottom:16px"><div class="wave-gate" style="margin:12px 14px">🔒 Първо потвърдете „Данни за ангажимента" (Стъпка 2), за да отключите Вълна 1.</div></div>`;
+  return `
     <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      Всяка вълна тръгва автоматично, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
+      <b>Стъпка 3.</b> Всяка вълна тръгва, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
     </div></div>
-    <div class="wave-grid">${w0}${waves}${outCard}</div>
-  </div>`;
+    ${gate}
+    <div class="wave-grid">${w0}${waves}${outCard}</div>`;
 }
+// Обратна съвместимост: старата точка за вход отвежда до стъпка „Пакетно изпълнение".
+function entShowBatch() { entShowSetup('batch'); }
 
 // Постоянно досие в единното хранилище — ползва СЪЩИЯ pdUploads store като ПД екраните
 function engPdAdd(code, key, files) { if (typeof pdAddFiles === 'function') pdAddFiles(code, key, files); if (document.getElementById('eng-docs-page')) entShowEngDocs(); }
@@ -30451,9 +30501,7 @@ function entTogglePhase(btn) {
 function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
-  h += `<button class="ent-item" data-k="engdata" onclick="entShowEngData()">Данни за ангажимента</button>`;
-  h += `<button class="ent-item" data-k="engdocs" onclick="entShowEngDocs()">Документи на ангажимента</button>`;
-  h += `<button class="ent-item" data-k="batch" onclick="entShowBatch()">Пакетно изпълнение</button>`;
+  h += `<button class="ent-item" data-k="setup" onclick="entShowSetup('docs')">Стартиране на ангажимента</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
