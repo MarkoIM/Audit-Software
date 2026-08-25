@@ -3980,10 +3980,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825150442"></script>
-<script src="pd-spec.js?v=20260825150442"></script>
-<script src="pd-details.js?v=20260825150442"></script>
-<script src="test-details.js?v=20260825150442"></script>
+<script src="questions.js?v=20260825170822"></script>
+<script src="pd-spec.js?v=20260825170822"></script>
+<script src="pd-details.js?v=20260825170822"></script>
+<script src="test-details.js?v=20260825170822"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -32009,20 +32009,43 @@ function saveClientModal() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// ПРОФОРМА ЛОГИН + 2FA — само за интерфейса, НЕ е реална автентикация.
-// Методология: 1) имейл+парола (парола = декоративна) → 2) 6-цифрен код
-// (демо: 123456) → 3) влизане. „Запомни устройство" пропуска 2FA следващия
-// път. Изход връща на логин екрана. Реалната сигурност идва с backend-а.
+// ПРОФОРМА ЛОГИН + 2FA (код по имейл) — само за интерфейса, НЕ е реална автентикация.
+// Методология: 1) имейл+парола (парола = декоративна) → 2) 6-цифрен код, „изпратен
+// по имейл" (случаен; валиден 10 мин; еднократен; макс. 5 опита) → 3) влизане.
+// „Запомни устройство" пропуска 2FA за 30 дни. Реалната сигурност идва с backend-а.
 // ══════════════════════════════════════════════════════════════════════
+const AUTH_CODE_TTL_MS = 10 * 60 * 1000;      // кодът по имейл важи 10 минути
+const AUTH_MAX_ATTEMPTS = 5;                   // макс. грешни опита преди да се иска нов код
+const AUTH_TRUST_MS = 30 * 24 * 60 * 60 * 1000; // „доверено устройство" важи 30 дни
 let authCurrentCode = '';      // текущият 6-цифрен код, „изпратен по имейл" (генерира се при вход)
+let authCodeIssuedAt = 0;      // кога е издаден кодът (за срока на валидност)
+let authCodeAttempts = 0;      // брой грешни опити с текущия код
 function authGenCode() { try { return String(Math.floor(Math.random() * 1000000)).padStart(6, '0'); } catch (e) { return '000000'; } }
+function authNow() { try { return Date.now(); } catch (e) { return 0; } }
 // Проформа „изпращане по имейл" на 6-цифрен код (без бекенд/имейл сървър — кодът се показва като демо подсказка)
-function authSendCode(uid) { authCurrentCode = authGenCode(); const u = users[uid] || {}; authToast('Изпратихме 6-цифрен код на ' + maskEmail(u.email) + '.'); return authCurrentCode; }
+function authSendCode(uid) {
+  authCurrentCode = authGenCode(); authCodeIssuedAt = authNow(); authCodeAttempts = 0;
+  const u = users[uid] || {};
+  authToast('Изпратихме 6-цифрен код на ' + maskEmail(u.email) + '. Валиден 10 минути.');
+  return authCurrentCode;
+}
+function authCodeExpired() { return !authCurrentCode || (authNow() - authCodeIssuedAt) > AUTH_CODE_TTL_MS; }
 let authStep = 'login';        // 'login' | '2fa'
 let authPendingUid = null;     // потребител, изчакващ потвърждение с код
 
 function isAuthed() { try { return !!localStorage.getItem('auditpro_authed'); } catch (e) { return false; } }
-function deviceTrusted() { try { return !!localStorage.getItem('auditpro_trusted_device'); } catch (e) { return false; } }
+// Доверено устройство с реален 30-дневен срок. Старият формат ('1', без дата) се третира като
+// изтекъл, за да се появи 2FA отново и да се запише коректен запис с дата.
+function deviceTrusted() {
+  try {
+    const raw = localStorage.getItem('auditpro_trusted_device'); if (!raw) return false;
+    let o = null; try { o = JSON.parse(raw); } catch (e) { o = null; }
+    if (!o || !o.at) return false;                       // легаси/невалиден → изисква 2FA отново
+    return (authNow() - o.at) < AUTH_TRUST_MS;
+  } catch (e) { return false; }
+}
+function trustDevice() { try { localStorage.setItem('auditpro_trusted_device', JSON.stringify({ at: authNow() })); } catch (e) {} }
+function untrustDevice() { try { localStorage.removeItem('auditpro_trusted_device'); } catch (e) {} }
 function maskEmail(e) { e = e || ''; const p = e.split('@'); if (p.length < 2) return e || 'имейла ти'; return p[0].slice(0, 2) + '•••@' + p[1]; }
 function userByEmail(em) { em = (em || '').trim().toLowerCase(); return Object.keys(users).find(id => (users[id].email || '').toLowerCase() === em && users[id].status !== 'inactive'); }
 
@@ -32046,7 +32069,7 @@ function renderAuth() {
     el.innerHTML = `<div class="auth-card" id="auth-card">
       <div class="auth-logo">Аудит<span>Про</span></div>
       <div class="auth-sub">Двуфакторна автентикация</div>
-      <div class="auth-fwd">Изпратихме 6-цифрен код на <b>${escHtml(maskEmail(u.email))}</b>.<br>Въведи го, за да завършиш входа.</div>
+      <div class="auth-fwd">Изпратихме 6-цифрен код на <b>${escHtml(maskEmail(u.email))}</b>.<br>Въведи го, за да завършиш входа. <span style="color:var(--p-text3)">Кодът е валиден 10 минути.</span></div>
       <div id="auth-err-slot"></div>
       <div class="tfa-row">${boxes}</div>
       <label class="auth-remember"><input type="checkbox" id="auth-remember"> Запомни това устройство за 30 дни</label>
@@ -32119,11 +32142,17 @@ function authPaste(e) {
 }
 function authVerify() {
   if (!authCurrentCode) { authError('Няма активен код. Натисни „Изпрати кода отново".'); authShake(); return; }
-  if (authCode() !== authCurrentCode) { authError('Грешен код. Провери 6-цифрения код, изпратен на имейла ти.'); authShake(); return; }
-  if ((document.getElementById('auth-remember') || {}).checked) { try { localStorage.setItem('auditpro_trusted_device', '1'); } catch (e) {} }
+  if (authCodeExpired()) { authCurrentCode = ''; authError('Кодът изтече (валиден е 10 минути). Натисни „Изпрати кода отново".'); authShake(); return; }
+  if (authCode() !== authCurrentCode) {
+    authCodeAttempts++;
+    if (authCodeAttempts >= AUTH_MAX_ATTEMPTS) { authCurrentCode = ''; authError('Твърде много грешни опити. Натисни „Изпрати кода отново" за нов код.'); authShake(); return; }
+    authError('Грешен код. Провери 6-цифрения код, изпратен на имейла ти. (Остават ' + (AUTH_MAX_ATTEMPTS - authCodeAttempts) + ' опита.)'); authShake(); return;
+  }
+  authCurrentCode = '';   // еднократна употреба — кодът не важи повторно
+  if ((document.getElementById('auth-remember') || {}).checked) trustDevice();
   authComplete(authPendingUid);
 }
-function authResend() { authSendCode(authPendingUid); authError(''); renderAuth(); }
+function authResend() { authSendCode(authPendingUid); authError(''); renderAuth(); authToast('Изпратихме нов код.'); }
 function authForgot() { authToast('Демо: възстановяване на парола не е активно в прототипа.'); }
 function authBack() { authStep = 'login'; authError(''); renderAuth(); }
 
