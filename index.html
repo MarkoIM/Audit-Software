@@ -3980,10 +3980,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825145453"></script>
-<script src="pd-spec.js?v=20260825145453"></script>
-<script src="pd-details.js?v=20260825145453"></script>
-<script src="test-details.js?v=20260825145453"></script>
+<script src="questions.js?v=20260825150442"></script>
+<script src="pd-spec.js?v=20260825150442"></script>
+<script src="pd-details.js?v=20260825150442"></script>
+<script src="test-details.js?v=20260825150442"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4142,7 +4142,7 @@ function creditPillHtml() {
 function creditRefreshPill() { const el = document.getElementById('ent-credits-pill'); if (el) el.outerHTML = creditPillHtml(); }
 // Екран „Кредити" — личен изглед + (за роля manage_credits) управление на пула и разпределяне.
 function entShowCredits() {
-  const m = entMainTop(); entSetActive(null);
+  const m = entMainTop(); entSaveNav('credits'); entSetActive(null);
   entCrumbs([{ l: 'Кредити за AI' }]);
   const me = currentUser(), canManage = hasPerm('manage_credits');
   const personal = `<div class="sh-card"><div class="ent-card-h">Моите кредити</div><div class="pf-body">
@@ -8932,6 +8932,7 @@ function setupFooter(step) {
 function entShowSetup(step, focusCat) {
   step = step || engSetupStep || 'docs'; engSetupStep = step;
   const m = entMainTop();
+  entSaveNav('setup', step);
   entSetActive(document.querySelector('#ent-tree .ent-item[data-k="setup"]'));
   const stepLabel = (SETUP_STEPS.find(s => s.k === step) || {}).l || '';
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Стартиране на ангажимента' }, { l: stepLabel }]);
@@ -30596,8 +30597,30 @@ function dashNext() {
   for (let n = 2; n <= 6; n++) { const st = waveState(n); if (!st.ready) return { msg: 'Одобрете тестовете от предходната вълна, за да отключите Вълна ' + n + '.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')" }; }
   return { msg: 'Всички вълни са изпълнени и одобрени.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')", done: true };
 }
+// Запомняне/възстановяване на текущия екран — при рефреш потребителят се връща там, където е бил.
+function entSaveNav(view, arg) { try { localStorage.setItem('auditpro_nav', JSON.stringify({ view: view, arg: (arg == null ? '' : String(arg)) })); } catch (e) {} }
+function entRestoreNav() {
+  let n = null; try { n = JSON.parse(localStorage.getItem('auditpro_nav') || 'null'); } catch (e) {}
+  if (!n || !n.view) { entShowClients(); return; }
+  try {
+    switch (n.view) {
+      case 'dashboard': entShowDashboard(); break;
+      case 'setup': entShowSetup(n.arg || 'docs'); break;
+      case 'section': entShowSection(n.arg); break;
+      case 'wd': entShowWd(n.arg); break;
+      case 'team': entShowTeam(); break;
+      case 'credits': entShowCredits(); break;
+      case 'profile': entShowProfile(); break;
+      case 'clients': default: entShowClients(); break;
+    }
+  } catch (e) { entShowClients(); return; }
+  // Ако целевият екран не се е отворил (напр. изтрит тест/раздел) — връщаме към клиентите.
+  const mm = document.getElementById('ios-main');
+  if (!mm || !mm.innerHTML || mm.innerHTML.trim().length < 30) entShowClients();
+}
 function entShowDashboard() {
   const m = entMainTop();
+  entSaveNav('dashboard');
   entSetActive(document.querySelector('#ent-tree .ent-item[data-k="dash"]'));
   entCrumbs([{ l: iosCurrentClient || 'Клиент' }, { l: 'Преглед' }]);
   const client = iosCurrentClient || Object.keys(clients)[0], year = iosCurrentYear || 2025;
@@ -30649,6 +30672,7 @@ function entShowDashboard() {
 
 function entShowSection(code) {
   const m = entMainTop();
+  entSaveNav('section', code);
   let sec = null, phaseN = 0, phaseName = '';
   const pd = (code === 'ПД');
   if (pd) { sec = { code: 'ПД', name: 'Постоянно досие', status: 'done', wds: permanentFile }; }
@@ -30687,6 +30711,7 @@ function entShowWd(code) {
   else { for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionCode = s.code; sectionName = s.name; wd = s.wds.find(w => w.code === code); break; } } }
   if (!wd) return;   // премахнат/несъществуващ работен документ — не се отваря (напр. изтрит тест)
   entMainTop();
+  entSaveNav('wd', code);
   const name = wd.name;
   const wdBtn = document.querySelector(`#ent-tree .ent-wd[data-code="${code}"]`);
   if (wdBtn) { const se = wdBtn.closest('.ent-sec'); if (se) entOpenSec(se); else entOpenPhase(wdBtn.closest('.ent-phase')); }
@@ -31584,6 +31609,7 @@ function setEngagement(name, year) {
 // ── Управление на клиенти (CRUD) ──────────────────────────────────────
 function entShowClients() {
   const m = entMainTop();
+  entSaveNav('clients');
   entSetActive(null); // входът е в контекста (ent-ctx), не в дървото
   entCrumbs([{ l: 'Клиенти' }]);
   const canEdit = hasPerm('manage_clients');
@@ -31625,6 +31651,7 @@ function profilePreviewHtml() {
 }
 function entShowProfile() {
   const m = entMainTop();
+  entSaveNav('profile');
   entSetActive(null);
   entCrumbs([{ l: 'Моят профил' }]);
   const me = currentUser();
@@ -31677,6 +31704,7 @@ function statusBadgeHtml(u) {
 }
 function entShowTeam() {
   const m = entMainTop();
+  entSaveNav('team');
   entSetActive(null); // входът е в горната лента (ent-topright), не в дървото
   entCrumbs([{ l: 'Дружество и екип' }]);
   const canManage = hasPerm('manage_users');
@@ -32166,7 +32194,7 @@ function authComplete(uid) {
   try { localStorage.setItem('auditpro_authed', uid); } catch (e) {}
   authPendingUid = null;
   hideAuth();
-  entInit();
+  entInit(false);   // пресен вход → „Управление на клиенти"
 }
 function logout() {
   try { localStorage.removeItem('auditpro_authed'); } catch (e) {}
@@ -32176,11 +32204,11 @@ function logout() {
 function authBoot() {
   if (isAuthed()) {
     try { const a = localStorage.getItem('auditpro_authed'); if (a && users[a]) { sessionUid = a; persistSession(); } } catch (e) {}
-    hideAuth(); entInit();
+    hideAuth(); entInit(true);   // рефреш/повторно зареждане → връща потребителя където е бил
   } else { showAuth(); }
 }
 
-function entInit() {
+function entInit(restore) {
   let act = null; try { act = JSON.parse(localStorage.getItem('auditpro_active') || 'null'); } catch (e) {}
   if (act && clients[act.client]) { iosCurrentClient = act.client; iosCurrentYear = +act.year; }
   if (!iosCurrentClient || !clients[iosCurrentClient]) iosCurrentClient = Object.keys(clients)[0];
@@ -32193,7 +32221,8 @@ function entInit() {
   reloadEngagement();
   entRenderCtx();
   entRenderTree();
-  entShowClients();   // при влизане в платформата се отваря „Управление на клиенти"
+  // Рефреш (вече вписан) → връща потребителя там, където е бил; пресен вход → „Управление на клиенти".
+  if (restore) entRestoreNav(); else entShowClients();
 }
 // Еднократна миграция: пренася старите (общи) данни към текущия ангажимент.
 function engMigrateLegacy() {
