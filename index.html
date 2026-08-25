@@ -545,6 +545,24 @@
   .ent-badge.done { color: var(--p-green); } .ent-badge.done .d { background: var(--p-green); }
   .ent-badge.active { color: var(--p-amber); } .ent-badge.active .d { background: var(--p-amber); }
   .ent-badge.pending { color: var(--p-text3); } .ent-badge.pending .d { background: var(--p-text3); }
+  /* Пакетно/вълново изпълнение */
+  .wave-grid { display: flex; flex-direction: column; gap: 12px; }
+  .wave-card { border: 1px solid var(--p-border); border-left: 4px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); padding: 14px 16px; }
+  .wave-card.ready { border-left-color: var(--p-amber); }
+  .wave-card.done { border-left-color: var(--p-green); }
+  .wave-card.locked { border-left-color: var(--p-text3); opacity: .82; }
+  .wave-card.outside { border-left-color: var(--p-accent); border-style: dashed; }
+  .wave-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .wave-h > div:first-child { display: flex; align-items: center; gap: 10px; font-size: 14.5px; }
+  .wave-n { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px; background: var(--p-accent-bg); color: var(--p-accent); font-weight: 700; font-size: 13px; }
+  .wave-desc { font-size: 12px; color: var(--p-text2); margin: 6px 0 0; }
+  .wave-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 9px; font-size: 12px; color: var(--p-text2); font-variant-numeric: tabular-nums; }
+  .wave-gate { margin-top: 9px; font-size: 12px; color: var(--p-amber); background: var(--p-amber-bg); border-radius: 6px; padding: 6px 10px; }
+  .wave-manual { margin-top: 8px; font-size: 11.5px; color: var(--p-text3); }
+  .wave-act { margin-top: 11px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
+  .eng-secchk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--p-text2); cursor: pointer; }
+  @media (max-width: 720px) { .eng-secgrid { grid-template-columns: 1fr; } }
   .ent-kpis { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); margin-bottom: 20px; overflow: hidden; }
   .ent-kpi { padding: 13px 16px; border-right: 1px solid var(--p-border); }
   .ent-kpi:last-child { border-right: none; }
@@ -3927,10 +3945,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825114707"></script>
-<script src="pd-spec.js?v=20260825114707"></script>
-<script src="pd-details.js?v=20260825114707"></script>
-<script src="test-details.js?v=20260825114707"></script>
+<script src="questions.js?v=20260825122118"></script>
+<script src="pd-spec.js?v=20260825122118"></script>
+<script src="pd-details.js?v=20260825122118"></script>
+<script src="test-details.js?v=20260825122118"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -7410,8 +7428,11 @@ const D10_RULES = {
 };
 function d10Compute(code) {
   const det = testDet(code), ans = testAnswers[code] || {};
-  const fw = ans['d10-fw'] || '', fwOther = (ans['d10-fwdesc'] || '').trim();
-  const variant = ans['d10-variant'] || '', genVar = ans['d10-genvar'] || '', generated = ans['d10-gen'] === '1';
+  // Глобалните параметри от „Данни за ангажимента" са fallback; локалният избор в теста има приоритет.
+  const engFw = (typeof engParamRaw === 'function' && engParamRaw('framework')) ? engParam('framework') : '';
+  const engVar = (typeof engParamRaw === 'function' && engParamRaw('matVariant')) ? engMatVariantCode() : '';
+  const fw = ans['d10-fw'] || engFw || '', fwOther = (ans['d10-fwdesc'] || '').trim();
+  const variant = ans['d10-variant'] || engVar || '', genVar = ans['d10-genvar'] || '', generated = ans['d10-gen'] === '1';
   const M = {};
   (det.d10.metrics || []).forEach(m => { M[m.key] = { name: m.name, cur: d10Num(ans['d10m-' + m.key + '-cur']), src: ans['d10m-' + m.key + '-src'] || '', cmp: ans['d10m-' + m.key + '-cmp'] || '', conf: ans['d10m-' + m.key + '-conf'] || '' }; });
   const val = (k) => (M[k] ? M[k].cur : NaN);
@@ -8761,6 +8782,261 @@ function entShowEngDocs(focusCat) {
       setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; el.style.background = prevBg; } catch (e) {} }, 2800);
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ВЪЛНА 0 · Данни за ангажимента (глобални параметри) + Пакетно/вълново изпълнение
+// Реализира методологията от „Пакетно изпълнение на тестовете":
+//  - 7 глобални параметъра, събрани веднъж (със защитими стойности по подразбиране);
+//  - 6 вълни с гейтове по одобрение (използват съществуващите статуси на тестовете);
+//  - пакетно изпълнение на всяка вълна (таксува кредити веднъж на тест).
+// ═══════════════════════════════════════════════════════════════════════════
+window.engParams = window.engParams || {};
+function engParamsPersist() { try { localStorage.setItem(engKey('auditpro_eng_params'), JSON.stringify(engParams)); } catch (e) {} }
+const ENG_PARAM_DEFS = [
+  { key: 'framework', name: '1 · Приложима счетоводна рамка', opts: ['НСС', 'МСС/МСФО (приети от ЕС)', 'Друга рамка'], def: 'НСС', note: 'Управлява извличането във всички водещи листове и D-10.' },
+  { key: 'matVariant', name: '2 · Вариант за определяне на съществеността', opts: ['Вариант 1 — автоматично', 'Вариант 2 — ръчно (база и процент)'], def: 'Вариант 1 — автоматично', note: 'D-10 и през него цялата верига D-20, D-30 и извадковите тестове.' },
+  { key: 'engType', name: '3 · Вид на ангажимента', opts: ['Първоначален', 'Продължаващ'], def: 'Продължаващ', note: 'Коефициент на надеждност при извадките и процедури по начални салда.' },
+  { key: 'prevAuditor', name: '3б · Предходен одитор', opts: ['Има предходен одитор', 'Няма', 'Неприложимо'], def: 'Неприложимо', note: 'Процедури по начални салда (ISA 510) при първоначален ангажимент.' },
+  { key: 'controlsReliance', name: '5 · Разчитане на контроли', opts: ['Да', 'Не'], def: 'Не', note: 'Определя коефициента на надеждност и обхвата на извадките в тестовете -30.' }
+];
+// Стойности по подразбиране (методология, раздел 2.2) — информативни, сменят се вътре в теста.
+const ENG_DEFAULTS_INFO = [
+  ['Източник за водещите листове', 'Оборотна ведомост'],
+  ['База за сравнение', 'Предходен период (бюджет, ако е качен)'],
+  ['Групиране', 'По сметка'],
+  ['Праг за разследване на отклонения', 'Същественост при изпълнение'],
+  ['Метод за аналитичните процедури', 'Изграждане на очакване'],
+  ['Метод за извадките', 'Автоматично по риска и структурата на популацията']
+];
+const AUDIT_SECTIONS = ['G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V'];
+function engParam(key) { const v = engParams[key]; if (v != null && v !== '') return v; const d = ENG_PARAM_DEFS.find(p => p.key === key); return d ? d.def : ''; }
+function engParamRaw(key) { return engParams[key]; }
+function engParamSet(key, val) { engParams[key] = val; engParamsPersist(); }
+function engSectionOn(sec) { const s = engParams.sections || {}; return s[sec] !== false; }   // по подразбиране всички включени
+function engToggleSection(sec, on) { engParams.sections = engParams.sections || {}; engParams.sections[sec] = !!on; engParamsPersist(); engApplyNa(); if (typeof entRenderTree === 'function') entRenderTree(); }
+function engMatVariantCode() { return /Вариант 2/.test(engParam('matVariant')) ? '2' : '1'; }
+function engParamsConfirmed() { return engParamRaw('confirmed') === '1'; }
+// Автоматично маркиране на тестовете от изключени раздели като „Неприложим" (и обратно).
+function engApplyNa() {
+  const tq = window.testQuestions || {}; let changed = false;
+  Object.keys(tq).forEach(code => {
+    const sec = code.split('-')[0]; if (AUDIT_SECTIONS.indexOf(sec) < 0) return;
+    const r = testStatusRec(code), off = !engSectionOn(sec);
+    if (off && r.status !== 'na') { r.status = 'na'; r.autoNa = true; changed = true; }
+    else if (!off && r.autoNa && r.status === 'na') { r.status = ''; r.autoNa = false; changed = true; }
+  });
+  if (changed) { try { persistStatus(); } catch (e) {} }
+}
+
+function entShowEngData() {
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="engdata"]'));
+  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Данни за ангажимента' }]);
+  const confirmed = engParamsConfirmed();
+  const paramRows = ENG_PARAM_DEFS.map(p => {
+    const cur = engParamRaw(p.key), usingDef = (cur == null || cur === '');
+    return `<div class="b40-f"><span class="b40-fl">${escHtml(p.name)}${usingDef ? ' <span style="color:var(--p-text3);font-weight:400">· по подразбиране</span>' : ''}</span>
+      <select onchange="engDataSet('${p.key}',this.value)">${d10Opts(engParam(p.key), p.opts)}</select>
+      <div style="font-size:11px;color:var(--p-text3);margin-top:3px">${escHtml(p.note)}</div></div>`;
+  }).join('');
+  const secChecks = AUDIT_SECTIONS.map(s => `<label class="eng-secchk"><input type="checkbox" ${engSectionOn(s) ? 'checked' : ''} onchange="engToggleSection('${s}',this.checked)"> <b>${s}</b> ${escHtml(secName(s))}</label>`).join('');
+  const defInfo = ENG_DEFAULTS_INFO.map(d => `<tr><td class="base">${escHtml(d[0])}</td><td>${escHtml(d[1])}</td></tr>`).join('');
+  const sched = (k, ph, type) => `<div class="b40-f"><span class="b40-fl">${escHtml(ph)}</span><input ${type ? 'type="' + type + '"' : ''} value="${escHtml(engParams[k] || '')}" onchange="engDataSetText('${k}',this.value)"></div>`;
+  const teamN = Object.keys(window.team || {}).length;
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Данни за ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · Вълна 0 — попълва се веднъж за целия ангажимент</div></div>
+      <span class="ent-badge ${confirmed ? 'done' : 'pending'}"><span class="d"></span>${confirmed ? 'Потвърдена' : 'Незавършена'}</span></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
+      Тези параметри днес се избират вътре в отделните тестове, но са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: 35 теста тръгват веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
+    </div></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Глобални параметри</div><div style="padding:12px 14px">
+      <div class="b40-fields">${paramRows}</div></div></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">4 · Приложими раздели</div><div style="padding:12px 14px">
+      <div style="font-size:11px;color:var(--p-text3);margin-bottom:8px">Изключените раздели се маркират автоматично като „Неприложим" и се пропускат от пакета.</div>
+      <div class="eng-secgrid">${secChecks}</div></div></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">6 · Екип, роли и планирани часове</div><div style="padding:12px 14px">
+      <div style="font-size:12.5px;color:var(--p-text2)">Екипът е факт за фирмата и се въвежда, не се генерира. Управлява се от <a href="#" onclick="openEngTeamModal();return false" style="color:var(--p-accent);font-weight:700">Управление на екипа</a>. Текущо разпределени: <b>${teamN}</b> роли.</div></div></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">7 · Времеви график и ключови дати</div><div style="padding:12px 14px">
+      <div class="b40-fields">
+        ${sched('dateStart', 'Начало на одита', 'date')}
+        ${sched('dateFieldwork', 'Теренна работа', 'date')}
+        ${sched('dateReport', 'Планирана дата на доклада', 'date')}
+        ${sched('dateDocs', 'Срок за документи от клиента', 'date')}
+      </div></div></div>
+
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Стойности по подразбиране (сменят се вътре в теста)</div><div style="padding:12px 14px">
+      <table class="b50-att" style="min-width:520px"><tbody>${defInfo}</tbody></table></div></div>
+
+    <div class="sh-card"><div style="padding:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="engConfirmData()">${confirmed ? '✓ Данните са потвърдени — обнови' : 'Потвърди и отключи Вълна 1'}</button>
+      <a href="#" onclick="entShowBatch();return false" style="color:var(--p-accent);font-weight:700">Към пакетно изпълнение →</a>
+      <div style="font-size:11px;color:var(--p-text3)">Потвърждаването отключва автоматичното изпълнение на първата вълна.</div>
+    </div></div>
+  </div>`;
+}
+function engDataSet(key, val) { engParamSet(key, val); if (key === 'matVariant' || key === 'framework') { /* веригата чете на живо */ } entShowEngData(); }
+function engDataSetText(key, val) { engParams[key] = val; engParamsPersist(); }
+function engConfirmData() { engParamSet('confirmed', '1'); engApplyNa(); if (typeof entRenderTree === 'function') entRenderTree(); entShowBatch(); }
+
+// ── Вълнов модел ──────────────────────────────────────────────────────────
+const WAVE1_DETAIL_SECS = ['J', 'M', 'O', 'P', 'Q', 'R', 'U', 'V'];   // доказателства на ниво раздел → налични предварително
+function testWave(code) {
+  code = (code || '').toUpperCase();
+  if (code === 'B-10' || code === 'B-50') return -1;   // извън вълните (изисква одитор)
+  if (code === 'C-10' || code === 'C-20' || code === 'D-10') return 1;
+  if (code === 'D-20') return 2;
+  if (code === 'D-30') return 3;
+  if (code === 'X-50') return 5;
+  if (code === 'X-10') return 6;
+  const m = code.match(/^([G-V])-(\d{2})$/);
+  if (m) {
+    const sec = m[1], t = m[2];
+    if (t === '00' || t === '20') return 1;
+    if (t === '30') return 3;
+    if (t === '05') return 4;
+    if (t === '10') return (WAVE1_DETAIL_SECS.indexOf(sec) >= 0) ? 1 : 4;
+    if (t === '90') return null;   // документация — извън вълновия модел
+  }
+  return null;   // A/E/F/Y/Z и др. — извън модела на файла
+}
+const WAVE_META = {
+  0: { name: 'Данни за ангажимента', desc: 'Качване на документите + седемте глобални параметъра' },
+  1: { name: 'Вълна 1 — веднага', desc: 'C-10, C-20, D-10, 16 водещи листа, 16 аналитични процедури + детайлни на ниво раздел' },
+  2: { name: 'Вълна 2 — същественост при изпълнение', desc: 'D-20 · след одобрена D-10' },
+  3: { name: 'Вълна 3 — извадки', desc: 'D-30 и 16 извадкови теста · след одобрена D-20' },
+  4: { name: 'Вълна 4 — детайлни тестове', desc: '16 детайлни теста и одиторски подход · след получени подкрепящи документи' },
+  5: { name: 'Вълна 5 — обобщение на неточностите', desc: 'X-50 · след приключени раздели' },
+  6: { name: 'Вълна 6 — заключителни аналитични', desc: 'X-10 · след осчетоводени корекции' }
+};
+function testApproved(code) { const s = testStatusOf(code); return s === 'reviewed' || s === 'finalized'; }
+function testGenFn(code) {
+  const k = code.toLowerCase().replace('-', '');
+  if (typeof window[k + 'Generate'] === 'function') return window[k + 'Generate'];
+  if (typeof window[k + 'Analyze'] === 'function') return window[k + 'Analyze'];
+  return null;
+}
+function testIsAuto(code) { return !!testGenFn(code); }
+function waveTests(n) {
+  const tq = window.testQuestions || {};
+  return Object.keys(tq).filter(c => testWave(c) === n).sort();
+}
+function waveAutoAllApproved(n) {
+  const t = waveTests(n).filter(c => testIsAuto(c) && testStatusOf(c) !== 'na');
+  return t.length > 0 && t.every(testApproved);
+}
+function waveReady(n) {
+  if (n <= 1) return engParamsConfirmed();
+  if (n === 2) return testApproved('D-10');
+  if (n === 3) return testApproved('D-20');
+  if (n === 4) return testApproved('D-20');
+  if (n === 5) return waveAutoAllApproved(3) && waveAutoAllApproved(4);
+  if (n === 6) return testApproved('X-50');
+  return true;
+}
+function waveGateText(n) {
+  if (n <= 1) return engParamsConfirmed() ? '' : 'Изисква потвърдени „Данни за ангажимента" (Вълна 0).';
+  if (n === 2) return testApproved('D-10') ? '' : 'Изисква одобрена D-10 (същественост за отчета като цяло).';
+  if (n === 3) return testApproved('D-20') ? '' : 'Изисква одобрена D-20 (същественост при изпълнение).';
+  if (n === 4) return testApproved('D-20') ? '' : 'Изисква одобрена D-20 и налични подкрепящи документи за избраните позиции.';
+  if (n === 5) return waveReady(5) ? '' : 'Изисква приключени детайлни и извадкови тестове (вълни 3 и 4).';
+  if (n === 6) return testApproved('X-50') ? '' : 'Изисква одобрена X-50 (обобщение на неточностите) и осчетоводени корекции.';
+  return '';
+}
+// Състояние на една вълна за таблото
+function waveState(n) {
+  const codes = waveTests(n);
+  const auto = codes.filter(testIsAuto), manual = codes.filter(c => !testIsAuto(c));
+  const active = codes.filter(c => testStatusOf(c) !== 'na');
+  const done = active.filter(testApproved).length;
+  const gen = auto.filter(c => testStatusOf(c) !== 'na' && ['review', 'reviewed', 'finalized', 'returned'].indexOf(testStatusOf(c)) >= 0).length;
+  // За изпълнение: само незапочнати или върнати за корекция (не пипаме ръчна работа, преглед или финализирани).
+  const eligible = auto.filter(c => { const s = testStatusOf(c); return s === 'not_started' || s === 'returned'; });
+  return { n, codes, auto, manual, active, done, gen, eligible, ready: waveReady(n), gate: waveGateText(n) };
+}
+// Пакетно изпълнение на една вълна: таксува веднъж на тест, извиква генериращата функция, праща за преглед.
+function waveRun(n) {
+  const st = waveState(n);
+  if (!st.ready) { alert('Вълна ' + n + ' още не може да стартира.\n\n' + st.gate); return; }
+  const run = st.eligible.slice();
+  if (!run.length) { alert('Няма тестове за изпълнение в тази вълна (всички са изпълнени, финализирани или неприложими).'); return; }
+  const price = creditPrice(), total = price * run.length, me = currentUser(), bal = creditBalance(me);
+  if (bal < total) { alert('Недостатъчно кредити за пакета.\nНужни: ' + total + ' (' + run.length + ' теста × ' + price + ') · Налични: ' + bal + '.\n\nПоискай кредити от роля „Управление на кредити".'); return; }
+  if (typeof confirm === 'function' && !confirm('Пакетно изпълнение на ' + WAVE_META[n].name + ':\n' + run.length + ' теста × ' + price + ' = ' + total + ' кредита.\nБаланс след изпълнение: ' + (bal - total) + '.\n\nДа продължи ли?')) return;
+  // Заглушаваме alert по време на пакета — единичните тестове алармират при липсващи входове,
+  // но методологията ги изпълнява с наличното (защитими стойности по подразбиране).
+  const _alert = window.alert; window.alert = function () {};
+  let okN = 0;
+  try {
+    run.forEach(code => {
+      try {
+        const fn = testGenFn(code); if (!fn) return;
+        creditCharge(me, code, price);
+        try { fn(code); } catch (e) {}
+        const r = testStatusRec(code);
+        r.status = 'review'; r.prep = testStamp();
+        testLog(code, 'Изпълнен в пакет · ' + WAVE_META[n].name);
+        okN++;
+      } catch (e) {}
+    });
+  } finally { window.alert = _alert; }
+  try { persistStatus(); } catch (e) {}
+  if (typeof entRenderTree === 'function') entRenderTree();
+  entShowBatch();
+  alert('Пакетът приключи: изпълнени ' + okN + ' теста. Прегледайте и одобрете резултатите, за да отключите следващата вълна.');
+}
+
+function entShowBatch() {
+  const m = entMainTop();
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="batch"]'));
+  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Пакетно изпълнение' }]);
+  const confirmed = engParamsConfirmed();
+  const w0 = `<div class="wave-card ${confirmed ? 'done' : 'todo'}">
+    <div class="wave-h"><div><span class="wave-n">0</span><b>${WAVE_META[0].name}</b></div>
+      <span class="ent-badge ${confirmed ? 'done' : 'pending'}"><span class="d"></span>${confirmed ? 'Потвърдена' : 'Незавършена'}</span></div>
+    <div class="wave-desc">${WAVE_META[0].desc}</div>
+    <div class="wave-act"><button class="btn ${confirmed ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="entShowEngData()">${confirmed ? 'Отвори данните за ангажимента' : 'Попълни данните за ангажимента'}</button></div>
+  </div>`;
+  const waves = [1, 2, 3, 4, 5, 6].map(n => {
+    const st = waveState(n);
+    const price = creditPrice(), cost = st.eligible.length * price;
+    const canRun = st.ready && st.eligible.length > 0;
+    const badge = st.gate ? `<span class="ent-badge pending"><span class="d"></span>Заключена</span>`
+      : (st.eligible.length === 0 ? `<span class="ent-badge done"><span class="d"></span>Изпълнена</span>` : `<span class="ent-badge active"><span class="d"></span>Готова</span>`);
+    const manualNote = st.manual.length ? `<div class="wave-manual">✍ ${st.manual.length} теста изискват одитора (не се генерират): ${st.manual.join(', ')}</div>` : '';
+    return `<div class="wave-card ${st.gate ? 'locked' : (st.eligible.length === 0 ? 'done' : 'ready')}">
+      <div class="wave-h"><div><span class="wave-n">${n}</span><b>${escHtml(WAVE_META[n].name)}</b></div>${badge}</div>
+      <div class="wave-desc">${escHtml(WAVE_META[n].desc)}</div>
+      <div class="wave-stats">
+        <span title="Автоматични тестове">🤖 ${st.auto.length} авто</span>
+        <span title="Одобрени">✓ ${st.done}/${st.active.length} одобрени</span>
+        ${st.eligible.length ? `<span title="Чакат изпълнение">⏳ ${st.eligible.length} за изпълнение</span>` : ''}
+      </div>
+      ${st.gate ? `<div class="wave-gate">🔒 ${escHtml(st.gate)}</div>` : ''}
+      ${manualNote}
+      <div class="wave-act">
+        <button class="btn btn-primary btn-sm" ${canRun ? '' : 'disabled'} onclick="waveRun(${n})">Изпълни вълна ${n}${canRun ? ' · ' + cost + ' кредита' : ''}</button>
+      </div>
+    </div>`;
+  }).join('');
+  const outside = waveTests(-1);
+  const outCard = `<div class="wave-card outside">
+    <div class="wave-h"><div><span class="wave-n">✍</span><b>Извън вълните — само одиторът</b></div></div>
+    <div class="wave-desc">Тези тестове документират факти и не се генерират: ${outside.join(', ') || 'B-10, B-50'}.</div>
+  </div>`;
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Пакетно изпълнение</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · шест вълни с одобрения между тях</div></div>
+      <button class="ent-credits" onclick="entShowCredits()" style="cursor:pointer"><b>${creditBalance()}</b> кред.</button></div>
+    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
+      Всяка вълна тръгва автоматично, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
+    </div></div>
+    <div class="wave-grid">${w0}${waves}${outCard}</div>
+  </div>`;
 }
 
 // Постоянно досие в единното хранилище — ползва СЪЩИЯ pdUploads store като ПД екраните
@@ -30175,7 +30451,9 @@ function entTogglePhase(btn) {
 function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
+  h += `<button class="ent-item" data-k="engdata" onclick="entShowEngData()">Данни за ангажимента</button>`;
   h += `<button class="ent-item" data-k="engdocs" onclick="entShowEngDocs()">Документи на ангажимента</button>`;
+  h += `<button class="ent-item" data-k="batch" onclick="entShowBatch()">Пакетно изпълнение</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -31146,6 +31424,7 @@ const ENG_STORES = [
   ['pdChecklist', 'auditpro_pd_checklist_v2'], ['pdClAttach', 'auditpro_pd_cl_attach'],
   ['team', 'auditpro_team'],
   ['engDocs', 'auditpro_eng_docs'], ['engDocOptOut', 'auditpro_eng_optout'],
+  ['engParams', 'auditpro_eng_params'],
 ];
 function engSuffix() { const c = clients[iosCurrentClient]; return (c ? c.id : 'def') + '_' + (iosCurrentYear || 'na'); }
 function engKey(base) { return base + '__' + engSuffix(); }
@@ -31155,6 +31434,7 @@ function reloadEngagement() {
     catch (e) { window[g] = {}; }
   });
   try { if (typeof gEngSyncAll === 'function') gEngSyncAll(); } catch (e) {}
+  try { if (typeof engApplyNa === 'function') engApplyNa(); } catch (e) {}
 }
 function clearEngagementData(id, year) {
   ENG_STORES.forEach(([g, base]) => { try { localStorage.removeItem(base + '__' + id + '_' + year); } catch (e) {} });
