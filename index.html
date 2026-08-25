@@ -523,6 +523,9 @@
   .ent-prof-meta { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
   .ent-prof-meta .nm { font-size: 12px; font-weight: 600; color: var(--p-text1); }
   .ent-prof-meta .rl { font-size: 10px; color: var(--p-text3); }
+  .ent-home { display: flex; align-items: center; gap: 7px; background: var(--p-accent); border: 1px solid var(--p-accent); border-radius: 20px; padding: 6px 13px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; color: #fff; }
+  .ent-home:hover { filter: brightness(1.05); }
+  .ent-home svg { flex-shrink: 0; }
   .ent-firm { display: flex; align-items: center; gap: 7px; background: none; border: 1px solid var(--p-border); border-radius: 20px; padding: 6px 13px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--p-text1); }
   .ent-firm:hover { background: var(--p-surface2); border-color: var(--p-border-strong); }
   .ent-firm svg { color: var(--p-text3); flex-shrink: 0; }
@@ -1130,7 +1133,23 @@
   .pf-switch { width: 100%; padding: 9px 11px; border: 1px solid var(--p-border-strong); border-radius: 5px; font-family: inherit; font-size: 13px; color: var(--p-text1); background: var(--p-surface); }
   .pf-hint { font-size: 11.5px; color: var(--p-text3); margin-top: 6px; line-height: 1.45; }
   .pf-you { font-size: 10px; font-weight: 700; color: var(--p-accent); background: var(--p-accent-bg); padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
-  @media (max-width: 780px) { .pf-grid { grid-template-columns: 1fr; } }
+  .pf-avatar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .pf-av-big { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: var(--p-accent); color: #fff; font-weight: 700; font-size: 16px; }
+  .pf-av-name { font-weight: 700; font-size: 14px; color: var(--p-text1); }
+  .pf-av-role { margin-top: 2px; }
+  .pf-toggle { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--p-text2); margin: 5px 0; cursor: pointer; }
+  .pf-sec-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--p-border); }
+  .cr-hero { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--p-accent-bg); border-radius: 10px; padding: 14px 16px; }
+  .cr-hero-num { font-size: 32px; font-weight: 800; color: var(--p-accent); letter-spacing: -.5px; line-height: 1; }
+  .cr-hero-unit { font-size: 12px; color: var(--p-text2); margin-top: 3px; }
+  .cr-hero-note { font-size: 13px; color: var(--p-text1); }
+  .cr-admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cr-box { border: 1px solid var(--p-border); border-radius: 10px; padding: 12px 14px; background: var(--p-bg); }
+  .cr-box-k { font-size: 11.5px; color: var(--p-text3); font-weight: 600; }
+  .cr-box-v { font-size: 24px; font-weight: 800; color: var(--p-text1); margin-top: 2px; }
+  .cr-box-act { display: flex; gap: 6px; margin-top: 8px; }
+  .cr-box-act input { width: 100px; }
+  @media (max-width: 780px) { .pf-grid { grid-template-columns: 1fr; } .cr-admin-grid { grid-template-columns: 1fr; } .cr-hero { flex-direction: column; align-items: flex-start; gap: 6px; } }
 
   /* Бейджове за роля/статус */
   .badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; letter-spacing: .2px; }
@@ -4000,10 +4019,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825212907"></script>
-<script src="pd-spec.js?v=20260825212907"></script>
-<script src="pd-details.js?v=20260825212907"></script>
-<script src="test-details.js?v=20260825212907"></script>
+<script src="questions.js?v=20260825214920"></script>
+<script src="pd-spec.js?v=20260825214920"></script>
+<script src="pd-details.js?v=20260825214920"></script>
+<script src="test-details.js?v=20260825214920"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4155,47 +4174,14 @@ function creditGen(btn) {
   if (typeof fn === 'function') fn(code);
 }
 function creditPillHtml() {
-  return `<button class="ent-credits" id="ent-credits-pill" onclick="entShowCredits()" title="Кредити за AI тестове · щракни за детайли">`
+  return `<button class="ent-credits" id="ent-credits-pill" onclick="entShowTeam('credits')" title="Кредити за AI тестове · щракни за детайли">`
     + `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5"/></svg>`
     + `<b>${creditBalance()}</b> кред.</button>`;
 }
 function creditRefreshPill() { const el = document.getElementById('ent-credits-pill'); if (el) el.outerHTML = creditPillHtml(); }
-// Екран „Кредити" — личен изглед + (за роля manage_credits) управление на пула и разпределяне.
-function entShowCredits() {
-  const m = entMainTop(); entSaveNav('credits'); entSetActive(null);
-  entCrumbs([{ l: 'Кредити за AI' }]);
-  const me = currentUser(), canManage = hasPerm('manage_credits');
-  const personal = `<div class="sh-card"><div class="ent-card-h">Моите кредити</div><div class="pf-body">
-      <div class="cr-big"><span class="cr-num">${creditBalance(me)}</span> <span class="cr-unit">кредита</span></div>
-      <div class="pf-hint">Всеки AI тест струва <b>${creditPrice()} кредита</b> при всяко изпълнение. Цената е изписана на всеки таксуващ бутон.</div>
-      ${!canManage ? '<div class="pf-hint">За допълнителни кредити се обърни към администратор (роля „Управление на кредити").</div>' : ''}
-    </div></div>`;
-  let mgmt = '';
-  if (canManage) {
-    const rows = Object.keys(users).filter(id => users[id].status !== 'inactive').map(id => {
-      const u = users[id];
-      return `<tr><td><span class="cm-av">${userInitials(u)}</span><b>${escHtml(u.name)}</b>${id === sessionUid ? ' <span class="pf-you">ти</span>' : ''}<div class="tm-mail">${escHtml(u.email || '')}</div></td>
-        <td class="r"><b>${creditBalance(u)}</b></td>
-        <td class="cr-actions"><input id="cg-${id}" type="number" min="0" placeholder="брой" style="width:78px"> <button class="btn btn-secondary btn-sm" onclick="creditGrantUI('${id}')">Дай</button> <button class="btn btn-secondary btn-sm" onclick="creditRevokeUI('${id}')">Отнеми</button></td></tr>`;
-    }).join('');
-    const led = (creditLog.ledger || []).slice(-12).reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.name || '')} · ${escHtml(e.code || '')} · −${e.amt} кред.</span><span class="tst-logmeta">${creditFmtWhen(e.at)}</span></div>`).join('') || '<div class="pf-hint">Няма разход още.</div>';
-    const gr = (creditLog.grants || []).slice(-12).reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.byName || '')} → ${escHtml(e.toName || '')} · ${e.amt >= 0 ? '+' : ''}${e.amt} кред.</span><span class="tst-logmeta">${creditFmtWhen(e.at)}</span></div>`).join('') || '<div class="pf-hint">Няма разпределяния още.</div>';
-    mgmt = `<div class="sh-card"><div class="ent-card-h">Пул на дружеството</div><div class="pf-body">
-        <div class="cr-big"><span class="cr-num">${creditPool()}</span> <span class="cr-unit">кредита в пула</span></div>
-        <div class="pf-row"><label>Зареди пула (проформа)</label><input id="cr-topup" type="number" min="0" placeholder="брой кредити"><button class="btn btn-secondary btn-sm" onclick="creditTopUpUI()">Зареди</button></div>
-        <div class="pf-row"><label>Цена на AI тест (кредита)</label><input id="cr-price" type="number" min="0" value="${creditPrice()}"><button class="btn btn-secondary btn-sm" onclick="creditSetPriceUI()">Запази цената</button></div>
-      </div></div>
-      <div class="sh-card" style="grid-column:1/-1"><div class="ent-card-h">Разпределяне по акаунти</div>
-        <table class="ent-tbl"><thead><tr><th>Потребител</th><th class="r">Баланс</th><th>Разпредели</th></tr></thead><tbody>${rows}</tbody></table>
-      </div>
-      <div class="sh-card"><div class="ent-card-h">Разход (последни)</div><div class="pf-body">${led}</div></div>
-      <div class="sh-card"><div class="ent-card-h">Разпределяния (последни)</div><div class="pf-body">${gr}</div></div>`;
-  }
-  m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Кредити за AI</h1><div class="sub">AI тестовете струват кредити · пул на дружеството + баланс по акаунт</div></div></div>
-    <div class="pf-grid">${personal}${mgmt}</div></div>`;
-}
-function creditGrantUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditGrant(uid, v)) { authToast && authToast('Разпределени ' + Math.round(+v) + ' кредита.'); entShowCredits(); creditRefreshPill(); } else { alert('Недостатъчно в пула или невалидна стойност.'); } }
+// „Кредити за AI" вече е част от екрана „Настройки" (settingsCreditsCard). entShowCredits е дефиниран
+// там като пренасочване към entShowTeam('credits'). По-долу са само действията върху кредитите.
+function creditGrantUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditGrant(uid, v)) { authToast && authToast('Дадени ' + Math.round(+v) + ' кредита.'); entShowCredits(); creditRefreshPill(); } else { alert('Недостатъчно кредити на дружеството или невалидна стойност.'); } }
 function creditRevokeUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditRevoke(uid, v)) { entShowCredits(); creditRefreshPill(); } else { alert('Няма достатъчно кредити по акаунта или невалидна стойност.'); } }
 function creditTopUpUI() { const v = (document.getElementById('cr-topup') || {}).value; creditTopUp(v); entShowCredits(); }
 function creditSetPriceUI() { const v = (document.getElementById('cr-price') || {}).value; creditSetPrice(v); entShowCredits(); }
@@ -30742,11 +30728,15 @@ function entRenderCtx() {
         + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
         + `Проба · PDF заключен</button>`
       : '') +
+    `<button class="ent-home" onclick="entShowDashboard()" title="Начало — преглед на ангажимента">` +
+      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>` +
+      `<span class="hnm">Начало</span>` +
+    `</button>` +
     `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
     creditPillHtml() +
-    `<button class="ent-firm" onclick="entShowTeam()" title="Дружество и екип · потребители, права, плащане">` +
-      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M15 21V9h3a1 1 0 0 1 1 1v11M9 8h2M9 11h2M9 14h2"/></svg>` +
-      `<span class="fnm">Дружество</span>` +
+    `<button class="ent-firm" onclick="entShowTeam()" title="Настройки · дружество, екип, абонамент, кредити">` +
+      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` +
+      `<span class="fnm">Настройки</span>` +
     `</button>` +
     `<button class="ent-prof" onclick="entShowProfile()" title="Моят профил">` +
       `<span class="ent-prof-av">${userInitials(me)}</span>` +
@@ -31919,26 +31909,56 @@ function entShowProfile() {
   const roleBadge = isAdmin(me) ? '<span class="badge badge-admin">Администратор</span>' : '<span class="badge badge-member">Член на екипа</span>';
   const switcher = Object.keys(users).filter(id => users[id].status !== 'inactive')
     .map(id => `<option value="${id}"${id === sessionUid ? ' selected' : ''}>${escHtml(users[id].name)} — ${users[id].role === 'admin' ? 'админ' : 'член'}</option>`).join('');
+  const prefs = me.prefs || {};
+  const trusted = (typeof deviceTrusted === 'function') && deviceTrusted();
+  const chk = (id, on, label) => `<label class="pf-toggle"><input type="checkbox" id="${id}"${on ? ' checked' : ''}> ${escHtml(label)}</label>`;
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>Моят профил</h1><div class="sub">Личните ти данни попълват полето „Изготвил" и подписа в работните документи</div></div>
-      <div style="display:flex;align-items:center"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="ent-logout" onclick="logout()">Изход</button><button class="btn btn-primary" onclick="saveProfile()">Запази</button></div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="pf-saved" id="pf-saved">Запазено ✓</span><button class="ent-logout" onclick="logout()">Изход</button><button class="btn btn-primary" onclick="saveProfile()">Запази промените</button></div></div>
     <div class="pf-grid">
       <div class="sh-card"><div class="ent-card-h">Лични данни</div><div class="pf-body">
+        <div class="pf-avatar-row"><span class="pf-av-big">${userInitials(me)}</span><div><div class="pf-av-name">${escHtml(me.name || 'Потребител')}</div><div class="pf-av-role">${roleBadge}</div></div></div>
         ${f('pf-name', 'Име и фамилия', me.name, 'напр. Марко Марков')}
         ${f('pf-title', 'Длъжност / роля', me.title, 'напр. Регистриран одитор')}
         ${f('pf-regNo', 'Диплома № (ИДЕС)', me.regNo, 'напр. 0123')}
         ${f('pf-email', 'Имейл (вход)', me.email, 'name@firm.bg')}
         ${f('pf-phone', 'Телефон', me.phone, 'напр. +359 …')}
       </div></div>
-      <div class="sh-card"><div class="ent-card-h">Контекст</div><div class="pf-body">
-        <div class="pf-row"><label>Дружество</label><div class="pf-ro">${escHtml(firm.name)}<span class="pf-link" onclick="entShowTeam()">управление →</span></div></div>
+      <div class="sh-card"><div class="ent-card-h">Сигурност</div><div class="pf-body">
+        <div class="pf-row"><label>Нова парола</label><input id="pf-pass1" type="password" placeholder="••••••••"></div>
+        <div class="pf-row"><label>Потвърди новата парола</label><input id="pf-pass2" type="password" placeholder="••••••••"></div>
+        <button class="btn btn-secondary btn-sm" onclick="pfChangePassword()">Смени паролата</button>
+        <div class="pf-sec-line"><div><b>Двуфакторна автентикация</b><div class="pf-hint">Код по имейл при вход. Активна за всички акаунти.</div></div><span class="badge badge-on">Активна</span></div>
+        <div class="pf-row" style="margin-top:8px"><div class="pf-hint">Това устройство: ${trusted ? '<b>запомнено</b> — 2FA се пропуска до 30 дни.' : 'не е запомнено — 2FA се иска при всеки вход.'}</div>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">${trusted ? '<button class="btn btn-secondary btn-sm" onclick="pfForgetDevice()">Забрави това устройство</button>' : ''}<button class="btn btn-secondary btn-sm" onclick="pfSignOutAll()">Изход от всички устройства</button></div></div>
+      </div></div>
+      <div class="sh-card"><div class="ent-card-h">Предпочитания</div><div class="pf-body">
+        <div class="pf-row"><label>Език на интерфейса</label><select id="pf-lang"><option value="bg"${prefs.lang !== 'en' ? ' selected' : ''}>Български</option><option value="en"${prefs.lang === 'en' ? ' selected' : ''}>English (скоро)</option></select></div>
+        <div class="pf-row"><label>Известия</label>
+          ${chk('pf-ntf-review', prefs.ntfReview !== false, 'Имейл, когато тест чака моя преглед')}
+          ${chk('pf-ntf-assign', prefs.ntfAssign !== false, 'Имейл, когато съм добавен към ангажимент')}
+          ${chk('pf-ntf-credit', !!prefs.ntfCredit, 'Имейл при ниско ниво на кредити')}
+        </div>
+      </div></div>
+      <div class="sh-card"><div class="ent-card-h">Дружество и роля</div><div class="pf-body">
+        <div class="pf-row"><label>Дружество</label><div class="pf-ro">${escHtml(firm.name)}<span class="pf-link" onclick="entShowTeam()">Настройки →</span></div></div>
         <div class="pf-row"><label>Роля в дружеството</label><div class="pf-ro">${roleBadge}</div></div>
+        <div class="pf-row"><label>Кредити за AI</label><div class="pf-ro"><b>${creditBalance(me)}</b> кредита<span class="pf-link" onclick="entShowTeam('credits')">управление →</span></div></div>
         <div class="pf-row"><label>Демо: влез като друг потребител</label><select class="pf-switch" onchange="setCurrentUser(this.value)">${switcher}</select><div class="pf-hint">Прототипен инструмент — в реалната система влизаш със своя имейл и парола.</div></div>
       </div></div>
     </div>
     <div class="sh-card"><div class="ent-card-h">Преглед в работен документ</div><div class="pf-prev" id="pf-prev">${profilePreviewHtml()}</div></div>
   </div>`;
 }
+function pfChangePassword() {
+  const a = (document.getElementById('pf-pass1') || {}).value || '', b = (document.getElementById('pf-pass2') || {}).value || '';
+  if (a.length < 6) { alert('Паролата трябва да е поне 6 символа.'); return; }
+  if (a !== b) { alert('Двете пароли не съвпадат.'); return; }
+  const p1 = document.getElementById('pf-pass1'), p2 = document.getElementById('pf-pass2'); if (p1) p1.value = ''; if (p2) p2.value = '';
+  authToast && authToast('Паролата е сменена (демо — без реален бекенд).');
+}
+function pfForgetDevice() { if (typeof untrustDevice === 'function') untrustDevice(); authToast && authToast('Устройството е забравено — при следващ вход ще се поиска 2FA код.'); entShowProfile(); }
+function pfSignOutAll() { if (typeof untrustDevice === 'function') untrustDevice(); logout(); }
 function saveProfile() {
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const me = currentUser();
@@ -31948,6 +31968,9 @@ function saveProfile() {
   me.email = g('pf-email');
   me.phone = g('pf-phone');
   me.initials = clInitials(me.name);
+  const chk = id => { const el = document.getElementById(id); return el ? !!el.checked : undefined; };
+  const lang = (document.getElementById('pf-lang') || {}).value;
+  me.prefs = Object.assign({}, me.prefs, { lang: lang || 'bg', ntfReview: chk('pf-ntf-review'), ntfAssign: chk('pf-ntf-assign'), ntfCredit: chk('pf-ntf-credit') });
   persistUsers();
   entRenderCtx();                                   // обнови чипа горе вдясно
   const prev = document.getElementById('pf-prev'); if (prev) prev.innerHTML = profilePreviewHtml();
@@ -31962,11 +31985,35 @@ function statusBadgeHtml(u) {
   if (u.status === 'inactive') return '<span class="badge badge-off">Неактивен</span>';
   return '<span class="badge badge-on">Активен</span>';
 }
-function entShowTeam() {
+// Опростена кредитна карта за екрана „Настройки" — елементарно за разбиране.
+function settingsCreditsCard() {
+  const me = currentUser(), canManage = hasPerm('manage_credits');
+  const bal = creditBalance(me), price = creditPrice(), tests = price ? Math.floor(bal / price) : 0;
+  const personal = `<div class="cr-hero"><div><div class="cr-hero-num">${bal}</div><div class="cr-hero-unit">кредита в твоя баланс</div></div><div class="cr-hero-note">≈ <b>${tests}</b> AI теста</div></div>
+    <div class="pf-hint" style="margin-top:8px">1 AI тест струва <b>${price} кредита</b> при всяко изпълнение. Описателните тестове са безплатни.${!canManage ? ' Свършат ли — поискай от администратор.' : ''}</div>`;
+  let admin = '';
+  if (canManage) {
+    const pool = creditPool();
+    const rows = Object.keys(users).filter(id => users[id].status !== 'inactive').map(id => {
+      const u = users[id];
+      return `<tr><td><span class="cm-av">${userInitials(u)}</span> ${escHtml(u.name)}${id === sessionUid ? ' <span class="pf-you">ти</span>' : ''}</td><td class="r"><b>${creditBalance(u)}</b></td><td><input id="cg-${id}" type="number" min="0" placeholder="брой" style="width:78px"> <button class="btn btn-secondary btn-sm" onclick="creditGrantUI('${id}')">Дай</button></td></tr>`;
+    }).join('');
+    const led = (creditLog.ledger || []).slice(-10).reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.name || '')} · ${escHtml(e.code || '')} · −${e.amt} кред.</span><span class="tst-logmeta">${creditFmtWhen(e.at)}</span></div>`).join('') || '<div class="pf-hint">Няма разход още.</div>';
+    admin = `<div class="cr-admin-grid" style="margin-top:14px">
+        <div class="cr-box"><div class="cr-box-k">Кредити на дружеството</div><div class="cr-box-v">${pool}</div><div class="cr-box-act"><input id="cr-topup" type="number" min="0" placeholder="+ зареди"><button class="btn btn-secondary btn-sm" onclick="creditTopUpUI()">Зареди</button></div></div>
+        <div class="cr-box"><div class="cr-box-k">Цена на 1 AI тест</div><div class="cr-box-v">${price}</div><div class="cr-box-act"><input id="cr-price" type="number" min="0" value="${price}"><button class="btn btn-secondary btn-sm" onclick="creditSetPriceUI()">Запази</button></div></div>
+      </div>
+      <div style="font-weight:700;margin:16px 0 6px;font-size:12.5px">Раздай кредити на екипа</div>
+      <table class="ent-tbl"><thead><tr><th>Потребител</th><th class="r">Баланс</th><th>Дай кредити</th></tr></thead><tbody>${rows}</tbody></table>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:11.5px;font-weight:700;color:var(--p-text3)">Дневник на разхода</summary><div style="margin-top:8px">${led}</div></details>`;
+  }
+  return `<div class="sh-card" id="settings-credits"><div class="ent-card-h">Кредити за AI</div><div class="pf-body">${personal}${admin}</div></div>`;
+}
+function entShowTeam(focus) {
   const m = entMainTop();
   entSaveNav('team');
   entSetActive(null); // входът е в горната лента (ent-topright), не в дървото
-  entCrumbs([{ l: 'Дружество и екип' }]);
+  entCrumbs([{ l: 'Настройки' }]);
   const canManage = hasPerm('manage_users');
   const used = seatsUsed(), seats = firm.seats || 0;
   const ids = Object.keys(users);
@@ -31989,7 +32036,7 @@ function entShowTeam() {
   }).join('');
   const overSeats = used > seats;
   m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Дружество и екип</h1><div class="sub">Потребители, роли и права · плащане на активен профил</div></div>
+    <div class="ent-h"><div><h1>Настройки</h1><div class="sub">Дружество · екип и права · абонамент · кредити за AI</div></div>
       ${canManage ? `<button class="btn btn-primary" onclick="openUserModal()">+ Покани потребител</button>` : ''}</div>
     <div class="pf-grid">
       <div class="sh-card"><div class="ent-card-h">Дружество</div><div class="pf-body">
@@ -32010,8 +32057,13 @@ function entShowTeam() {
       <table class="cm-tbl tm-tbl"><thead><tr><th>Потребител</th><th>Длъжност</th><th>Роля</th><th>Статус</th><th>Права</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table>
       ${overSeats ? '<div class="seat-warn">⚠ Надвишени места — увеличете абонамента или деактивирайте потребител.</div>' : ''}
-    </div></div>`;
+    </div>
+    ${settingsCreditsCard()}
+    </div>`;
+  if (focus === 'credits') { const el = document.getElementById('settings-credits'); if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px'; setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; } catch (e) {} }, 2600); } }
 }
+// „Кредити за AI" вече е част от Настройки — старите точки за вход водят там.
+function entShowCredits() { entShowTeam('credits'); }
 function saveFirm() {
   if (!hasPerm('manage_users')) return;
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
