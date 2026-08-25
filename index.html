@@ -563,18 +563,36 @@
   .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
   .eng-secchk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--p-text2); cursor: pointer; }
   @media (max-width: 720px) { .eng-secgrid { grid-template-columns: 1fr; } }
-  /* Съветник „Стартиране на ангажимента" — stepper + footer */
-  .setup-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-  .setup-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--p-border); border-radius: 999px; background: var(--p-surface); color: var(--p-text2); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  /* Съветник „Стартиране на ангажимента" — карта „как работи" + stepper + ориентация + footer */
+  .setup-how { margin-bottom: 14px; }
+  .how-flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+  .how-node { flex: 1; min-width: 150px; border: 1px solid var(--p-border); border-radius: 10px; background: var(--p-bg); padding: 11px 12px; display: flex; flex-direction: column; gap: 3px; }
+  .how-node.result { border-color: var(--p-green); background: var(--p-accent-bg); }
+  .how-node .hn-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--p-accent); color: #fff; font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .how-node.result .hn-n { background: var(--p-green); }
+  .how-node b { font-size: 13px; color: var(--p-text1); }
+  .how-node .hn-d { font-size: 11px; color: var(--p-text3); line-height: 1.45; }
+  .how-arr { display: flex; align-items: center; color: var(--p-text3); font-size: 18px; }
+  .how-note { font-size: 12px; color: var(--p-text2); line-height: 1.55; margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--p-border); }
+  .setup-steps { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .setup-step { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 11px; padding: 11px 14px; border: 1px solid var(--p-border); border-radius: 10px; background: var(--p-surface); color: var(--p-text2); text-align: left; cursor: pointer; transition: all .15s; font-family: inherit; }
   .setup-step:hover { border-color: var(--p-accent); }
-  .setup-step .sn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--p-border); color: var(--p-text2); font-size: 11px; font-weight: 700; }
-  .setup-step.cur { border-color: var(--p-accent); background: var(--p-accent-bg); color: var(--p-accent); }
+  .setup-step .sn { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--p-border); color: var(--p-text2); font-size: 12px; font-weight: 700; }
+  .setup-step .stx { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .setup-step .sl { font-size: 13px; font-weight: 700; color: var(--p-text1); }
+  .setup-step .ss { font-size: 11px; color: var(--p-text3); }
+  .setup-step .sstat { flex-shrink: 0; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--p-text3); }
+  .setup-step.cur { border-color: var(--p-accent); box-shadow: 0 0 0 2px var(--p-accent-bg); }
   .setup-step.cur .sn { background: var(--p-accent); color: #fff; }
-  .setup-step.done { color: var(--p-green); border-color: var(--p-green); }
+  .setup-step.cur .sstat { color: var(--p-accent); }
   .setup-step.done .sn { background: var(--p-green); color: #fff; }
-  .setup-arrow { color: var(--p-text3); font-size: 13px; }
+  .setup-step.done .sstat { color: var(--p-green); }
+  .setup-intro { display: flex; align-items: center; gap: 12px; background: var(--p-accent-bg); border-radius: 10px; padding: 11px 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .setup-intro .si-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--p-accent); background: var(--p-surface); border: 1px solid var(--p-accent); border-radius: 999px; padding: 4px 11px; }
+  .setup-intro .si-main { font-size: 12.5px; color: var(--p-text1); }
+  .setup-intro .si-next { color: var(--p-text3); }
   .setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--p-border); }
-  @media (max-width: 720px) { .setup-steps { gap: 4px; } .setup-step { padding: 7px 10px; font-size: 11.5px; } .setup-step .sl { display: none; } }
+  @media (max-width: 760px) { .how-arr { display: none; } .setup-step { min-width: 100%; } }
   /* Преглед на ангажимента (dashboard) */
   .dash-kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 16px; }
   .dash-kpi { border: 1px solid var(--p-border); border-radius: 8px; background: var(--p-surface); box-shadow: var(--p-card-shadow); padding: 12px 14px; }
@@ -3982,10 +4000,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825204817"></script>
-<script src="pd-spec.js?v=20260825204817"></script>
-<script src="pd-details.js?v=20260825204817"></script>
-<script src="test-details.js?v=20260825204817"></script>
+<script src="questions.js?v=20260825212907"></script>
+<script src="pd-spec.js?v=20260825212907"></script>
+<script src="pd-details.js?v=20260825212907"></script>
+<script src="test-details.js?v=20260825212907"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8861,7 +8879,7 @@ function startupBanner() {
 function engDocsBody(focusCat) {
   return `<div id="eng-docs-page">
     <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      <b>Стъпка 1.</b> Качете счетоводния пакет (Ниво 1). Оборотната ведомост определя кои справки по раздели (Ниво 2) са нужни. Данните отвън (Ниво 3) се искат по-късно. Всеки файл се качва <b>веднъж</b> и се присвоява автоматично на тестовете, които го ползват.
+      Документите са в <b>три нива</b>. <b>Ниво 1</b> е счетоводният пакет — качва се сега. <b>Ниво 2</b> са справките по раздели — показват се само за сметки със салда в оборотната ведомост. <b>Ниво 3</b> са данните отвън (потвърждения, оценки) — искат се по-късно. Всеки файл се качва <b>веднъж</b> и се присвоява автоматично на тестовете, които го ползват.
     </div></div>
     ${startupBanner()}
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Ниво 1 · Счетоводен пакет</div><div style="padding:12px 14px">${STARTUP_TIER1.map(startupTier1Row).join('')}
@@ -9075,7 +9093,7 @@ function engDataBody() {
   const teamN = Object.keys(window.team || {}).length;
   return `
     <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      <b>Стъпка 2.</b> Тези параметри са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: първата вълна тръгва веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
+      Тези параметри са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: първата вълна тръгва веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
       ${confirmed ? '<span class="ent-badge done" style="margin-left:6px"><span class="d"></span>Потвърдена</span>' : ''}
     </div></div>
 
@@ -9107,16 +9125,40 @@ function engConfirmData() { engParamSet('confirmed', '1'); engApplyNa(); if (typ
 // ── Съветник „Стартиране на ангажимента": Документи → Данни → Пакетно изпълнение ──
 let engSetupStep = 'docs';
 const SETUP_STEPS = [
-  { k: 'docs', n: 1, l: 'Документи' },
-  { k: 'data', n: 2, l: 'Данни за ангажимента' },
-  { k: 'batch', n: 3, l: 'Пакетно изпълнение' }
+  { k: 'docs', n: 1, l: 'Документи', sub: 'Качвате счетоводните файлове', next: 'оборотната ведомост определя кои справки по раздели ще ви трябват.' },
+  { k: 'data', n: 2, l: 'Данни за ангажимента', sub: 'Задавате параметрите на одита', next: 'потвърждаването отключва първата вълна тестове.' },
+  { k: 'batch', n: 3, l: 'Пакетно изпълнение', sub: 'Тестовете тръгват на вълни', next: 'изпълнявате вълна, одобрявате я и следващата се отключва.' }
 ];
 function setupStepDone(k) { if (k === 'docs') return engDocsStepDone(); if (k === 'data') return engParamsConfirmed(); return false; }
 function setupStepper(step) {
   return `<div class="setup-steps">` + SETUP_STEPS.map(s => {
-    const state = s.k === step ? 'cur' : (setupStepDone(s.k) ? 'done' : 'todo');
-    return `<button class="setup-step ${state}" onclick="entShowSetup('${s.k}')"><span class="sn">${(state === 'done') ? '✓' : s.n}</span><span class="sl">${escHtml(s.l)}</span></button>`;
-  }).join('<span class="setup-arrow">→</span>') + `</div>`;
+    const done = setupStepDone(s.k), cur = s.k === step, state = cur ? 'cur' : (done ? 'done' : 'todo');
+    const status = cur ? 'Тук сте' : (done ? 'Готово' : 'Предстои');
+    return `<button class="setup-step ${state}" onclick="entShowSetup('${s.k}')">
+      <span class="sn">${done && !cur ? '✓' : s.n}</span>
+      <span class="stx"><span class="sl">${escHtml(s.l)}</span><span class="ss">${escHtml(s.sub)}</span></span>
+      <span class="sstat">${status}</span></button>`;
+  }).join('') + `</div>`;
+}
+// Карта „как работи" — визуален поток на целия процес (структурата и резултатът).
+function setupHowWorks() {
+  return `<div class="sh-card setup-how"><div style="padding:14px 16px">
+    <div class="how-flow">
+      <div class="how-node"><span class="hn-n">1</span><b>Документи</b><span class="hn-d">Качвате счетоводния пакет веднъж. Файловете се присвояват автоматично на тестовете.</span></div>
+      <div class="how-arr">→</div>
+      <div class="how-node"><span class="hn-n">2</span><b>Данни за ангажимента</b><span class="hn-d">7 параметъра за целия одит — рамка, същественост, раздели, екип, график.</span></div>
+      <div class="how-arr">→</div>
+      <div class="how-node"><span class="hn-n">3</span><b>Пакетно изпълнение</b><span class="hn-d">Тестовете тръгват на 6 вълни; одобрявате резултата между вълните.</span></div>
+      <div class="how-arr">→</div>
+      <div class="how-node result"><span class="hn-n">✓</span><b>Готово досие</b><span class="hn-d">AI тестовете попълват чернови, вие проверявате и одобрявате.</span></div>
+    </div>
+    <div class="how-note"><b>Идеята:</b> подготвяте ангажимента веднъж, а системата изпълнява автоматично. Само оборотната ведомост е задължителна за старт — всичко друго може да се добави по-късно, без да блокира.</div>
+  </div></div>`;
+}
+// Ориентираща лента за текущата стъпка — какво правите тук и какво следва.
+function setupIntro(step) {
+  const s = SETUP_STEPS.find(x => x.k === step) || SETUP_STEPS[0];
+  return `<div class="setup-intro"><span class="si-badge">Стъпка ${s.n} от 3</span><span class="si-main"><b>${escHtml(s.l)}.</b> ${escHtml(s.sub)}. <span class="si-next">Следва: ${escHtml(s.next)}</span></span></div>`;
 }
 function setupFooter(step) {
   const idx = SETUP_STEPS.findIndex(s => s.k === step);
@@ -9137,9 +9179,11 @@ function entShowSetup(step, focusCat) {
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Стартиране на ангажимента' }, { l: stepLabel }]);
   const body = step === 'docs' ? engDocsBody(focusCat) : (step === 'data' ? engDataBody() : engBatchBody());
   m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Стартиране на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · Вълна 0 → пакетно изпълнение</div></div>
+    <div class="ent-h"><div><h1>Стартиране на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · подгответе веднъж, системата изпълнява автоматично</div></div>
       <button class="ent-credits" onclick="entShowCredits()" style="cursor:pointer"><b>${creditBalance()}</b> кред.</button></div>
+    ${setupHowWorks()}
     ${setupStepper(step)}
+    ${setupIntro(step)}
     ${body}
     ${setupFooter(step)}
   </div>`;
@@ -9304,7 +9348,7 @@ function engBatchBody() {
   const gate = engParamsConfirmed() ? '' : `<div class="sh-card" style="margin-bottom:16px"><div class="wave-gate" style="margin:12px 14px">🔒 Първо потвърдете „Данни за ангажимента" (Стъпка 2), за да отключите Вълна 1.</div></div>`;
   return `
     <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      <b>Стъпка 3.</b> Всяка вълна тръгва, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
+      <b>6 вълни с одобрения.</b> Всяка вълна тръгва, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
     </div></div>
     ${gate}
     <div class="wave-grid">${w0}${waves}${outCard}</div>`;
