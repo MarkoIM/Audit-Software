@@ -577,6 +577,27 @@
   .how-node .hn-d { font-size: 11px; color: var(--p-text3); line-height: 1.45; }
   .how-arr { display: flex; align-items: center; color: var(--p-text3); font-size: 18px; }
   .how-note { font-size: 12px; color: var(--p-text2); line-height: 1.55; margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--p-border); }
+  /* Екран „Как работи · процеси" */
+  .proc-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .proc-tbl th { text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--p-border); color: var(--p-text3); font-size: 11px; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+  .proc-tbl td { padding: 10px 12px; border-bottom: 1px solid var(--p-border); vertical-align: top; color: var(--p-text2); line-height: 1.45; }
+  .proc-tbl td.c { text-align: center; white-space: nowrap; }
+  .proc-tbl td:nth-child(1) { min-width: 150px; color: var(--p-text1); }
+  .proc-tbl td:nth-child(4) { min-width: 220px; }
+  .proc-st { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .proc-st.ok { color: var(--p-green); background: color-mix(in srgb, var(--p-green) 14%, transparent); }
+  .proc-st.warn { color: var(--p-amber); background: var(--p-amber-bg); }
+  .proc-st.na { color: var(--p-text2); background: var(--p-border); }
+  .proc-layers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .proc-layer { border: 1px solid var(--p-border); border-radius: 10px; padding: 12px 14px; background: var(--p-bg); }
+  .proc-layer .pl-h { font-size: 13px; font-weight: 700; color: var(--p-text1); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .proc-layer .pl-d { font-size: 12px; color: var(--p-text2); line-height: 1.5; }
+  .proc-layer .pl-code { display: inline-block; margin-top: 6px; font-family: monospace; font-size: 11px; color: var(--p-text3); }
+  .proc-note { font-size: 12px; color: var(--p-text2); line-height: 1.5; margin-bottom: 10px; }
+  .proc-note code { font-family: monospace; font-size: 11px; background: var(--p-bg); padding: 1px 5px; border-radius: 4px; }
+  .proc-ul, .proc-ol { margin: 0; padding-left: 20px; font-size: 12.5px; color: var(--p-text2); line-height: 1.6; }
+  .proc-ul li, .proc-ol li { margin-bottom: 5px; }
+  @media (max-width: 780px) { .proc-layers { grid-template-columns: 1fr; } }
   .setup-steps { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .setup-step { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 11px; padding: 11px 14px; border: 1px solid var(--p-border); border-radius: 10px; background: var(--p-surface); color: var(--p-text2); text-align: left; cursor: pointer; transition: all .15s; font-family: inherit; }
   .setup-step:hover { border-color: var(--p-accent); }
@@ -4019,10 +4040,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260825214920"></script>
-<script src="pd-spec.js?v=20260825214920"></script>
-<script src="pd-details.js?v=20260825214920"></script>
-<script src="test-details.js?v=20260825214920"></script>
+<script src="questions.js?v=20260826101906"></script>
+<script src="pd-spec.js?v=20260826101906"></script>
+<script src="pd-details.js?v=20260826101906"></script>
+<script src="test-details.js?v=20260826101906"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -30776,6 +30797,7 @@ function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   h += `<button class="ent-item" data-k="setup" onclick="entShowSetup('docs')">Стартиране на ангажимента</button>`;
+  h += `<button class="ent-item" data-k="procs" onclick="entShowProcesses()">Как работи · процеси</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -30855,6 +30877,7 @@ function entRestoreNav() {
   try {
     switch (n.view) {
       case 'dashboard': entShowDashboard(); break;
+      case 'procs': entShowProcesses(); break;
       case 'setup': entShowSetup(n.arg || 'docs'); break;
       case 'section': entShowSection(n.arg); break;
       case 'wd': entShowWd(n.arg); break;
@@ -30868,6 +30891,97 @@ function entRestoreNav() {
   const mm = document.getElementById('ios-main');
   if (!mm || !mm.innerHTML || mm.innerHTML.trim().length < 30) entShowClients();
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// Екран „Как работи · процеси и архитектура" — за одитора (какво се иска от теб)
+// и за backend разработчика (какви процеси да реализира и какво е mock сега).
+// ═══════════════════════════════════════════════════════════════════════════
+const PROC_MODULES = [
+  { p: 'Автентикация + 2FA', u: 'Въвежда имейл и парола, после 6-цифрен код от имейла.', now: 'Проформа: кодът се генерира на клиента (authSendCode) и се показва като демо; „доверено устройство" 30 дни.', be: 'Реален identity доставчик, SMTP/OTP изпращане, сесии/токени (JWT), лимити и заключване, по избор SSO.', st: 'mock' },
+  { p: 'Документи · 3 нива', u: 'Качва счетоводния пакет (ОВ, ГФО, ГК) и справките по раздели; ниво 3 — по-късно.', now: 'Файловете се пазят само с име/размер в localStorage; ОВ в CSV се парсва за сметки (startupParseTb).', be: 'Файлово съхранение (напр. S3), извличане/OCR/парсер на ОВ, ГК и регистри → сметки, салда, редове; дедупликация по каноничен документ.', st: 'mock + CSV' },
+  { p: 'Глобални параметри (Вълна 0)', u: 'Задава 7-те параметъра веднъж (рамка, същественост, раздели, екип, график).', now: 'engParams в localStorage; захранва изчисленията като стойност по подразбиране.', be: 'Таблица „engagement config"; сървърна валидация; захранва слоя за изчисление.', st: 'готово (UI+модел)' },
+  { p: 'Изчислителен тест (детерминистичен)', u: 'Натиска „Изпълни" и преглежда таблицата/резултата.', now: 'Смята се изцяло в JS (d10Compute, d20Compute, g00Compute…) — без модел.', be: 'Същата логика като услуга върху извлечените данни; възпроизводимо, версионирано.', st: 'логика налична' },
+  { p: 'AI тест (формулиране)', u: 'Натиска „Изпълни автоматичен анализ"; получава чернова, която редактира.', now: 'Проформа текст; кредитите се таксуват през creditRun/creditGen.', be: 'LLM извикване с фиксиран промпт + кеширан контекст (методология/шаблони); връща САМО текст; записва чернова; таксува кредити атомарно.', st: 'mock' },
+  { p: 'Кредити', u: 'Вижда баланса си; администраторът раздава кредити.', now: 'firm.credits / users[].credits / creditLog в localStorage.', be: 'Билинг + леджер таблици; атомарно теглене при изпълнение; връщане при неуспех; лимити по акаунт.', st: 'mock леджер' },
+  { p: 'Вълни + гейтове', u: 'Изпълнява вълна; одобрява резултатите, за да отключи следващата.', now: 'testWave/waveState/waveRun; гейт по статус на предходните тестове.', be: 'Оркестрация (опашка/джоб на тест), правила за предпоставки, атомарност, паралелизъм.', st: 'логика налична' },
+  { p: 'Статуси + заверка', u: 'Подава за преглед, одобрява, финализира; вижда кой кога.', now: 'testStatus {prep, rev, fin, log}; разделение на функциите (не одобряваш своето).', be: 'Workflow машина + одит-лог (неизменим), права по роля, времеви печати.', st: 'готово (UI+модел)' },
+  { p: 'Експорт PDF / Excel', u: 'Сваля работния документ / досието.', now: 'PDF чрез печат (window.open); Excel е визуален placeholder.', be: 'Сървърно генериране на PDF/XLSX по шаблон; заключване при пробен период.', st: 'PDF mock · Excel TODO' },
+  { p: 'МОС 505 потвърждения', u: 'Генерира писмо до банка; качва отговора при получаване.', now: 'Проформа HTML писмо (startup505Letter), без изпращане.', be: 'Шаблон + изпращане и проследяване на потвърждения; свързване с теста.', st: 'mock' }
+];
+const PROC_FLOW = [
+  { n: 1, t: 'Вход', d: 'Имейл + парола → 6-цифрен код по имейл (2FA).' },
+  { n: 2, t: 'Клиент и ангажимент', d: 'Избираш клиент и година от „Управление на клиенти".' },
+  { n: 3, t: 'Стартиране (Вълна 0)', d: 'Документи (3 нива) → Данни за ангажимента (7 параметъра) → Пакетно изпълнение.' },
+  { n: 4, t: 'Изпълнение на тестове', d: '6 вълни; AI тестовете попълват чернови, описателните се попълват от теб.' },
+  { n: 5, t: 'Преглед и заверка', d: 'Изготвил → проверил → финализиран, с разделение на функциите.' },
+  { n: 6, t: 'Приключване и доклад', d: 'Обобщение на неточностите (X-50) → заключителни процедури (X-10) → доклад.' }
+];
+const PROC_USER = [
+  'Качи 3-те задължителни файла (оборотна ведомост, проект на ГФО, главна книга).',
+  'Попълни и потвърди 7-те параметъра на ангажимента (Вълна 0).',
+  'Изпълнявай вълните и одобрявай резултатите между тях.',
+  'Въведи фактическите данни, които не се генерират (екип, часове, встъпително обсъждане).',
+  'Прегледай черновите на AI тестовете, коригирай и завери.',
+  'Набави документите от Ниво 3 (потвърждения, оценки, правни) при отваряне на съответния раздел.'
+];
+function entShowProcesses() {
+  const m = entMainTop();
+  entSaveNav('procs');
+  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="procs"]'));
+  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Как работи · процеси' }]);
+  const stCls = s => /готово/.test(s) ? 'ok' : (/логика/.test(s) ? 'warn' : 'na');
+  const flow = PROC_FLOW.map((f, i) => `<div class="how-node"><span class="hn-n">${f.n}</span><b>${escHtml(f.t)}</b><span class="hn-d">${escHtml(f.d)}</span></div>${i < PROC_FLOW.length - 1 ? '<div class="how-arr">→</div>' : ''}`).join('');
+  const modRows = PROC_MODULES.map(r => `<tr>
+    <td><b>${escHtml(r.p)}</b></td>
+    <td>${escHtml(r.u)}</td>
+    <td>${escHtml(r.now)}</td>
+    <td>${escHtml(r.be)}</td>
+    <td class="c"><span class="proc-st ${stCls(r.st)}">${escHtml(r.st)}</span></td></tr>`).join('');
+  const userRows = PROC_USER.map(x => `<li>${escHtml(x)}</li>`).join('');
+  m.innerHTML = `<div class="ent-page">
+    <div class="ent-h"><div><h1>Как работи · процеси и архитектура</h1><div class="sub">Едно място, което описва цялата процедура — за одитора (какво се иска от теб) и за backend разработчика (какви процеси да реализира)</div></div></div>
+
+    <div class="sh-card"><div class="ent-card-h">Целият поток (от вход до доклад)</div><div style="padding:14px 16px"><div class="how-flow">${flow}</div></div></div>
+
+    <div class="sh-card"><div class="ent-card-h">Ключов принцип · два слоя</div><div style="padding:14px 16px">
+      <div class="proc-layers">
+        <div class="proc-layer"><div class="pl-h">Слой А · Извличане и изчисление <span class="proc-st warn">детерминистичен</span></div>
+          <div class="pl-d">Същественост, извадки, равнения, водещи листове, проверки. <b>Без модел</b> — само правила и аритметика. Изпълнява се веднъж за ангажимента.<br><span class="pl-code">сега: JS (d10Compute, d20Compute, waveState…) · backend: услуга върху извлечените данни</span></div></div>
+        <div class="proc-layer"><div class="pl-h">Слой Б · Формулиране <span class="proc-st na">AI</span></div>
+          <div class="pl-d">Чернови на заключения, обяснения и бележки. <b>Само текст</b> — моделът не смята и не преписва таблици. Извиква се за отделния тест.<br><span class="pl-code">сега: проформа + таксуване (creditRun) · backend: LLM с кеширан контекст</span></div></div>
+      </div>
+      <div class="how-note"><b>Правилото:</b> числата ги смята кодът (детерминистично, възпроизводимо); текстовете ги пише моделът. Това пази досието одитируемо и намалява разхода.</div>
+    </div></div>
+
+    <div class="sh-card"><div class="ent-card-h">Процеси по модули — какво прави всеки и какво трябва да реализира backend-ът</div>
+      <div style="overflow-x:auto"><table class="proc-tbl"><thead><tr><th>Процес</th><th>Потребителят</th><th>Системата сега (прототип)</th><th>Backend трябва да реализира</th><th>Статус</th></tr></thead><tbody>${modRows}</tbody></table></div>
+      <div style="padding:0 16px 12px;font-size:11px;color:var(--p-text3)">Легенда: <span class="proc-st ok">готово</span> UI + модел са налични · <span class="proc-st warn">логика налична</span> изчислението е в кода, чака пренасяне в услуга · <span class="proc-st na">mock</span> проформа, изисква реален backend/интеграция.</div>
+    </div>
+
+    <div class="pf-grid">
+      <div class="sh-card"><div class="ent-card-h">Данни и съхранение</div><div class="pf-body">
+        <div class="proc-note"><b>Per-ангажимент</b> (ENG_STORES, ключ <code>base__клиент_година</code>): testAnswers, testNotes, testUploads, testStatus, pdUploads/pdChecklist, team, engDocs, engParams. → в реална БД: таблици, scoped по <code>engagement_id</code>.</div>
+        <div class="proc-note"><b>Глобални:</b> firm, users, creditLog, auditpro_active/nav/trusted_device. → организация, потребители, билинг, сесии.</div>
+        <div class="proc-note"><b>Важно правило:</b> вход, който идва от друг тест (същественост, SAD, водещ лист), <b>не е документ за качване</b>, а връзка (gClassify → internal). Backend-ът пренася стойността по веригата, не иска файл.</div>
+      </div></div>
+      <div class="sh-card"><div class="ent-card-h">Интеграции, които изискват backend</div><div class="pf-body">
+        <ul class="proc-ul">
+          <li><b>LLM</b> — изпълнение на AI тестовете (фиксиран промпт + кеширан контекст, само текст).</li>
+          <li><b>Извличане от документи</b> — парсер/OCR на ОВ, главна книга, регистри → структурирани данни.</li>
+          <li><b>Имейл</b> — 2FA код, потвърждения по МОС 505, известия.</li>
+          <li><b>Файлово съхранение</b> — качените документи и генерираните PDF/Excel.</li>
+          <li><b>Билинг + кредити</b> — абонамент, места, атомарно таксуване на AI тестове.</li>
+          <li><b>Одит-лог</b> — неизменим запис кой какво и кога (заверки, изпълнения).</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="sh-card"><div class="ent-card-h">Какво се иска от теб (одитора)</div><div class="pf-body">
+      <ol class="proc-ol">${userRows}</ol>
+      <div class="pf-hint">Всичко останало — изчисления, чернови, присвояване на документи, подредба по вълни — се прави от системата.</div>
+    </div></div>
+  </div>`;
+}
+
 function entShowDashboard() {
   const m = entMainTop();
   entSaveNav('dashboard');
