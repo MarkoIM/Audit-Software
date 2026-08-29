@@ -575,6 +575,19 @@
   .wave-gate-tests { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
   .wave-gate-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--p-surface); border: 1px solid var(--p-border); border-radius: 6px; padding: 6px 10px; color: var(--p-text1); }
   .wave-flowhint { font-size: 12px; color: var(--p-text2); background: var(--p-surface2); border-radius: 8px; padding: 9px 12px; margin-bottom: 14px; line-height: 1.5; }
+  .pend-card { border-left: 4px solid var(--p-amber); }
+  .pend-list { display: flex; flex-direction: column; }
+  .pend-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--p-border); flex-wrap: wrap; }
+  .pend-row:first-child { border-top: none; }
+  .pend-code { font-weight: 700; color: var(--p-accent); min-width: 52px; }
+  .pend-nm { flex: 1; min-width: 140px; font-size: 12.5px; color: var(--p-text1); }
+  .pend-w { font-size: 11px; color: var(--p-text3); }
+  .pend-unl { font-size: 11px; font-weight: 700; color: var(--p-green); }
+  .pend-st { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .pend-st.rv { color: var(--p-amber); background: var(--p-amber-bg); }
+  .pend-st.rt { color: #c0392b; background: rgba(192,57,43,.1); }
+  .pend-act { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tst-back { font-size: 12px; font-weight: 700; color: var(--p-accent); text-decoration: none; }
   .wave-manual { margin-top: 8px; font-size: 11.5px; color: var(--p-text3); }
   .wave-act { margin-top: 11px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
@@ -4123,10 +4136,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829141516"></script>
-<script src="pd-spec.js?v=20260829141516"></script>
-<script src="pd-details.js?v=20260829141516"></script>
-<script src="test-details.js?v=20260829141516"></script>
+<script src="questions.js?v=20260829143406"></script>
+<script src="pd-spec.js?v=20260829143406"></script>
+<script src="pd-details.js?v=20260829143406"></script>
+<script src="test-details.js?v=20260829143406"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -9412,6 +9425,26 @@ function batchNextAction() {
   }
   return { msg: 'Всички вълни са изпълнени и одобрени.', done: true };
 }
+// Тестове, които чакат действие на одитора (преглед/одобрение) — за списъка на таблото.
+function batchPendingTests() {
+  const out = [];
+  for (let n = 1; n <= 6; n++) {
+    waveTests(n).forEach(c => {
+      if (!testIsAuto(c)) return;
+      const s = testStatusOf(c);
+      if (s === 'review' || s === 'returned') {
+        let unlocks = 0; for (let m = n + 1; m <= 6; m++) { if (waveGateTests(m).indexOf(c) >= 0) { unlocks = m; break; } }
+        out.push({ code: c, wave: n, status: s, unlocks: unlocks });
+      }
+    });
+  }
+  // тестовете, които отключват вълна, най-отгоре
+  out.sort((a, b) => (b.unlocks ? 1 : 0) - (a.unlocks ? 1 : 0) || a.code.localeCompare(b.code));
+  return out;
+}
+// Одобряване/връщане ДИРЕКТНО от таблото (без да напускаш страницата).
+function batchApprove(code) { testApprove(code); entShowBatch(); }
+function batchReturn(code) { testReturnReview(code); entShowBatch(); }
 // Състояние на една вълна за таблото
 function waveState(n) {
   const codes = waveTests(n);
@@ -9514,9 +9547,20 @@ function engBatchBody() {
     <span class="se-tx">${nx.done ? 'Готово' : 'Следваща стъпка'}<span class="se-sub">${escHtml(nx.msg)}</span></span>
     ${nx.act ? `<button class="btn btn-primary btn-sm" onclick="${nx.act}">${escHtml(nx.btn)}</button>` : ''}
   </div>`;
-  const flow = `<div class="wave-flowhint">Всяка вълна се <b>изпълнява</b>, после <b>одобрявате</b> ключовия ѝ тест (в картата „Заверка" на самия тест) — това отключва следващата вълна.</div>`;
+  const flow = `<div class="wave-flowhint">Изпълнявате цяла вълна наведнъж (или всеки тест поотделно от неговия екран). След изпълнение AI тестовете чакат вашето <b>одобрение</b> — виждате ги в списъка по-долу и ги одобрявате направо оттук. Одобряването на ключовия тест отключва следващата вълна.</div>`;
+  const pend = batchPendingTests();
+  const pendCard = pend.length ? `<div class="sh-card pend-card" style="margin-bottom:14px"><div class="ent-card-h">Чакат вашето действие · ${pend.length}</div><div class="pend-list">${pend.map(p => {
+    const nm = ((typeof testEffectiveDef === 'function') && (testEffectiveDef(p.code) || {}).test) || p.code;
+    const stTxt = p.status === 'review' ? '<span class="pend-st rv">За преглед</span>' : '<span class="pend-st rt">Върнат</span>';
+    const unl = p.unlocks ? `<span class="pend-unl">🔓 отключва Вълна ${p.unlocks}</span>` : `<span class="pend-w">Вълна ${p.wave}</span>`;
+    const acts = p.status === 'review'
+      ? `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${p.code}')">Отвори</button><button class="btn btn-primary btn-sm" onclick="batchApprove('${p.code}')">✓ Одобри</button><button class="btn btn-secondary btn-sm" onclick="batchReturn('${p.code}')">↩ Върни</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${p.code}')">Отвори за корекция</button>`;
+    return `<div class="pend-row"><span class="pend-code">${p.code}</span><span class="pend-nm">${escHtml(nm)}</span>${unl}${stTxt}<span class="pend-act">${acts}</span></div>`;
+  }).join('')}</div><div style="padding:8px 14px;font-size:11px;color:var(--p-text3)">„Одобри" тук замества отварянето на теста. За детайлен преглед натиснете „Отвори".</div></div>` : '';
   return `
     ${banner}
+    ${pendCard}
     ${flow}
     <div class="wave-grid">${w0}${waves}${outCard}</div>`;
 }
@@ -29739,10 +29783,13 @@ function testSignoffCard(code) {
     if (canPrepareTest() && s !== 'review' && s !== 'reviewed') btns.push(`<button class="btn btn-secondary" onclick="testToggleNA('${code}')">Маркирай „Неприложим"</button>`);
   }
   const logHtml = (r.log && r.log.length) ? `<details style="margin-top:12px"><summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Одитна следа (${r.log.length})</summary><div style="margin-top:8px">${r.log.slice().reverse().map(e => `<div class="tst-logrow"><span>${escHtml(e.t)}</span><span class="tst-logmeta">${escHtml(e.u)}${e.at ? ' · ' + testFmtWhen(e.at) : ''}</span></div>`).join('')}</div></details>` : '';
+  const wv = (typeof testWave === 'function') ? testWave(code) : null;
+  const backBatch = (typeof wv === 'number' && wv >= 1) ? `<a href="#" class="tst-back" onclick="entShowSetup('batch');return false">← Към пакетно изпълнение (Вълна ${wv})</a>` : '';
   return `<div class="sh-card" id="test-signoff" style="margin:20px 0">
     <div class="ent-card-h" style="display:flex;align-items:center;justify-content:space-between"><span>Заверка и статус</span>${testStatusBadge(code)}</div>
     <div style="padding:14px 18px">${fields}
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px">${btns.join(' ') || '<span class="tst-note">Няма действия за вашата роля на този етап.</span>'}</div>
+      ${backBatch ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--p-border)">${backBatch}</div>` : ''}
       ${logHtml}
     </div>
   </div>`;
