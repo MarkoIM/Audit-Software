@@ -4120,10 +4120,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829130429"></script>
-<script src="pd-spec.js?v=20260829130429"></script>
-<script src="pd-details.js?v=20260829130429"></script>
-<script src="test-details.js?v=20260829130429"></script>
+<script src="questions.js?v=20260829135806"></script>
+<script src="pd-spec.js?v=20260829135806"></script>
+<script src="pd-details.js?v=20260829135806"></script>
+<script src="test-details.js?v=20260829135806"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -6003,7 +6003,7 @@ function corpObserve() {
 const AI_DOC_BASE = 101;
 function testAiPanel(code) {
   const det = testDet(code);
-  if (det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00 || det.k20 || det.k30 || det.l00 || det.l10 || det.l20 || det.l30 || det.m00 || det.m20 || det.m30 || det.n00 || det.n10 || det.n20 || det.n30 || det.o00 || det.o10 || det.o20 || det.o30 || det.p00 || det.p10 || det.p20 || det.p30 || det.q00 || det.q10 || det.q20 || det.q30 || det.r00 || det.r10 || det.r20 || det.r30 || det.s00 || det.s20 || det.s30 || det.t00 || det.t10 || det.t20 || det.t30 || det.u00 || det.u10 || det.u20 || det.u30 || det.v00 || det.v10 || det.v20 || det.v30 || det.x10 || det.x50) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00…K-30 / L-00…L-30 / M-00 / M-20 / M-30 / N-00 / N-10 / N-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
+  if (det.d10 || det.d20 || det.d30 || det.g00 || det.g05 || det.g10 || det.g20 || det.g30 || det.h00 || det.h10 || det.i00 || det.i10 || det.i20 || det.i30 || det.j00 || det.j10 || det.j20 || det.j30 || det.k00 || det.k20 || det.k30 || det.l00 || det.l10 || det.l20 || det.l30 || det.m00 || det.m20 || det.m30 || det.n00 || det.n10 || det.n20 || det.n30 || det.o00 || det.o10 || det.o20 || det.o30 || det.p00 || det.p10 || det.p20 || det.p30 || det.q00 || det.q10 || det.q20 || det.q30 || det.r00 || det.r10 || det.r20 || det.r30 || det.s00 || det.s20 || det.s30 || det.t00 || det.t10 || det.t20 || det.t30 || det.u00 || det.u10 || det.u20 || det.u30 || det.v00 || det.v10 || det.v20 || det.v30 || det.x10 || det.x50) return '';   // G-00…G-30 / H-00 / H-10 / I-00…I-30 / J-00…J-30 / K-00…K-30 / L-00…L-30 / M-00 / M-20 / M-30 / N-00 / N-10 / N-20 имат собствен панел с вградена „Инструкция към AI (преглед)"
   if (det.aiInputs) return b10StrategyPanel(code);
   if (!det.aiPrompt) return '';
   const docs = det.aiDocs || [];
@@ -8212,7 +8212,8 @@ function testPerfMatPanel(code) {
   const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d20DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d20ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на процента</div><div style="padding:12px 14px">${d20FactorsTable(code)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d20Analyze('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button> <button class="btn btn-secondary btn-sm" onclick="creditRun('${code}')&&d20Analyze('${code}')">Обнови анализа · ${creditPrice()} кредита</button></div></div>`;
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d20Analyze('${code}')">${((testAnswers[code] || {})['d20-generated'] === '1') ? 'Обнови анализа' : 'Изпълни автоматичен анализ'} · ${creditPrice()} кредита</button>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary><div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(testDet(code).aiPrompt || '')}</div></details></div></div>`;
   const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d20-summary">${d20SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на съществеността за изпълнение</div><div style="padding:12px 14px" id="d20-calc">${d20CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за същественост за изпълнение</div><div id="d20-proposal">${d20ProposalInner(code, c)}</div></div>
@@ -8232,6 +8233,7 @@ function d20Recalc(code) {
 }
 function d20Analyze(code) {
   const c = d20Compute(code);
+  setAnswer(code, 'd20-generated', '1');
   const ans = testAnswers[code] || {};
   const fill = (k, v) => { if (v && !((ans[k] || '').trim())) setAnswer(code, k, v); };
   fill('d20-basis', d20BasisText(c));
@@ -8528,7 +8530,8 @@ function testTrivialPanel(code) {
   const prep = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Необходими документи и данни</div><div style="padding:12px 14px">${d30DocsCards(code)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Входни параметри</div><div style="padding:12px 14px">${d30ParamsTable(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Оценка на факторите за определяне на прага</div><div style="padding:12px 14px">${d30FactorsTable(code)}</div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d30Analyze('${code}')">Изпълни автоматичен анализ · ${creditPrice()} кредита</button> <button class="btn btn-secondary btn-sm" onclick="creditRun('${code}')&&d30Analyze('${code}')">Обнови анализа · ${creditPrice()} кредита</button></div></div>`;
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изпълнете анализа</div><div style="padding:12px 14px"><button class="btn btn-primary btn-sm" onclick="creditRun('${code}')&&d30Analyze('${code}')">${((testAnswers[code] || {})['d30-generated'] === '1') ? 'Обнови анализа' : 'Изпълни автоматичен анализ'} · ${creditPrice()} кредита</button>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--p-accent)">Инструкция към AI (преглед)</summary><div style="max-height:280px;overflow:auto;background:var(--p-accent-bg);border-radius:8px;padding:12px 14px;margin-top:8px;font-family:monospace;font-size:11.5px;color:var(--p-text2);line-height:1.6;white-space:pre-wrap">${escHtml(testDet(code).aiPrompt || '')}</div></details></div></div>`;
   const result = `<div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Обобщение на анализа</div><div style="padding:12px 14px" id="d30-summary">${d30SummaryInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Изчисление на прага за ясно незначителни неточности</div><div style="padding:12px 14px" id="d30-calc">${d30CalcInner(code, c)}</div></div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Финално предложение за праг</div><div id="d30-proposal">${d30ProposalInner(code, c)}</div></div>
@@ -8548,6 +8551,7 @@ function d30Recalc(code) {
 }
 function d30Analyze(code) {
   const c = d30Compute(code);
+  setAnswer(code, 'd30-generated', '1');
   const ans = testAnswers[code] || {};
   const fill = (k, v) => { if (v && !((ans[k] || '').trim())) setAnswer(code, k, v); };
   fill('d30-basis', d30BasisText(c));
