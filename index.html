@@ -571,7 +571,10 @@
   .wave-n { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px; background: var(--p-accent-bg); color: var(--p-accent); font-weight: 700; font-size: 13px; }
   .wave-desc { font-size: 12px; color: var(--p-text2); margin: 6px 0 0; }
   .wave-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 9px; font-size: 12px; color: var(--p-text2); font-variant-numeric: tabular-nums; }
-  .wave-gate { margin-top: 9px; font-size: 12px; color: var(--p-amber); background: var(--p-amber-bg); border-radius: 6px; padding: 6px 10px; }
+  .wave-gate { margin-top: 9px; font-size: 12px; color: var(--p-amber); background: var(--p-amber-bg); border-radius: 6px; padding: 8px 10px; }
+  .wave-gate-tests { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .wave-gate-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--p-surface); border: 1px solid var(--p-border); border-radius: 6px; padding: 6px 10px; color: var(--p-text1); }
+  .wave-flowhint { font-size: 12px; color: var(--p-text2); background: var(--p-surface2); border-radius: 8px; padding: 9px 12px; margin-bottom: 14px; line-height: 1.5; }
   .wave-manual { margin-top: 8px; font-size: 11.5px; color: var(--p-text3); }
   .wave-act { margin-top: 11px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
@@ -4120,10 +4123,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829135806"></script>
-<script src="pd-spec.js?v=20260829135806"></script>
-<script src="pd-details.js?v=20260829135806"></script>
-<script src="test-details.js?v=20260829135806"></script>
+<script src="questions.js?v=20260829141516"></script>
+<script src="pd-spec.js?v=20260829141516"></script>
+<script src="pd-details.js?v=20260829141516"></script>
+<script src="test-details.js?v=20260829141516"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -9387,6 +9390,28 @@ function waveGateText(n) {
   if (n === 6) return testApproved('X-50') ? '' : 'Изисква одобрена X-50 (обобщение на неточностите) и осчетоводени корекции.';
   return '';
 }
+// Кои тестове трябва да бъдат ОДОБРЕНИ, за да се отключи вълна n (за да е ясно какво да направи одиторът).
+function waveGateTests(n) {
+  if (n === 2) return ['D-10'];
+  if (n === 3 || n === 4) return ['D-20'];
+  if (n === 6) return ['X-50'];
+  if (n === 5) { return waveTests(3).concat(waveTests(4)).filter(c => testIsAuto(c) && testStatusOf(c) !== 'na' && !testApproved(c)); }
+  return [];
+}
+// Единствената „следваща стъпка" за таблото — точно какво да направи одиторът сега.
+function batchNextAction() {
+  if (!engParamsConfirmed()) return { msg: 'Потвърдете „Данни за ангажимента", за да отключите Вълна 1.', btn: 'Към данните за ангажимента', act: "entShowSetup('data')" };
+  for (let n = 1; n <= 6; n++) { const st = waveState(n); if (st.ready && st.eligible.length > 0) return { msg: 'Вълна ' + n + ' е готова — изпълнете я (' + st.eligible.length + ' теста).', btn: 'Изпълни вълна ' + n, act: 'waveRun(' + n + ')' }; }
+  for (let n = 2; n <= 6; n++) {
+    const st = waveState(n); if (!st.gate) continue;
+    const gts = waveGateTests(n).filter(c => !testApproved(c));
+    const pend = gts.filter(c => testStatusOf(c) === 'review' || testStatusOf(c) === 'returned');
+    if (pend.length) return { msg: 'Одобрете ' + pend.join(', ') + ' (отворете теста → „Проверено от одитор"), за да отключите Вълна ' + n + '.', btn: 'Отвори ' + pend[0] + ' за одобрение', act: "entShowWd('" + pend[0] + "')" };
+    if (gts.length) return { msg: 'Изпълнете и одобрете ' + gts.join(', '), btn: gts[0] + ' →', act: "entShowWd('" + gts[0] + "')" };
+    return { msg: st.gate, btn: '', act: '' };
+  }
+  return { msg: 'Всички вълни са изпълнени и одобрени.', done: true };
+}
 // Състояние на една вълна за таблото
 function waveState(n) {
   const codes = waveTests(n);
@@ -9427,7 +9452,12 @@ function waveRun(n) {
   try { persistStatus(); } catch (e) {}
   if (typeof entRenderTree === 'function') entRenderTree();
   entShowBatch();
-  alert('Пакетът приключи: изпълнени ' + okN + ' теста. Прегледайте и одобрете резултатите, за да отключите следващата вълна.');
+  // Конкретна следваща стъпка: кой тест да се одобри, за да се отключи следващата вълна.
+  const nextGate = waveGateTests(n + 1).filter(c => !testApproved(c));
+  const hint = nextGate.length
+    ? '\n\nЗа да отключите Вълна ' + (n + 1) + ', одобрете: ' + nextGate.join(', ') + '.\nОтворете теста и натиснете „Проверено от одитор" (в картата „Заверка" най-долу).'
+    : '\n\nПрегледайте и одобрете резултатите.';
+  alert('Пакетът приключи: изпълнени ' + okN + ' теста.' + hint);
 }
 
 // Тяло на стъпка „Пакетно изпълнение" в съветника.
@@ -9448,6 +9478,16 @@ function engBatchBody() {
     const badge = st.gate ? `<span class="ent-badge pending"><span class="d"></span>Заключена</span>`
       : (st.eligible.length === 0 ? `<span class="ent-badge done"><span class="d"></span>Изпълнена</span>` : `<span class="ent-badge active"><span class="d"></span>Готова</span>`);
     const manualNote = st.manual.length ? `<div class="wave-manual">✍ ${st.manual.length} теста изискват одитора (не се генерират): ${st.manual.join(', ')}</div>` : '';
+    let gateHtml = '';
+    if (st.gate) {
+      const rows = waveGateTests(n).map(c => {
+        const s = testStatusOf(c), okd = testApproved(c);
+        const stTxt = okd ? '✓ одобрена' : (s === 'review' ? '⏳ чака вашето одобрение' : (s === 'returned' ? 'върната за корекция' : (s === 'not_started' ? 'още не е изпълнена' : 'в процес')));
+        const btn = okd ? '' : `<button class="btn btn-secondary btn-sm" onclick="entShowWd('${c}')">Отвори ${c} за одобрение →</button>`;
+        return `<div class="wave-gate-row"><span><b>${c}</b> · ${stTxt}</span>${btn}</div>`;
+      }).join('');
+      gateHtml = `<div class="wave-gate">🔒 ${escHtml(st.gate)}${rows ? `<div class="wave-gate-tests">${rows}</div>` : ''}</div>`;
+    }
     return `<div class="wave-card ${st.gate ? 'locked' : (st.eligible.length === 0 ? 'done' : 'ready')}">
       <div class="wave-h"><div><span class="wave-n">${n}</span><b>${escHtml(WAVE_META[n].name)}</b></div>${badge}</div>
       <div class="wave-desc">${escHtml(WAVE_META[n].desc)}</div>
@@ -9456,7 +9496,7 @@ function engBatchBody() {
         <span title="Одобрени">✓ ${st.done}/${st.active.length} одобрени</span>
         ${st.eligible.length ? `<span title="Чакат изпълнение">⏳ ${st.eligible.length} за изпълнение</span>` : ''}
       </div>
-      ${st.gate ? `<div class="wave-gate">🔒 ${escHtml(st.gate)}</div>` : ''}
+      ${gateHtml}
       ${manualNote}
       <div class="wave-act">
         <button class="btn btn-primary btn-sm" ${canRun ? '' : 'disabled'} onclick="waveRun(${n})">Изпълни вълна ${n}${canRun ? ' · ' + cost + ' кредита' : ''}</button>
@@ -9468,12 +9508,16 @@ function engBatchBody() {
     <div class="wave-h"><div><span class="wave-n">✍</span><b>Извън вълните — само одиторът</b></div></div>
     <div class="wave-desc">Тези тестове документират факти и не се генерират: ${outside.join(', ') || 'B-10, B-50'}.</div>
   </div>`;
-  let doneCnt = 0, readyCnt = 0; [1, 2, 3, 4, 5, 6].forEach(n => { const st = waveState(n); if (st.gate) { } else if (st.eligible.length === 0) doneCnt++; else readyCnt++; });
-  const effect = engParamsConfirmed()
-    ? `<div class="setup-effect ok"><span class="se-num">${readyCnt}</span><span class="se-tx">вълни готови за изпълнение<span class="se-sub">${doneCnt} изпълнени · одобрявай между вълните</span></span><span class="se-badge ok">В ход</span></div>`
-    : `<div class="setup-effect"><span class="se-num">🔒</span><span class="se-tx">Заключено<span class="se-sub">потвърди „Данни за ангажимента", за да отключиш Вълна 1</span></span><span class="se-badge">Стъпка 2 предстои</span></div>`;
+  const nx = batchNextAction();
+  const banner = `<div class="setup-effect ${nx.done ? 'ok' : ''}">
+    <span class="se-num" style="font-size:22px">${nx.done ? '✓' : '➤'}</span>
+    <span class="se-tx">${nx.done ? 'Готово' : 'Следваща стъпка'}<span class="se-sub">${escHtml(nx.msg)}</span></span>
+    ${nx.act ? `<button class="btn btn-primary btn-sm" onclick="${nx.act}">${escHtml(nx.btn)}</button>` : ''}
+  </div>`;
+  const flow = `<div class="wave-flowhint">Всяка вълна се <b>изпълнява</b>, после <b>одобрявате</b> ключовия ѝ тест (в картата „Заверка" на самия тест) — това отключва следващата вълна.</div>`;
   return `
-    ${effect}
+    ${banner}
+    ${flow}
     <div class="wave-grid">${w0}${waves}${outCard}</div>`;
 }
 // Обратна съвместимост: старата точка за вход отвежда до стъпка „Пакетно изпълнение".
