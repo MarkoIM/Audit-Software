@@ -4120,10 +4120,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829124825"></script>
-<script src="pd-spec.js?v=20260829124825"></script>
-<script src="pd-details.js?v=20260829124825"></script>
-<script src="test-details.js?v=20260829124825"></script>
+<script src="questions.js?v=20260829130429"></script>
+<script src="pd-spec.js?v=20260829130429"></script>
+<script src="pd-details.js?v=20260829130429"></script>
+<script src="test-details.js?v=20260829130429"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -29617,7 +29617,8 @@ function testSubmitReview(code) {
 function testApprove(code) {
   if (!canReviewTest()) { alert('Нямате право да преглеждате тестове.'); return; }
   const r = testStatusRec(code), u = currentUser();
-  if (r.prep && r.prep.id && u && r.prep.id === u.id) { alert('Не можете да проверите собствената си работа (разделение на функциите).'); return; }
+  // Разделение на функциите: обикновен потребител не одобрява собствената си работа. Администраторът има пълни права.
+  if (!isAdmin(u) && r.prep && r.prep.id && u && r.prep.id === u.id) { alert('Не можете да проверите собствената си работа (разделение на функциите). Администратор може да я одобри.'); return; }
   r.status = 'reviewed'; r.rev = testStamp(); testLog(code, 'Проверено от одитор'); persistStatus(); testStatusRefresh(code);
 }
 function testReturnReview(code) {
@@ -29626,7 +29627,10 @@ function testReturnReview(code) {
 }
 function testFinalize(code) {
   if (!canFinalizeTest()) { alert('Само партньор/администратор може да финализира.'); return; }
-  const r = testStatusRec(code); if (r.status !== 'reviewed') { alert('Тестът трябва да е „Прегледан" преди финализиране.'); return; }
+  const r = testStatusRec(code), u = currentUser();
+  // Админ може да финализира директно (пълни права); за останалите тестът трябва първо да е „Прегледан".
+  if (!isAdmin(u) && r.status !== 'reviewed') { alert('Тестът трябва да е „Прегледан" преди финализиране.'); return; }
+  if (!r.rev || !r.rev.name) r.rev = testStamp();   // ако се финализира директно, отбележи и прегледа
   r.status = 'finalized'; r.fin = testStamp(); testLog(code, 'Финализиран (заключен)'); persistStatus(); testStatusRefresh(code);
 }
 function testReopen(code) {
@@ -29672,8 +29676,12 @@ function testSignoffCard(code) {
     if ((s === 'not_started' || s === 'in_progress' || s === 'returned') && canPrepareTest())
       btns.push(`<button class="btn btn-primary" onclick="testSubmitReview('${code}')">Подай за преглед</button>`);
     if (s === 'review') {
-      if (canReviewTest() && !isPreparer) { btns.push(`<button class="btn btn-primary" onclick="testApprove('${code}')">Проверено от одитор</button>`); btns.push(`<button class="btn btn-secondary" onclick="testReturnReview('${code}')">Върни за корекция</button>`); }
-      else if (canReviewTest() && isPreparer) btns.push(`<span class="tst-note">Не можете да проверите собствената си работа (разделение на функциите).</span>`);
+      if (canReviewTest() && (!isPreparer || isAdmin(me))) {
+        btns.push(`<button class="btn btn-primary" onclick="testApprove('${code}')">Проверено от одитор</button>`);
+        btns.push(`<button class="btn btn-secondary" onclick="testReturnReview('${code}')">Върни за корекция</button>`);
+        if (isAdmin(me)) btns.push(`<button class="btn btn-secondary" onclick="testFinalize('${code}')">Финализирай (заключи)</button>`);
+      }
+      else if (canReviewTest() && isPreparer) btns.push(`<span class="tst-note">Не можете да проверите собствената си работа (разделение на функциите). Администратор може да я одобри.</span>`);
       else btns.push(`<span class="tst-note">Изчаква преглед от одитор с право на одобрение.</span>`);
     }
     if (s === 'reviewed') {
