@@ -4136,10 +4136,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829143406"></script>
-<script src="pd-spec.js?v=20260829143406"></script>
-<script src="pd-details.js?v=20260829143406"></script>
-<script src="test-details.js?v=20260829143406"></script>
+<script src="questions.js?v=20260829152536"></script>
+<script src="pd-spec.js?v=20260829152536"></script>
+<script src="pd-details.js?v=20260829152536"></script>
+<script src="test-details.js?v=20260829152536"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -31014,7 +31014,6 @@ function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   h += `<button class="ent-item" data-k="setup" onclick="entShowSetup('docs')">Стартиране на ангажимента</button>`;
-  h += `<button class="ent-item" data-k="procs" onclick="entShowProcesses()">Как работи · процеси</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
     `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
@@ -31094,7 +31093,6 @@ function entRestoreNav() {
   try {
     switch (n.view) {
       case 'dashboard': entShowDashboard(); break;
-      case 'procs': entShowProcesses(); break;
       case 'billing': entShowBilling(); break;
       case 'notifications': entShowNotifications(); break;
       case 'search': entShowSearch(n.arg || ''); break;
@@ -31248,7 +31246,6 @@ function entShowNotifications() {
 const SEARCH_SCREENS = [
   { l: 'Преглед на ангажимента', a: 'entShowDashboard()' },
   { l: 'Стартиране на ангажимента', a: "entShowSetup('docs')" },
-  { l: 'Как работи · процеси', a: 'entShowProcesses()' },
   { l: 'Плащания и фактури', a: 'entShowBilling()' },
   { l: 'Известия', a: 'entShowNotifications()' },
   { l: 'Настройки', a: 'entShowTeam()' },
