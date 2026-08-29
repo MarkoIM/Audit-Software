@@ -4120,10 +4120,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829120413"></script>
-<script src="pd-spec.js?v=20260829120413"></script>
-<script src="pd-details.js?v=20260829120413"></script>
-<script src="test-details.js?v=20260829120413"></script>
+<script src="questions.js?v=20260829121909"></script>
+<script src="pd-spec.js?v=20260829121909"></script>
+<script src="pd-details.js?v=20260829121909"></script>
+<script src="test-details.js?v=20260829121909"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -9012,7 +9012,13 @@ function startupAnalyze() {
   if (!startupTbPresent()) { alert('Качете първо оборотната ведомост (Ниво 1), за да я разчетем.'); return; }
   let pend = engParams._tbPending || [], demo = false;
   if (!pend.length) { pend = STARTUP_DEMO_ACCOUNTS.slice(); demo = true; }   // за целите на интерфейса
-  engParams.tbAccounts = pend; engParams.tbAnalyzed = '1'; engParamsPersist();
+  engParams.tbAccounts = pend; engParams.tbAnalyzed = '1';
+  // Приложими раздели (Стъпка 2) се отмятат автоматично според засечените салда.
+  const det = startupDetectedSections();
+  engParams.sections = engParams.sections || {};
+  AUDIT_SECTIONS.forEach(s => { engParams.sections[s] = !!det[s]; });
+  engParamsPersist();
+  try { if (typeof engApplyNa === 'function') engApplyNa(); } catch (e) {}
   entShowSetup('docs');
   try {
     const n = STARTUP_TIER2.filter(r => startupAcctMatch(r) === true).length;
@@ -9167,6 +9173,16 @@ function startupAcctMatch(rep) {
   if (secs && Object.keys(secs).length) return !!secs[rep.sec];
   return null;
 }
+// Раздели със салда според разчитането: раздела на всяка засечена справка + разделите на тестовете,
+// които тя отключва (така V се включва през J/O). Раздел R (собствен капитал) е винаги приложим.
+function startupDetectedSections() {
+  const set = {};
+  STARTUP_TIER2.forEach(r => {
+    if (startupAcctMatch(r) === true) { set[r.sec] = 1; (r.unlocks || []).forEach(c => { const s = c.split('-')[0]; if (AUDIT_SECTIONS.indexOf(s) >= 0) set[s] = 1; }); }
+  });
+  set['R'] = 1;   // собственият капитал присъства при всяко предприятие
+  return set;
+}
 function startupTestReady(code) {
   if (STARTUP_NO_DOC.indexOf(code) >= 0) return true;
   if (STARTUP_TIER3_TESTS.indexOf(code) >= 0) return false;
@@ -9210,7 +9226,7 @@ function engDataBody() {
       <div class="b40-fields">${paramRows}</div></div></div>
 
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">4 · Приложими раздели</div><div style="padding:12px 14px">
-      <div style="font-size:11px;color:var(--p-text3);margin-bottom:8px">Изключените раздели се маркират автоматично като „Неприложим" и се пропускат от пакета.</div>
+      <div style="font-size:11px;color:var(--p-text3);margin-bottom:8px">${engParams.tbAnalyzed ? 'Отметнати <b>автоматично</b> според салдата от разчетената оборотна ведомост — коригирайте при нужда.' : 'Ще се отметнат автоматично след разчитане на оборотната ведомост (Стъпка 1). Изключените се маркират като „Неприложим".'}</div>
       <div class="eng-secgrid">${secChecks}</div></div></div>
 
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">6 · Екип, роли и планирани часове</div><div style="padding:12px 14px">
