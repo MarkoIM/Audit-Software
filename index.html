@@ -693,6 +693,8 @@
   .ent-card-tag { font-weight: 400; font-size: 11px; color: var(--p-text3); text-transform: none; letter-spacing: 0; }
   .startup-analyze { text-align: center; padding: 18px 12px; border: 1px dashed var(--p-border-strong); border-radius: 10px; background: var(--p-bg); }
   .startup-analyze .btn { font-size: 13.5px; }
+  .tier2-summary { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 12px; background: var(--p-green-bg); border-radius: 8px; font-size: 12.5px; color: var(--p-text1); line-height: 1.5; }
+  .tier2-summary .t2-ic { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--p-green); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
   @media (max-width: 760px) { .setup-rail { flex-direction: column; align-items: stretch; gap: 8px; } .rail-conn { display: none; } .setup-effect { flex-wrap: wrap; } }
   @media (max-width: 760px) { .how-arr { display: none; } .setup-step { min-width: 100%; } }
   /* Преглед на ангажимента (dashboard) */
@@ -4118,10 +4120,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829113744"></script>
-<script src="pd-spec.js?v=20260829113744"></script>
-<script src="pd-details.js?v=20260829113744"></script>
-<script src="test-details.js?v=20260829113744"></script>
+<script src="questions.js?v=20260829120413"></script>
+<script src="pd-spec.js?v=20260829120413"></script>
+<script src="pd-details.js?v=20260829120413"></script>
+<script src="test-details.js?v=20260829120413"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8947,9 +8949,11 @@ function startupTier2Card() {
     return `<div style="font-size:12px;color:var(--p-text2);margin-bottom:8px">Оборотната ведомост не е разчетена автоматично (не е CSV). Отбележете ръчно кои раздели са приложими за този клиент:</div><div class="eng-secgrid">${chips}</div>${reana}`;
   }
   const relevant = reps.filter(r => startupAcctMatch(r) === true), other = reps.filter(r => startupAcctMatch(r) !== true);
+  const unlocked = relevant.reduce((a, r) => a + r.unlocks.length, 0);
+  const summary = `<div class="tier2-summary"><span class="t2-ic">✓</span><span class="t2-tx"><b>Оборотната ведомост е разчетена.</b> Открити <b>${relevant.length}</b> раздела със салда → показани са долните справки, които отключват <b>${unlocked}</b> теста. ${other.length ? '<span style="color:var(--p-text3)">' + other.length + ' раздела без салда са скрити.</span>' : ''}</span></div>`;
   let html = relevant.length ? relevant.map(startupTier2Row).join('') : '<div style="font-size:12px;color:var(--p-text3)">Няма открити раздели със салда. Използвайте „Приложим е" по-долу, ако е нужно.</div>';
   if (other.length) html += `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:11.5px;font-weight:700;color:var(--p-text3)">Други раздели (без салда) · ${other.length}</summary><div style="margin-top:8px">${other.map(startupTier2Row).join('')}</div></details>`;
-  return html + reana;
+  return summary + html + reana;
 }
 function startupTier3NoteCard() {
   const rows = STARTUP_TIER3.map(t => `<tr><td class="role" style="white-space:nowrap">${t.test}${t.mos505 ? ' 🔒' : ''}</td><td>${escHtml(t.missing)}</td><td style="color:var(--p-text3)">${escHtml(t.when)}</td></tr>`).join('');
@@ -9006,13 +9010,13 @@ function startupUploadTb(files) {
 // Явно разчитане на оборотната ведомост → определя приложимите справки от Ниво 2.
 function startupAnalyze() {
   if (!startupTbPresent()) { alert('Качете първо оборотната ведомост (Ниво 1), за да я разчетем.'); return; }
-  const pend = engParams._tbPending || [];
-  if (pend.length) engParams.tbAccounts = pend;
-  engParams.tbAnalyzed = '1'; engParamsPersist();
+  let pend = engParams._tbPending || [], demo = false;
+  if (!pend.length) { pend = STARTUP_DEMO_ACCOUNTS.slice(); demo = true; }   // за целите на интерфейса
+  engParams.tbAccounts = pend; engParams.tbAnalyzed = '1'; engParamsPersist();
   entShowSetup('docs');
   try {
     const n = STARTUP_TIER2.filter(r => startupAcctMatch(r) === true).length;
-    if (typeof authToast === 'function') authToast(pend.length ? ('Оборотната ведомост е разчетена · ' + n + ' справки с основание') : 'Оборотната ведомост е приета — изберете приложимите раздели по-долу.');
+    if (typeof authToast === 'function') authToast('Оборотната ведомост е разчетена' + (demo ? ' (демо)' : '') + ' · ' + n + ' справки с основание');
   } catch (e) {}
 }
 function startupReanalyze() { engParams.tbAnalyzed = ''; engParamsPersist(); entShowSetup('docs'); }
@@ -9118,6 +9122,9 @@ const STARTUP_TIER2 = [
   { id: 'REG_TAX', name: 'Данъчни разчети и временни разлики', sec: 'Q', accounts: ['45'], unlocks: ['Q-20', 'Q-30'] },
   { id: 'REG_SALES', name: 'Дневник на продажбите / регистър на издадените фактури', sec: 'S', accounts: ['70'], unlocks: ['S-20', 'S-30', 'S-10'] }
 ];
+// Демо набор сметки със салда — за целите на интерфейса, когато няма реален CSV за разчитане.
+// Нарочно БЕЗ 226 (инвестиционни имоти) и 497/498 (провизии) → те попадат в „други раздели без салда".
+const STARTUP_DEMO_ACCOUNTS = ['20', '21', '24', '30', '40', '41', '45', '49', '50', '51', '60', '70', '15', '159', '221', '42', '46', '604', '605'];
 // Ниво 3 — искат се при отваряне на раздела/вълната; НИКОГА в стартовия прозорец.
 const STARTUP_TIER3 = [
   { test: 'G-20', missing: 'Оценки, обезценки или експертни доклади за НМА', when: 'при отваряне на раздел G' },
