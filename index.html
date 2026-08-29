@@ -663,6 +663,35 @@
   .setup-intro .si-main { font-size: 12.5px; color: var(--p-text1); }
   .setup-intro .si-next { color: var(--p-text3); }
   .setup-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--p-border); }
+  /* Прогрес-рейл (ново, чисто) */
+  .setup-rail { display: flex; align-items: center; gap: 0; margin-bottom: 14px; }
+  .rail-step { flex: 1; display: flex; align-items: center; gap: 11px; padding: 11px 14px; border: 1px solid var(--p-border); border-radius: 10px; background: var(--p-surface); cursor: pointer; text-align: left; font-family: inherit; transition: all .15s; min-width: 0; }
+  .rail-step:hover { border-color: var(--p-accent); }
+  .rail-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; background: var(--p-surface2); color: var(--p-text2); }
+  .rail-tx { display: flex; flex-direction: column; min-width: 0; }
+  .rail-l { font-size: 13px; font-weight: 700; color: var(--p-text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail-st { font-size: 11px; color: var(--p-text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail-step.cur { border-color: var(--p-accent); background: var(--p-accent-bg); box-shadow: 0 0 0 2px var(--p-accent-bg); }
+  .rail-step.cur .rail-num { background: var(--p-accent); color: #fff; }
+  .rail-step.cur .rail-st { color: var(--p-accent); font-weight: 600; }
+  .rail-step.done .rail-num { background: var(--p-green); color: #fff; }
+  .rail-conn { flex: 0 0 22px; height: 2px; background: var(--p-border); }
+  .rail-conn.done { background: var(--p-green); }
+  .setup-lead { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 9px 14px; background: var(--p-accent-bg); border-radius: 9px; }
+  .sl-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--p-accent); background: var(--p-surface); border: 1px solid var(--p-accent); border-radius: 999px; padding: 3px 10px; }
+  .sl-tx { font-size: 12.5px; color: var(--p-text1); }
+  .sl-next { color: var(--p-text3); }
+  /* „Ефект" лента — какво постигаш на тази стъпка (живо) */
+  .setup-effect { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding: 14px 18px; border: 1px solid var(--p-border); border-left: 4px solid var(--p-text3); border-radius: 10px; background: var(--p-surface); box-shadow: var(--p-card-shadow); }
+  .setup-effect.ok { border-left-color: var(--p-green); }
+  .se-num { font-size: 30px; font-weight: 800; color: var(--p-accent); line-height: 1; letter-spacing: -.5px; min-width: 40px; text-align: center; }
+  .setup-effect.ok .se-num { color: var(--p-green); }
+  .se-tx { flex: 1; font-size: 14px; font-weight: 700; color: var(--p-text1); display: flex; flex-direction: column; gap: 2px; }
+  .se-sub { font-size: 11.5px; font-weight: 400; color: var(--p-text3); }
+  .se-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: var(--p-amber-bg); color: var(--p-amber); }
+  .se-badge.ok { background: var(--p-green-bg); color: var(--p-green); }
+  .ent-card-tag { font-weight: 400; font-size: 11px; color: var(--p-text3); text-transform: none; letter-spacing: 0; }
+  @media (max-width: 760px) { .setup-rail { flex-direction: column; align-items: stretch; gap: 8px; } .rail-conn { display: none; } .setup-effect { flex-wrap: wrap; } }
   @media (max-width: 760px) { .how-arr { display: none; } .setup-step { min-width: 100%; } }
   /* Преглед на ангажимента (dashboard) */
   .dash-kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 16px; }
@@ -4087,10 +4116,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829104606"></script>
-<script src="pd-spec.js?v=20260829104606"></script>
-<script src="pd-details.js?v=20260829104606"></script>
-<script src="test-details.js?v=20260829104606"></script>
+<script src="questions.js?v=20260829112307"></script>
+<script src="pd-spec.js?v=20260829112307"></script>
+<script src="pd-details.js?v=20260829112307"></script>
+<script src="test-details.js?v=20260829112307"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8931,16 +8960,14 @@ function startupBanner() {
   </div></div>`;
 }
 function engDocsBody(focusCat) {
+  const rc = startupReadyCount(), up = startupTier1Uploaded(), mand = startupMandatoryOk();
+  const effect = `<div class="setup-effect ${mand ? 'ok' : ''}"><span class="se-num">${rc.ready}</span><span class="se-tx">теста готови за изпълнение <span class="se-sub">от ${rc.total} · качени ${up}/${STARTUP_TIER1.length} файла</span></span>${mand ? '<span class="se-badge ok">Готово за старт</span>' : '<span class="se-badge">Липсва задължителен файл</span>'}</div>`;
   return `<div id="eng-docs-page">
-    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      Документите са в <b>три нива</b>. <b>Ниво 1</b> е счетоводният пакет — качва се сега. <b>Ниво 2</b> са справките по раздели — показват се само за сметки със салда в оборотната ведомост. <b>Ниво 3</b> са данните отвън (потвърждения, оценки) — искат се по-късно. Всеки файл се качва <b>веднъж</b> и се присвоява автоматично на тестовете, които го ползват.
-    </div></div>
-    ${startupBanner()}
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Ниво 1 · Счетоводен пакет</div><div style="padding:12px 14px">${STARTUP_TIER1.map(startupTier1Row).join('')}
-      <div style="font-size:11px;color:var(--p-text3);margin-top:8px">Три задължителни + три препоръчителни файла. С тях тръгват 17 AI теста; заедно с тестовете без документи — 31 веднага.</div></div></div>
-    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Ниво 2 · Справки по раздели (според оборотната ведомост)</div><div style="padding:12px 14px" id="startup-tier2">${startupTier2Card()}</div></div>
+    ${effect}
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Ниво 1 · Счетоводен пакет <span class="ent-card-tag">качва се сега</span></div><div style="padding:12px 14px">${STARTUP_TIER1.map(startupTier1Row).join('')}</div></div>
+    <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Ниво 2 · Справки по раздели <span class="ent-card-tag">според оборотната ведомост</span></div><div style="padding:12px 14px" id="startup-tier2">${startupTier2Card()}</div></div>
     ${startupTier3NoteCard()}
-    <div class="sh-card" style="margin-bottom:6px"><div class="ent-card-h">Пълно хранилище (всички категории · по избор)</div><div style="padding:6px 0 0"><div style="font-size:11px;color:var(--p-text3);padding:6px 14px">Пълният каталог на документите — за преглед и ръчно качване извън стъпките по-горе.</div></div></div>
+    <div class="sh-card" style="margin-bottom:6px"><div class="ent-card-h">Пълно хранилище <span class="ent-card-tag">всички категории · по избор</span></div></div>
     ${pdEngRepoCard(focusCat)}
     ${gEngRepoCard(focusCat)}
   </div>`;
@@ -9146,11 +9173,7 @@ function engDataBody() {
   const sched = (k, ph, type) => `<div class="b40-f"><span class="b40-fl">${escHtml(ph)}</span><input ${type ? 'type="' + type + '"' : ''} value="${escHtml(engParams[k] || '')}" onchange="engDataSetText('${k}',this.value)"></div>`;
   const teamN = Object.keys(window.team || {}).length;
   return `
-    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      Тези параметри са <b>еднакви за целия ангажимент</b>. Събирането им тук отключва пакетното изпълнение: първата вълна тръгва веднага, а веригата D-10 → D-20 → D-30 → извадки → X-50 → X-10 се захранва автоматично. Всеки параметър има <b>защитима стойност по подразбиране</b> и може да се промени по-късно във всеки тест (локалната стойност има приоритет).
-      ${confirmed ? '<span class="ent-badge done" style="margin-left:6px"><span class="d"></span>Потвърдена</span>' : ''}
-    </div></div>
-
+    <div class="setup-effect ${confirmed ? 'ok' : ''}"><span class="se-num">${confirmed ? '✓' : '7'}</span><span class="se-tx">${confirmed ? 'Данните са потвърдени' : 'параметъра за целия ангажимент'}<span class="se-sub">${confirmed ? 'Вълна 1 е отключена' : 'всеки има стойност по подразбиране · сменя се и по-късно'}</span></span>${confirmed ? '<span class="se-badge ok">Готово</span>' : '<span class="se-badge">Потвърди, за да продължиш</span>'}</div>
     <div class="sh-card" style="margin-bottom:16px"><div class="ent-card-h">Глобални параметри</div><div style="padding:12px 14px">
       <div class="b40-fields">${paramRows}</div></div></div>
 
@@ -9184,35 +9207,30 @@ const SETUP_STEPS = [
   { k: 'batch', n: 3, l: 'Пакетно изпълнение', sub: 'Тестовете тръгват на вълни', next: 'изпълнявате вълна, одобрявате я и следващата се отключва.' }
 ];
 function setupStepDone(k) { if (k === 'docs') return engDocsStepDone(); if (k === 'data') return engParamsConfirmed(); return false; }
+// Жив статус под всяка стъпка в рейла — „къде съм и какво е готово".
+function setupStepStatus(k) {
+  try {
+    if (k === 'docs') { const rc = startupReadyCount(); return startupTier1Uploaded() + '/' + STARTUP_TIER1.length + ' файла · ' + rc.ready + ' теста готови'; }
+    if (k === 'data') { return engParamsConfirmed() ? 'потвърдени' : 'незавършени'; }
+    if (k === 'batch') { if (!engParamsConfirmed()) return 'заключено'; for (let n = 1; n <= 6; n++) { const st = waveState(n); if (st.ready && st.eligible.length > 0) return 'Вълна ' + n + ' е готова'; } return 'изчаква одобрение'; }
+  } catch (e) {}
+  return '';
+}
+// Прогрес-рейл: къде си (текуща), какво е готово (✓), какъв е статусът на всяка стъпка.
 function setupStepper(step) {
-  return `<div class="setup-steps">` + SETUP_STEPS.map(s => {
+  return `<div class="setup-rail">` + SETUP_STEPS.map((s, i) => {
     const done = setupStepDone(s.k), cur = s.k === step, state = cur ? 'cur' : (done ? 'done' : 'todo');
-    const status = cur ? 'Тук сте' : (done ? 'Готово' : 'Предстои');
-    return `<button class="setup-step ${state}" onclick="entShowSetup('${s.k}')">
-      <span class="sn">${done && !cur ? '✓' : s.n}</span>
-      <span class="stx"><span class="sl">${escHtml(s.l)}</span><span class="ss">${escHtml(s.sub)}</span></span>
-      <span class="sstat">${status}</span></button>`;
+    const conn = i < SETUP_STEPS.length - 1 ? `<span class="rail-conn ${done ? 'done' : ''}"></span>` : '';
+    return `<button class="rail-step ${state}" onclick="entShowSetup('${s.k}')">
+        <span class="rail-num">${done && !cur ? '✓' : s.n}</span>
+        <span class="rail-tx"><span class="rail-l">${escHtml(s.l)}</span><span class="rail-st">${escHtml(setupStepStatus(s.k))}</span></span>
+      </button>${conn}`;
   }).join('') + `</div>`;
 }
-// Карта „как работи" — визуален поток на целия процес (структурата и резултатът).
-function setupHowWorks() {
-  return `<div class="sh-card setup-how"><div style="padding:14px 16px">
-    <div class="how-flow">
-      <div class="how-node"><span class="hn-n">1</span><b>Документи</b><span class="hn-d">Качвате счетоводния пакет веднъж. Файловете се присвояват автоматично на тестовете.</span></div>
-      <div class="how-arr">→</div>
-      <div class="how-node"><span class="hn-n">2</span><b>Данни за ангажимента</b><span class="hn-d">7 параметъра за целия одит — рамка, същественост, раздели, екип, график.</span></div>
-      <div class="how-arr">→</div>
-      <div class="how-node"><span class="hn-n">3</span><b>Пакетно изпълнение</b><span class="hn-d">Тестовете тръгват на 6 вълни; одобрявате резултата между вълните.</span></div>
-      <div class="how-arr">→</div>
-      <div class="how-node result"><span class="hn-n">✓</span><b>Готово досие</b><span class="hn-d">AI тестовете попълват чернови, вие проверявате и одобрявате.</span></div>
-    </div>
-    <div class="how-note"><b>Идеята:</b> подготвяте ангажимента веднъж, а системата изпълнява автоматично. Само оборотната ведомост е задължителна за старт — всичко друго може да се добави по-късно, без да блокира.</div>
-  </div></div>`;
-}
-// Ориентираща лента за текущата стъпка — какво правите тук и какво следва.
-function setupIntro(step) {
+// Тънка лента „текуща стъпка" — какво правя сега и какво следва (един ред).
+function setupLead(step) {
   const s = SETUP_STEPS.find(x => x.k === step) || SETUP_STEPS[0];
-  return `<div class="setup-intro"><span class="si-badge">Стъпка ${s.n} от 3</span><span class="si-main"><b>${escHtml(s.l)}.</b> ${escHtml(s.sub)}. <span class="si-next">Следва: ${escHtml(s.next)}</span></span></div>`;
+  return `<div class="setup-lead"><span class="sl-badge">Стъпка ${s.n} от 3</span><span class="sl-tx"><b>${escHtml(s.sub)}.</b> <span class="sl-next">След това ${escHtml(s.next)}</span></span></div>`;
 }
 function setupFooter(step) {
   const idx = SETUP_STEPS.findIndex(s => s.k === step);
@@ -9235,9 +9253,8 @@ function entShowSetup(step, focusCat) {
   m.innerHTML = `<div class="ent-page">
     <div class="ent-h"><div><h1>Стартиране на ангажимента</h1><div class="sub">${escHtml(iosCurrentClient || 'Клиент')} · Одит ${iosCurrentYear || 2025} · подгответе веднъж, системата изпълнява автоматично</div></div>
       <button class="ent-credits" onclick="entShowCredits()" style="cursor:pointer"><b>${creditBalance()}</b> кред.</button></div>
-    ${setupHowWorks()}
     ${setupStepper(step)}
-    ${setupIntro(step)}
+    ${setupLead(step)}
     ${body}
     ${setupFooter(step)}
   </div>`;
@@ -9399,12 +9416,12 @@ function engBatchBody() {
     <div class="wave-h"><div><span class="wave-n">✍</span><b>Извън вълните — само одиторът</b></div></div>
     <div class="wave-desc">Тези тестове документират факти и не се генерират: ${outside.join(', ') || 'B-10, B-50'}.</div>
   </div>`;
-  const gate = engParamsConfirmed() ? '' : `<div class="sh-card" style="margin-bottom:16px"><div class="wave-gate" style="margin:12px 14px">🔒 Първо потвърдете „Данни за ангажимента" (Стъпка 2), за да отключите Вълна 1.</div></div>`;
+  let doneCnt = 0, readyCnt = 0; [1, 2, 3, 4, 5, 6].forEach(n => { const st = waveState(n); if (st.gate) { } else if (st.eligible.length === 0) doneCnt++; else readyCnt++; });
+  const effect = engParamsConfirmed()
+    ? `<div class="setup-effect ok"><span class="se-num">${readyCnt}</span><span class="se-tx">вълни готови за изпълнение<span class="se-sub">${doneCnt} изпълнени · одобрявай между вълните</span></span><span class="se-badge ok">В ход</span></div>`
+    : `<div class="setup-effect"><span class="se-num">🔒</span><span class="se-tx">Заключено<span class="se-sub">потвърди „Данни за ангажимента", за да отключиш Вълна 1</span></span><span class="se-badge">Стъпка 2 предстои</span></div>`;
   return `
-    <div class="sh-card" style="margin-bottom:16px"><div style="padding:12px 14px;font-size:12.5px;color:var(--p-text2);line-height:1.6">
-      <b>6 вълни с одобрения.</b> Всяка вълна тръгва, когато предходната е одобрена. Одиторът се намесва <b>между</b> вълните, не вътре в тях. Изпълнението таксува кредити веднъж на тест; повторно генериране на вече изпълнен тест не се включва автоматично.
-    </div></div>
-    ${gate}
+    ${effect}
     <div class="wave-grid">${w0}${waves}${outCard}</div>`;
 }
 // Обратна съвместимост: старата точка за вход отвежда до стъпка „Пакетно изпълнение".
