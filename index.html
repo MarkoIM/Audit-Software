@@ -691,6 +691,8 @@
   .se-badge { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: var(--p-amber-bg); color: var(--p-amber); }
   .se-badge.ok { background: var(--p-green-bg); color: var(--p-green); }
   .ent-card-tag { font-weight: 400; font-size: 11px; color: var(--p-text3); text-transform: none; letter-spacing: 0; }
+  .startup-analyze { text-align: center; padding: 18px 12px; border: 1px dashed var(--p-border-strong); border-radius: 10px; background: var(--p-bg); }
+  .startup-analyze .btn { font-size: 13.5px; }
   @media (max-width: 760px) { .setup-rail { flex-direction: column; align-items: stretch; gap: 8px; } .rail-conn { display: none; } .setup-effect { flex-wrap: wrap; } }
   @media (max-width: 760px) { .how-arr { display: none; } .setup-step { min-width: 100%; } }
   /* Преглед на ангажимента (dashboard) */
@@ -4116,10 +4118,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260829112307"></script>
-<script src="pd-spec.js?v=20260829112307"></script>
-<script src="pd-details.js?v=20260829112307"></script>
-<script src="test-details.js?v=20260829112307"></script>
+<script src="questions.js?v=20260829113744"></script>
+<script src="pd-spec.js?v=20260829113744"></script>
+<script src="pd-details.js?v=20260829113744"></script>
+<script src="test-details.js?v=20260829113744"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -8930,16 +8932,24 @@ function startupTier2Row(rep) {
   return `<div class="ndoc ${provided ? 'ok' : ''}"><span class="ndoc-ic">${provided ? '✓' : '○'}</span><span class="ndoc-nm" title="${escHtml(eff)}">${escHtml(rep.name)}${docFmtHint(rep.name)} <span style="color:var(--p-text3);font-weight:400">· ${escHtml(eff)}</span></span>${files}<span class="ndoc-act">${badge} ${up}${defer}</span></div>`;
 }
 function startupTier2Card() {
+  // Ниво 2 се разкрива едва след явно разчитане на оборотната ведомост.
+  if (!engParams.tbAnalyzed) {
+    const has = startupTbPresent();
+    return `<div class="startup-analyze">
+      <button class="btn btn-primary" ${has ? '' : 'disabled'} onclick="startupAnalyze()">▶ Разчети оборотната ведомост и покажи справките</button>
+      <div class="pf-hint" style="margin-top:8px">${has ? 'Ще прочетем оборотната ведомост и ще покажем <b>само справките, за които има салда</b>.' : 'Качете първо оборотната ведомост (Ниво 1) — след това бутонът ще разчете кои справки са нужни.'}</div></div>`;
+  }
   const reps = STARTUP_TIER2.slice().sort((a, b) => b.unlocks.length - a.unlocks.length);
   const haveDetection = (engParams.tbAccounts && engParams.tbAccounts.length) || (engParams.tbSections && Object.keys(engParams.tbSections).length);
+  const reana = `<div style="margin-top:12px;text-align:right"><a href="#" class="pf-link" onclick="startupReanalyze();return false">↻ Разчети наново</a></div>`;
   if (!haveDetection) {
     const chips = reps.map(r => `<label class="eng-secchk"><input type="checkbox" onchange="startupSetSection('${r.sec}',this.checked);entShowSetup('docs')"> <b>${r.sec}</b> ${escHtml(secName(r.sec))} <span style="color:var(--p-text3)">(${r.unlocks.length})</span></label>`).join('');
-    return `<div style="font-size:12px;color:var(--p-text2);margin-bottom:8px">Качете оборотната ведомост като <b>CSV</b>, за да се покажат автоматично само справките със салда — или отбележете ръчно кои раздели са приложими за този клиент:</div><div class="eng-secgrid">${chips}</div>`;
+    return `<div style="font-size:12px;color:var(--p-text2);margin-bottom:8px">Оборотната ведомост не е разчетена автоматично (не е CSV). Отбележете ръчно кои раздели са приложими за този клиент:</div><div class="eng-secgrid">${chips}</div>${reana}`;
   }
   const relevant = reps.filter(r => startupAcctMatch(r) === true), other = reps.filter(r => startupAcctMatch(r) !== true);
   let html = relevant.length ? relevant.map(startupTier2Row).join('') : '<div style="font-size:12px;color:var(--p-text3)">Няма открити раздели със салда. Използвайте „Приложим е" по-долу, ако е нужно.</div>';
   if (other.length) html += `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:11.5px;font-weight:700;color:var(--p-text3)">Други раздели (без салда) · ${other.length}</summary><div style="margin-top:8px">${other.map(startupTier2Row).join('')}</div></details>`;
-  return html;
+  return html + reana;
 }
 function startupTier3NoteCard() {
   const rows = STARTUP_TIER3.map(t => `<tr><td class="role" style="white-space:nowrap">${t.test}${t.mos505 ? ' 🔒' : ''}</td><td>${escHtml(t.missing)}</td><td style="color:var(--p-text3)">${escHtml(t.when)}</td></tr>`).join('');
@@ -8981,16 +8991,31 @@ function startupUploadReport(repId, files) {
 }
 function startupUploadTb(files) {
   if (typeof gRepoAdd === 'function') gRepoAdd('ov', files);
+  // Ново качване → изисква ново разчитане (бутонът „Разчети" го задейства).
+  engParams.tbAnalyzed = ''; engParams.tbAccounts = []; engParams._tbPending = null; engParamsPersist();
   try {
     const f = files && files[0];
     if (f && /\.(csv|txt|tsv)$/i.test(f.name || '') && typeof FileReader !== 'undefined') {
       const r = new FileReader();
-      r.onload = function () { try { const acc = startupParseTb(String(r.result || '')); if (acc.length) startupSetAccounts(acc); } catch (e) {} entShowSetup('docs'); };
+      r.onload = function () { try { engParams._tbPending = startupParseTb(String(r.result || '')); engParamsPersist(); } catch (e) {} entShowSetup('docs'); };
       r.readAsText(f); return;
     }
   } catch (e) {}
   entShowSetup('docs');
 }
+// Явно разчитане на оборотната ведомост → определя приложимите справки от Ниво 2.
+function startupAnalyze() {
+  if (!startupTbPresent()) { alert('Качете първо оборотната ведомост (Ниво 1), за да я разчетем.'); return; }
+  const pend = engParams._tbPending || [];
+  if (pend.length) engParams.tbAccounts = pend;
+  engParams.tbAnalyzed = '1'; engParamsPersist();
+  entShowSetup('docs');
+  try {
+    const n = STARTUP_TIER2.filter(r => startupAcctMatch(r) === true).length;
+    if (typeof authToast === 'function') authToast(pend.length ? ('Оборотната ведомост е разчетена · ' + n + ' справки с основание') : 'Оборотната ведомост е приета — изберете приложимите раздели по-долу.');
+  } catch (e) {}
+}
+function startupReanalyze() { engParams.tbAnalyzed = ''; engParamsPersist(); entShowSetup('docs'); }
 // Проформа искане за потвърждение по МОС 505 — писмо до банка с данните на клиента (демо, без изпращане).
 function startup505Letter() {
   const cl = iosCurrentClient || 'Клиент', yr = iosCurrentYear || 2025;
