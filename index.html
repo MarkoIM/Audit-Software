@@ -4087,10 +4087,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260826152633"></script>
-<script src="pd-spec.js?v=20260826152633"></script>
-<script src="pd-details.js?v=20260826152633"></script>
-<script src="test-details.js?v=20260826152633"></script>
+<script src="questions.js?v=20260829104606"></script>
+<script src="pd-spec.js?v=20260829104606"></script>
+<script src="pd-details.js?v=20260829104606"></script>
+<script src="test-details.js?v=20260829104606"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -30846,8 +30846,6 @@ function entRenderTree() {
   // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
   let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
   h += `<button class="ent-item" data-k="setup" onclick="entShowSetup('docs')">Стартиране на ангажимента</button>`;
-  h += `<button class="ent-item" data-k="resources" onclick="entShowResources()">Планиране на ресурси</button>`;
-  h += `<button class="ent-item" data-k="billing" onclick="entShowBilling()">Плащания и фактури</button>`;
   h += `<button class="ent-item" data-k="procs" onclick="entShowProcesses()">Как работи · процеси</button>`;
   // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
   h += `<div class="ent-phase" data-grp="pd">` +
@@ -30929,7 +30927,6 @@ function entRestoreNav() {
     switch (n.view) {
       case 'dashboard': entShowDashboard(); break;
       case 'procs': entShowProcesses(); break;
-      case 'resources': entShowResources(); break;
       case 'billing': entShowBilling(); break;
       case 'notifications': entShowNotifications(); break;
       case 'search': entShowSearch(n.arg || ''); break;
@@ -31084,7 +31081,6 @@ const SEARCH_SCREENS = [
   { l: 'Преглед на ангажимента', a: 'entShowDashboard()' },
   { l: 'Стартиране на ангажимента', a: "entShowSetup('docs')" },
   { l: 'Как работи · процеси', a: 'entShowProcesses()' },
-  { l: 'Планиране на ресурси', a: 'entShowResources()' },
   { l: 'Плащания и фактури', a: 'entShowBilling()' },
   { l: 'Известия', a: 'entShowNotifications()' },
   { l: 'Настройки', a: 'entShowTeam()' },
@@ -31120,49 +31116,7 @@ function entShowSearch(q) {
   const inp = document.getElementById('srch-big-inp'); if (inp) { try { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {} }
 }
 
-// ── Планиране на ресурси ────────────────────────────────────────────────────
-let resPlan = null;
-function resLoad() { if (resPlan) return resPlan; try { resPlan = JSON.parse(localStorage.getItem('auditpro_resources') || '{}'); } catch (e) { resPlan = {}; } return resPlan; }
-function resSave() { try { localStorage.setItem('auditpro_resources', JSON.stringify(resPlan || {})); } catch (e) {} }
-function resCap(uid) { const p = resLoad()[uid] || {}; return (typeof p.cap === 'number') ? p.cap : 40; }
-function resAllocVal(uid, cl) { const p = resLoad()[uid] || {}; return (p.alloc && p.alloc[cl]) || 0; }
-function resAllocTotal(uid) { const p = resLoad()[uid] || {}; let s = 0; if (p.alloc) Object.keys(p.alloc).forEach(k => s += (+p.alloc[k] || 0)); return s; }
-function resSetCap(uid, v) { resLoad(); resPlan[uid] = resPlan[uid] || {}; resPlan[uid].cap = Math.max(0, Math.round(+v || 0)); resSave(); entShowResources(); }
-function resSetAlloc(uid, cl, v) { resLoad(); resPlan[uid] = resPlan[uid] || {}; resPlan[uid].alloc = resPlan[uid].alloc || {}; resPlan[uid].alloc[cl] = Math.max(0, Math.round(+v || 0)); resSave(); entShowResources(); }
-function entShowResources() {
-  const m = entMainTop(); entSaveNav('resources'); entSetActive(document.querySelector('#ent-tree .ent-item[data-k="resources"]'));
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Планиране на ресурси' }]);
-  const canEdit = hasPerm('assign_team');
-  const cls = Object.keys(window.clients || {});
-  const uids = Object.keys(users).filter(id => users[id].status !== 'inactive');
-  const cap = (uid) => resCap(uid), alloc = (uid) => resAllocTotal(uid);
-  let totCap = 0, totAlloc = 0;
-  const rows = uids.map(id => {
-    const u = users[id], c = cap(id), a = alloc(id), pct = c ? Math.round(a / c * 100) : 0, over = a > c;
-    totCap += c; totAlloc += a;
-    const capIn = `<input type="number" min="0" value="${c}" style="width:66px" ${canEdit ? '' : 'disabled'} onchange="resSetCap('${id}',this.value)">`;
-    const allocCells = cls.map(cl => `<td><input type="number" min="0" value="${resAllocVal(id, cl)}" style="width:60px" ${canEdit ? '' : 'disabled'} onchange="resSetAlloc('${id}','${qEsc(cl)}',this.value)"></td>`).join('');
-    return `<tr><td><span class="cm-av">${userInitials(u)}</span> <b>${escHtml(u.name)}</b><div class="tm-mail">${escHtml(u.title || '')}</div></td>
-      <td class="c">${capIn}</td>${allocCells}
-      <td class="c"><b>${a}</b></td>
-      <td style="min-width:120px"><div class="res-bar"><div class="res-fill${over ? ' over' : ''}" style="width:${Math.min(100, pct)}%"></div></div><div class="res-pct${over ? ' over' : ''}">${pct}%${over ? ' ⚠' : ''}</div></td></tr>`;
-  }).join('');
-  const clHead = cls.map(cl => `<th class="c" title="${escHtml(cl)}">${escHtml(cl.length > 10 ? cl.slice(0, 9) + '…' : cl)}</th>`).join('');
-  const overallPct = totCap ? Math.round(totAlloc / totCap * 100) : 0;
-  m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Планиране на ресурси</h1><div class="sub">Капацитет и разпределение на екипа по клиенти (часове/седмица)</div></div></div>
-    <div class="dash-kpis" style="grid-template-columns:repeat(3,1fr)">
-      <div class="dash-kpi"><div class="l">Екип</div><div class="v">${uids.length}</div><div class="sub">активни членове</div></div>
-      <div class="dash-kpi"><div class="l">Планирани часове</div><div class="v">${totAlloc} <small>/ ${totCap}</small></div><div class="sub">разпределени / капацитет</div></div>
-      <div class="dash-kpi ${overallPct > 100 ? 'warn' : 'good'}"><div class="l">Натовареност</div><div class="v">${overallPct}%</div><div class="sub">${overallPct > 100 ? 'над капацитета' : 'в рамките на капацитета'}</div></div>
-    </div>
-    <div class="sh-card"><div class="ent-card-h">Разпределение по членове и клиенти</div>
-      <div style="overflow-x:auto"><table class="ent-tbl res-tbl"><thead><tr><th>Член на екипа</th><th class="c">Капацитет</th>${clHead}<th class="c">Разпред.</th><th>Натовареност</th></tr></thead><tbody>${rows}</tbody></table></div>
-      ${canEdit ? '<div class="pf-hint" style="padding:0 14px 12px">Въведи часове/седмица за капацитета и по клиент. Натовареност над 100% се маркира.</div>' : '<div class="pf-hint" style="padding:0 14px 12px">Само роля с право „Разпределяне на екип" може да редактира.</div>'}
-    </div></div>`;
-}
-
-// ── Плащания и фактури ──────────────────────────────────────────────────────
+// ── Плащания и фактури (карта в екрана „Настройки") ─────────────────────────
 function billingInvoices() {
   if (!firm.invoices) {
     firm.invoices = [
@@ -31175,7 +31129,7 @@ function billingInvoices() {
   return firm.invoices;
 }
 function billingPay(no) {
-  const inv = (firm.invoices || []).find(i => i.no === no); if (inv) { inv.status = 'Платена'; try { persistFirm(); } catch (e) {} authToast && authToast('Фактура ' + no + ' е платена (демо).'); entShowBilling(); }
+  const inv = (firm.invoices || []).find(i => i.no === no); if (inv) { inv.status = 'Платена'; try { persistFirm(); } catch (e) {} authToast && authToast('Фактура ' + no + ' е платена (демо).'); entShowTeam('billing'); }
 }
 function billingInvoicePdf(no) {
   const inv = (firm.invoices || []).find(i => i.no === no); if (!inv) return;
@@ -31187,33 +31141,30 @@ function billingInvoicePdf(no) {
     <p class="muted" style="margin-top:20px;font-size:12px">Демо: проформа фактура за целите на интерфейса.</p></body></html>`;
   try { const w = window.open('', '_blank'); if (w) { w.document.open(); w.document.write(html); w.document.close(); } } catch (e) {}
 }
-function entShowBilling() {
-  const m = entMainTop(); entSaveNav('billing'); entSetActive(document.querySelector('#ent-tree .ent-item[data-k="billing"]'));
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Плащания и фактури' }]);
+// Карта „Плащания и фактури" в екрана „Настройки".
+function settingsBillingCard() {
   const canManage = hasPerm('manage_billing');
   const invs = billingInvoices();
   const due = invs.filter(i => i.status !== 'Платена').length;
   const invRows = invs.map(i => `<tr><td><b>${escHtml(i.no)}</b></td><td>${escHtml(i.date)}</td><td>${escHtml(i.period)}</td><td class="r">${escHtml(i.amount)}</td>
     <td><span class="inv-st ${i.status === 'Платена' ? 'paid' : 'due'}">${escHtml(i.status)}</span></td>
     <td class="cm-act"><button class="btn btn-secondary btn-sm" onclick="billingInvoicePdf('${i.no}')">PDF</button>${i.status !== 'Платена' && canManage ? ` <button class="btn btn-primary btn-sm" onclick="billingPay('${i.no}')">Плати</button>` : ''}</td></tr>`).join('');
-  m.innerHTML = `<div class="ent-page">
-    <div class="ent-h"><div><h1>Плащания и фактури</h1><div class="sub">Абонамент, метод на плащане и история на фактурите</div></div></div>
-    <div class="pf-grid">
-      <div class="sh-card"><div class="ent-card-h">Текущ абонамент</div><div class="pf-body">
-        <div class="cr-hero"><div><div class="cr-hero-num">${isTrial() ? 'Проба' : escHtml(firm.plan || 'Стандартен')}</div><div class="cr-hero-unit">${firm.seats || 0} места · ${seatsUsed()} заети</div></div><div class="cr-hero-note">Следваща фактура: <b>01.09.2026</b></div></div>
-        <div class="pf-hint" style="margin-top:8px">Плаща се на активен профил. Управлението на местата е в <a href="#" class="pf-link" onclick="entShowTeam();return false">Настройки</a>.</div>
-        ${canManage && isTrial() ? '<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="trialActivateBilling()">Активирай абонамент</button>' : ''}
-      </div></div>
-      <div class="sh-card"><div class="ent-card-h">Метод на плащане</div><div class="pf-body">
+  return `<div class="sh-card" id="settings-billing"><div class="ent-card-h">Плащания и фактури</div><div class="pf-body">
+    <div class="pf-grid" style="margin-bottom:14px">
+      <div><div class="proc-note" style="font-weight:700;margin-bottom:6px">Метод на плащане</div>
         <div class="pay-card"><span class="pay-brand">VISA</span><span class="pay-num">•••• •••• •••• 4242</span><span class="pay-exp">12/28</span></div>
         ${canManage ? '<button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="authToast&&authToast(\'Демо: смяна на карта не е активна в прототипа.\')">Смени картата</button>' : '<div class="pf-hint">Само роля с право „Управление на плащания" може да променя.</div>'}
-        <div class="pf-hint" style="margin-top:8px">Кредити за AI се управляват в <a href="#" class="pf-link" onclick="entShowTeam('credits');return false">Настройки → Кредити</a>.</div>
-      </div></div>
+      </div>
+      <div><div class="proc-note" style="font-weight:700;margin-bottom:6px">Следваща фактура</div>
+        <div class="cr-hero"><div><div class="cr-hero-num" style="font-size:22px">240,00 лв.</div><div class="cr-hero-unit">${firm.seats || 0} места · ${seatsUsed()} заети</div></div><div class="cr-hero-note">на <b>01.09.2026</b></div></div>
+      </div>
     </div>
-    <div class="sh-card"><div class="ent-card-h" style="display:flex;justify-content:space-between;align-items:center">Фактури${due ? `<span class="inv-st due">${due} дължими</span>` : ''}</div>
-      <table class="ent-tbl"><thead><tr><th>№</th><th>Дата</th><th>Период</th><th class="r">Сума</th><th>Статус</th><th></th></tr></thead><tbody>${invRows}</tbody></table>
-    </div></div>`;
+    <div style="font-weight:700;margin:4px 0 6px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center">Фактури${due ? `<span class="inv-st due">${due} дължими</span>` : ''}</div>
+    <div style="overflow-x:auto"><table class="ent-tbl"><thead><tr><th>№</th><th>Дата</th><th>Период</th><th class="r">Сума</th><th>Статус</th><th></th></tr></thead><tbody>${invRows}</tbody></table></div>
+  </div></div>`;
 }
+// „Плащания и фактури" вече е в „Настройки" — старите входове водят там.
+function entShowBilling() { entShowTeam('billing'); }
 
 function entShowDashboard() {
   const m = entMainTop();
@@ -32407,8 +32358,10 @@ function entShowTeam(focus) {
       ${overSeats ? '<div class="seat-warn">⚠ Надвишени места — увеличете абонамента или деактивирайте потребител.</div>' : ''}
     </div>
     ${settingsCreditsCard()}
+    ${settingsBillingCard()}
     </div>`;
-  if (focus === 'credits') { const el = document.getElementById('settings-credits'); if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px'; setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; } catch (e) {} }, 2600); } }
+  const focusEl = focus === 'credits' ? 'settings-credits' : (focus === 'billing' ? 'settings-billing' : '');
+  if (focusEl) { const el = document.getElementById(focusEl); if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px'; setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; } catch (e) {} }, 2600); } }
 }
 // „Кредити за AI" вече е част от Настройки — старите точки за вход водят там.
 function entShowCredits() { entShowTeam('credits'); }
