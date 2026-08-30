@@ -4225,10 +4225,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260830214704"></script>
-<script src="pd-spec.js?v=20260830214704"></script>
-<script src="pd-details.js?v=20260830214704"></script>
-<script src="test-details.js?v=20260830214704"></script>
+<script src="questions.js?v=20260830215456"></script>
+<script src="pd-spec.js?v=20260830215456"></script>
+<script src="pd-details.js?v=20260830215456"></script>
+<script src="test-details.js?v=20260830215456"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -31213,30 +31213,69 @@ function dashNext() {
   return { msg: 'Всички вълни са изпълнени и одобрени.', btn: 'Към пакетното изпълнение', act: "entShowSetup('batch')", done: true };
 }
 // Запомняне/възстановяване на текущия екран — при рефреш потребителят се връща там, където е бил.
-function entSaveNav(view, arg) { try { localStorage.setItem('auditpro_nav', JSON.stringify({ view: view, arg: (arg == null ? '' : String(arg)) })); } catch (e) {} }
+// Освен това всяка навигация добавя запис в историята на браузъра, за да работят стрелките
+// „назад/напред" (лавиране между отваряните екрани). Данните са в localStorage → не се губят.
+let entHistoryInit = false;    // първата навигация заменя базовия запис (replaceState)
+let entHistoryLock = false;    // активно при възстановяване от popstate — не добавяй нов запис
+function entSameHistState(a, b) {
+  return !!(a && b && a.ap && a.view === b.view && a.arg === b.arg && a.client === b.client && +a.year === +b.year);
+}
+function entPushHistory(view, arg) {
+  if (entHistoryLock) return;   // идваме от back/forward — не създавай нов запис
+  const st = { ap: 1, view: view, arg: (arg == null ? '' : String(arg)), client: iosCurrentClient, year: iosCurrentYear, engOpen: !!entEngOpen };
+  try {
+    if (!entHistoryInit) { history.replaceState(st, ''); entHistoryInit = true; return; }
+    if (entSameHistState(history.state, st)) { history.replaceState(st, ''); return; }  // същият екран (пре-рендер) → без нов запис
+    history.pushState(st, '');
+  } catch (e) {}
+}
+function entSaveNav(view, arg) {
+  try { localStorage.setItem('auditpro_nav', JSON.stringify({ view: view, arg: (arg == null ? '' : String(arg)) })); } catch (e) {}
+  entPushHistory(view, arg);
+}
+// Диспечер: отваря екрана по view/arg (споделен от рефреш и от back/forward).
+function entDispatch(view, arg) {
+  switch (view) {
+    case 'home': entShowHome(); break;
+    case 'dashboard': entShowDashboard(); break;
+    case 'billing': entShowBilling(); break;
+    case 'notifications': entShowNotifications(); break;
+    case 'search': entShowSearch(arg || ''); break;
+    case 'setup': entShowSetup(arg || 'docs'); break;
+    case 'section': entShowSection(arg); break;
+    case 'wd': entShowWd(arg); break;
+    case 'team': entShowTeam(); break;
+    case 'credits': entShowCredits(); break;
+    case 'profile': entShowProfile(); break;
+    case 'clients': default: entShowClients(); break;
+  }
+}
 function entRestoreNav() {
   let n = null; try { n = JSON.parse(localStorage.getItem('auditpro_nav') || 'null'); } catch (e) {}
   if (!n || !n.view) { entShowClients(); return; }
-  try {
-    switch (n.view) {
-      case 'home': entShowHome(); break;
-      case 'dashboard': entShowDashboard(); break;
-      case 'billing': entShowBilling(); break;
-      case 'notifications': entShowNotifications(); break;
-      case 'search': entShowSearch(n.arg || ''); break;
-      case 'setup': entShowSetup(n.arg || 'docs'); break;
-      case 'section': entShowSection(n.arg); break;
-      case 'wd': entShowWd(n.arg); break;
-      case 'team': entShowTeam(); break;
-      case 'credits': entShowCredits(); break;
-      case 'profile': entShowProfile(); break;
-      case 'clients': default: entShowClients(); break;
-    }
-  } catch (e) { entShowClients(); return; }
+  try { entDispatch(n.view, n.arg); } catch (e) { entShowClients(); return; }
   // Ако целевият екран не се е отворил (напр. изтрит тест/раздел) — връщаме към клиентите.
   const mm = document.getElementById('ios-main');
   if (!mm || !mm.innerHTML || mm.innerHTML.trim().length < 30) entShowClients();
 }
+// Стрелки „назад/напред" на браузъра → връщане към предишния/следващия отварян екран.
+// Възстановяваме и ангажимента (клиент/година) от записа, а данните идват от localStorage
+// (последните промени се пазят — просто пре-рендираме екрана с актуалните данни).
+function entHistoryPop(ev) {
+  const st = ev && ev.state;
+  if (!st || !st.ap) return;   // не е екран на приложението
+  entHistoryLock = true;
+  try {
+    if (st.client && clients[st.client] && (st.client !== iosCurrentClient || +st.year !== +iosCurrentYear)) {
+      iosCurrentClient = st.client; iosCurrentYear = +st.year; persistActive(); reloadEngagement();
+    }
+    entEngOpen = !!st.engOpen; entPersistEngOpen();
+    entRenderCtx(); entRenderTree();
+    entDispatch(st.view, st.arg);
+  } catch (e) {
+  } finally { entHistoryLock = false; }
+}
+if (typeof window !== 'undefined') window.addEventListener('popstate', entHistoryPop);
 // ═══════════════════════════════════════════════════════════════════════════
 // Екран „Как работи · процеси и архитектура" — за одитора (какво се иска от теб)
 // и за backend разработчика (какви процеси да реализира и какво е mock сега).
@@ -32843,7 +32882,7 @@ function entShowTeam(focus) {
   if (focusEl) { const el = document.getElementById(focusEl); if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px'; setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; } catch (e) {} }, 2600); } }
 }
 // „Кредити за AI" вече е част от Настройки — но в менюто е отделен вход.
-function entShowCredits() { entShowTeam('credits'); entSaveNav('credits'); entSetActive('credits'); }
+function entShowCredits() { const prev = entHistoryLock; entHistoryLock = true; entShowTeam('credits'); entHistoryLock = prev; entSaveNav('credits'); entSetActive('credits'); }
 function saveFirm() {
   if (!hasPerm('manage_users')) return;
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
