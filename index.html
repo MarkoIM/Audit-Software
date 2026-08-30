@@ -80,13 +80,20 @@
 
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: 6px; font-size: 15px; font-weight: 500;
+    padding: 8px 15px; border-radius: 6px; font-size: 15px; font-weight: 600;
     cursor: pointer; border: 1px solid transparent; transition: all .15s;
   }
   .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
   .btn-primary:hover { background: #16314f; }
-  .btn-secondary { background: #fff; color: var(--gray-700); border-color: var(--gray-300); }
-  .btn-secondary:hover { background: var(--gray-50); }
+  /* Вторичен бутон — ясно очертан и леко запълнен, за да не се слива с белите карти (тема-осъзнат) */
+  .btn-secondary { background: var(--p-surface2); color: var(--p-text1); border-color: var(--p-border-strong); }
+  .btn-secondary:hover { background: var(--p-accent-bg); color: var(--p-accent); border-color: var(--p-accent); }
+  /* Клавиатурен фокус — видим контур върху всички интерактивни елементи (нищо да не се пропуска) */
+  .btn:focus-visible, button:focus-visible, a:focus-visible,
+  .ent-navitem:focus-visible, .ent-item:focus-visible, .ent-wd:focus-visible, .ent-shdr:focus-visible, .ent-phdr:focus-visible,
+  .pf-link:focus-visible, .auth-link:focus-visible, .cm-year:focus-visible, .link:focus-visible {
+    outline: 2px solid var(--p-accent); outline-offset: 2px; border-radius: 5px;
+  }
   .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
   .btn-success:hover { background: #15803d; }
   .btn-warning { background: #f59e0b; color: #fff; border-color: #f59e0b; }
@@ -552,7 +559,7 @@
   .ent-maincol { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   .ent-topbar { height: 50px; flex-shrink: 0; background: var(--p-surface); border-bottom: 1px solid var(--p-border); display: flex; align-items: center; padding: 0 22px; }
   .ent-crumbs { font-size: 14px; color: var(--p-text3); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-  .ent-crumbs .link { color: var(--p-text2); cursor: pointer; } .ent-crumbs .link:hover { color: var(--p-accent); }
+  .ent-crumbs .link { color: var(--p-accent); cursor: pointer; font-weight: 600; } .ent-crumbs .link:hover { text-decoration: underline; }
   .ent-crumbs .sep { color: var(--p-border-strong); } .ent-crumbs .cur { color: var(--p-text1); font-weight: 600; }
   .ent-topright { margin-left: auto; font-size: 14px; color: var(--p-text2); display: flex; align-items: center; gap: 14px; }
   .ent-eng { color: var(--p-text2); font-variant-numeric: tabular-nums; }
@@ -622,7 +629,7 @@
   .pend-st.rv { color: var(--p-amber); background: var(--p-amber-bg); }
   .pend-st.rt { color: #c0392b; background: rgba(192,57,43,.1); }
   .pend-act { display: flex; gap: 6px; flex-wrap: wrap; }
-  .tst-back { font-size: 14px; font-weight: 700; color: var(--p-accent); text-decoration: none; }
+  .tst-back { font-size: 14px; font-weight: 700; color: var(--p-accent); text-decoration: underline; text-underline-offset: 2px; }
   .wave-manual { margin-top: 8px; font-size: 13.5px; color: var(--p-text3); }
   .wave-act { margin-top: 11px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .eng-secgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px 18px; }
@@ -1114,8 +1121,8 @@
   }
   .btn-sm { padding: 4px 10px; font-size: 14px; }
   .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
-  .btn-ghost { background: transparent; border-color: transparent; color: var(--blue); padding: 4px 8px; }
-  .btn-ghost:hover { background: var(--blue-light); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--p-accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; padding: 5px 9px; }
+  .btn-ghost:hover { background: var(--p-accent-bg); text-decoration: none; }
 
   .card { background: #fff; border: 1px solid var(--gray-200); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
   .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -4225,10 +4232,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260830220528"></script>
-<script src="pd-spec.js?v=20260830220528"></script>
-<script src="pd-details.js?v=20260830220528"></script>
-<script src="test-details.js?v=20260830220528"></script>
+<script src="questions.js?v=20260830221326"></script>
+<script src="pd-spec.js?v=20260830221326"></script>
+<script src="pd-details.js?v=20260830221326"></script>
+<script src="test-details.js?v=20260830221326"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
