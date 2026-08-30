@@ -487,6 +487,7 @@
   .ent-theme { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #2a3a5e; background: #16302f; color: #c8d0e0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .ent-theme:hover { background: #1c4444; }
   .ent-ctx { padding: 10px 16px; border-bottom: 1px solid #2a3a5e; font-size: 11px; color: #7d8aa8; }
+  .ent-ctx:empty { display: none; }
   .ent-ctx b { display: block; color: #dbe2ef; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
   .ent-ctx select { width: 100%; background: #16302f; color: #dbe2ef; border: 1px solid #2a3a5e; border-radius: 4px; padding: 4px 6px; font-size: 11.5px; font-family: inherit; outline: none; }
   .ent-tree { flex: 1; overflow-y: auto; padding: 6px 0 24px; }
@@ -513,6 +514,40 @@
   .ent-wd-top { padding-left: 22px; }
   .ent-sdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .ent-sdot.done { background: #4a9d6f; } .ent-sdot.active { background: #d6a23e; } .ent-sdot.pending { background: #566179; }
+  /* ── Ляв панел: глобално меню + текущ ангажимент ── */
+  .ent-nav-search { margin: 10px 14px 8px; display: flex; align-items: center; gap: 8px; background: #16302f; border: 1px solid #2a3a5e; border-radius: 8px; padding: 7px 10px; }
+  .ent-nav-search svg { color: #7d8aa8; flex-shrink: 0; }
+  .ent-nav-search input { border: 0; background: none; outline: none; color: #dbe2ef; font-family: inherit; font-size: 12.5px; width: 100%; }
+  .ent-nav-search input::placeholder { color: #6f7d9c; }
+  .ent-navgrp { padding: 3px 0; }
+  .ent-navlabel { padding: 12px 16px 5px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #6f7d9c; }
+  .ent-navitem { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 9px 16px; font-size: 13px; font-family: inherit; color: #c2ccdf; background: none; border: none; border-left: 2px solid transparent; cursor: pointer; }
+  .ent-navitem svg { color: #8391ad; flex-shrink: 0; }
+  .ent-navitem:hover { background: #16302f; color: #fff; } .ent-navitem:hover svg { color: #c2ccdf; }
+  .ent-navitem.active { background: #173a3a; color: #fff; border-left-color: #3fb0ac; font-weight: 600; }
+  .ent-navitem.active svg { color: #3fb0ac; }
+  .ent-navitem .lbl { flex: 1; }
+  .ent-nav-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c0392b; color: #fff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .ent-nav-tag { font-size: 11px; font-weight: 700; color: #8fd6d2; background: rgba(63,176,172,.16); padding: 1px 9px; border-radius: 10px; }
+  .ent-navsec { display: flex; align-items: center; justify-content: space-between; padding: 15px 16px 7px; margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #6f7d9c; border-top: 1px solid #22314f; }
+  .ent-navsec-x { background: none; border: 0; color: #6f7d9c; cursor: pointer; font-size: 15px; line-height: 1; padding: 1px 6px; border-radius: 5px; }
+  .ent-navsec-x:hover { background: #16302f; color: #fff; }
+  .ent-engcard { margin: 2px 14px 8px; padding: 11px; background: #16302f; border: 1px solid #2a3a5e; border-radius: 9px; }
+  .ent-engcard .ee-top { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+  .ent-engcard .ee-av { width: 32px; height: 32px; border-radius: 8px; background: #3fb0ac; color: #0e2b2b; display: grid; place-items: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+  .ent-engcard .ee-nm { font-size: 13px; font-weight: 700; color: #eaf0ef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ent-engcard .ee-meta { font-size: 11px; color: #7d8aa8; }
+  .ent-engcard .ee-year { width: 100%; background: #0f2424; color: #dbe2ef; border: 1px solid #2a3a5e; border-radius: 6px; padding: 6px 8px; font-size: 12px; font-family: inherit; outline: none; }
+  .ent-userfoot { flex-shrink: 0; border-top: 1px solid #2a3a5e; padding: 9px 10px; }
+  .ent-userfoot .ent-navitem { border-radius: 8px; padding: 7px 8px; border-left: 0; gap: 10px; }
+  .ent-userfoot .ent-navitem:hover { background: #16302f; }
+  .ent-userfoot .ent-navitem.active { background: #173a3a; border-left: 0; }
+  .uf-av { width: 32px; height: 32px; border-radius: 50%; background: #3fb0ac; color: #0e2b2b; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .uf-meta { min-width: 0; flex: 1; text-align: left; }
+  .uf-nm { font-size: 12.5px; font-weight: 600; color: #eaf0ef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .uf-rl { font-size: 10.5px; color: #7d8aa8; }
+  .uf-adm { font-size: 9px; font-weight: 700; color: #d6a23e; border: 1px solid #4a3f22; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .uf-cog { color: #7d8aa8; flex-shrink: 0; }
 
   .ent-maincol { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   .ent-topbar { height: 50px; flex-shrink: 0; background: var(--p-surface); border-bottom: 1px solid var(--p-border); display: flex; align-items: center; padding: 0 22px; }
@@ -1848,6 +1883,7 @@
           </div>
           <div class="ent-ctx" id="ent-ctx"></div>
           <div class="ent-tree" id="ent-tree"></div>
+          <div class="ent-userfoot" id="ent-userfoot"></div>
         </aside>
         <div class="ent-maincol">
           <div class="ent-topbar"><nav class="ent-crumbs" id="ent-crumbs"></nav><div class="ent-topright" id="ent-topright"></div></div>
@@ -4189,10 +4225,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="questions.js?v=20260830211213"></script>
-<script src="pd-spec.js?v=20260830211213"></script>
-<script src="pd-details.js?v=20260830211213"></script>
-<script src="test-details.js?v=20260830211213"></script>
+<script src="questions.js?v=20260830214121"></script>
+<script src="pd-spec.js?v=20260830214121"></script>
+<script src="pd-details.js?v=20260830214121"></script>
+<script src="test-details.js?v=20260830214121"></script>
 <script>
 function clInitials(name) {
   const w = String(name || '').replace(/["„""'`]/g, '').split(/\s+/).filter(Boolean);
@@ -4348,7 +4384,7 @@ function creditPillHtml() {
     + `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5"/></svg>`
     + `<b>${creditBalance()}</b> кред.</button>`;
 }
-function creditRefreshPill() { const el = document.getElementById('ent-credits-pill'); if (el) el.outerHTML = creditPillHtml(); }
+function creditRefreshPill() { if (typeof entRefreshBadges === 'function') entRefreshBadges(); }
 // „Кредити за AI" вече е част от екрана „Настройки" (settingsCreditsCard). entShowCredits е дефиниран
 // там като пренасочване към entShowTeam('credits'). По-долу са само действията върху кредитите.
 function creditGrantUI(uid) { const v = (document.getElementById('cg-' + uid) || {}).value; if (creditGrant(uid, v)) { authToast && authToast('Дадени ' + Math.round(+v) + ' кредита.'); entShowCredits(); creditRefreshPill(); } else { alert('Недостатъчно кредити на дружеството или невалидна стойност.'); } }
@@ -9366,8 +9402,9 @@ function setupFooter(step) {
 function entShowSetup(step, focusCat) {
   step = step || engSetupStep || 'docs'; engSetupStep = step;
   const m = entMainTop();
+  entOpenEng();
   entSaveNav('setup', step);
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="setup"]'));
+  entSetActive('setup');
   const stepLabel = (SETUP_STEPS.find(s => s.k === step) || {}).l || '';
   entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Стартиране на ангажимента' }, { l: stepLabel }]);
   const body = step === 'docs' ? engDocsBody(focusCat) : (step === 'data' ? engDataBody() : engBatchBody());
@@ -31001,37 +31038,23 @@ function entWdProgress(code) {
 function entMainTop() { const m = document.getElementById('ios-main'); m.style.alignItems = 'flex-start'; m.style.justifyContent = 'flex-start'; m.style.overflow = 'auto'; return m; }
 
 function entRenderCtx() {
-  const names = Object.keys(clients);
-  const cur = iosCurrentClient || names[0];
-  const yrs = (clients[cur] && clients[cur].years && clients[cur].years.length) ? clients[cur].years.slice().sort((a, b) => b - a) : [iosCurrentYear || 2025];
-  const yr = iosCurrentYear || yrs[0];
-  document.getElementById('ent-ctx').innerHTML =
-    `<b>${cur}</b>` +
-    `<select onchange="entSetClient(this.value)">${names.map(n => `<option${n === cur ? ' selected' : ''}>${n}</option>`).join('')}</select>` +
-    `<select onchange="entSetYear(this.value)" style="margin-top:6px">${yrs.map(y => `<option value="${y}"${y == yr ? ' selected' : ''}>Одит ${y}</option>`).join('')}</select>` +
-    `<button class="ent-ctx-btn" onclick="entShowClients()">Управление на клиенти</button>`;
+  // Контекстът (клиент/година) вече е в левия панел (текущ ангажимент); тук чистим стария блок.
+  const ctx = document.getElementById('ent-ctx'); if (ctx) ctx.innerHTML = '';
   const me = currentUser();
-  document.getElementById('ent-topright').innerHTML =
-    (isTrial()
-      ? `<button class="trial-pill" onclick="trialBlockPdf()" title="Пробен период — PDF е заключен. Активирай, за да отключиш досието.">`
-        + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
-        + `Проба · PDF заключен</button>`
-      : '') +
-    `<div class="ent-search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="ent-search-inp" placeholder="Търси…" onkeydown="if(event.key==='Enter')entSearchGo(this.value)"></div>` +
-    `<button class="ent-home" onclick="entShowHome()" title="Начало — работен плот (всички ангажименти)">` +
-      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>` +
-      `<span class="hnm">Начало</span>` +
-    `</button>` +
-    `<span class="ent-eng">${escHtml(cur)} · Одит ${yr}</span>` +
-    creditPillHtml() +
-    notifBellHtml() +
-    `<button class="ent-firm" onclick="entShowTeam()" title="Настройки · дружество, екип, абонамент, кредити">` +
-      `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` +
-      `<span class="fnm">Настройки</span>` +
-    `</button>` +
-    `<button class="ent-prof" onclick="entShowProfile()" title="Моят профил">` +
-      `<span class="ent-prof-av">${userInitials(me)}</span>` +
-      `<span class="ent-prof-meta"><span class="nm">${escHtml(me.name || 'Потребител')}${isAdmin(me) ? ' <span class=\"ent-prof-adm\">Админ</span>' : ''}</span><span class="rl">${escHtml(me.title || '')}</span></span>` +
+  // Горна лента: само контекстно предупреждение (проба). Всичко останало е в левия панел.
+  const tr = document.getElementById('ent-topright');
+  if (tr) tr.innerHTML = isTrial()
+    ? `<button class="trial-pill" onclick="trialBlockPdf()" title="Пробен период — PDF е заключен. Активирай, за да отключиш досието.">`
+      + `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+      + `Проба · PDF заключен</button>`
+    : '';
+  // Профил — долу вляво (акаунт)
+  const foot = document.getElementById('ent-userfoot');
+  if (foot) foot.innerHTML =
+    `<button class="ent-navitem" data-k="profile" onclick="entShowProfile()" title="Моят профил и настройки на акаунта">` +
+      `<span class="uf-av">${userInitials(me)}</span>` +
+      `<span class="uf-meta"><span class="uf-nm">${escHtml(me.name || 'Потребител')}${isAdmin(me) ? '<span class="uf-adm">АДМИН</span>' : ''}</span><span class="uf-rl">${escHtml(me.title || (isAdmin(me) ? 'Администратор' : 'Одитор'))}</span></span>` +
+      `<svg class="uf-cog" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>` +
     `</button>`;
 }
 function entSetClient(name) {
@@ -31063,22 +31086,71 @@ function entTogglePhase(btn) {
   else entOpenPhase(phase);
 }
 
+// ── Състояние „отворен ангажимент" — етапите/досието се показват само след избор ──
+let entEngOpen = false;
+function entPersistEngOpen() { try { localStorage.setItem('auditpro_eng_open', entEngOpen ? '1' : '0'); } catch (e) {} }
+function entLoadEngOpen() { try { return localStorage.getItem('auditpro_eng_open') === '1'; } catch (e) { return false; } }
+function entOpenEng() { if (!entEngOpen) { entEngOpen = true; entPersistEngOpen(); entRenderTree(); } }
+function entCloseEng() { entEngOpen = false; entPersistEngOpen(); entRenderTree(); entShowHome(); }
+function entRefreshBadges() {
+  const nb = document.getElementById('nav-notif-badge');
+  if (nb) { const n = (typeof notifCount === 'function') ? notifCount() : 0; nb.textContent = n > 9 ? '9+' : n; nb.style.display = n ? '' : 'none'; }
+  const cb = document.getElementById('nav-credit-bal');
+  if (cb) cb.textContent = (typeof creditBalance === 'function') ? creditBalance() : 0;
+}
+// SVG икони за глобалното меню (currentColor)
+const NAV_ICONS = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>',
+  clients: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  notif: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  credits: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H9.5"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  dash: '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+  setup: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+};
+function navIco(k) { return `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[k] || ''}</svg>`; }
+function navItem(k, label, onclick, right) {
+  return `<button class="ent-navitem" data-k="${k}" onclick="${onclick}">${navIco(k)}<span class="lbl">${label}</span>${right || ''}</button>`;
+}
 function entRenderTree() {
-  // Клиентите се управляват от бутона в контекста (ent-ctx); дружеството/екипът — от горната лента (ent-topright).
-  let h = `<button class="ent-item" data-k="dash" onclick="entShowDashboard()">Преглед на ангажимента</button>`;
-  h += `<button class="ent-item" data-k="setup" onclick="entShowSetup('docs')">Стартиране на ангажимента</button>`;
-  // Постоянно досие — разпъваема група като етапите (toggle-only хедър)
-  h += `<div class="ent-phase" data-grp="pd">` +
-    `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
-    `<div class="ent-secs">` +
-    permanentFile.map(w => `<button class="ent-wd ent-wd-top" data-code="${w.code}" onclick="entShowWd('${w.code}')"><span class="ent-sdot ${w.status || 'pending'}"></span><span class="code">${w.code}</span>${w.name}</button>`).join('') +
-    `</div></div>`;
-  auditPhases.forEach((ph, i) => {
-    const n = i + 1;
-    h += `<div class="ent-phase${n === 1 ? ' open' : ''}">` +
-      `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Етап ${n} · ${ph.name}</button>` +
-      `<div class="ent-secs">` + ph.sections.map(s => entSecNode(s)).join('') + `</div></div>`;
-  });
+  const nu = (typeof notifCount === 'function') ? notifCount() : 0;
+  const bal = (typeof creditBalance === 'function') ? creditBalance() : 0;
+  // ── Глобално меню (винаги видимо) ──
+  let h = `<div class="ent-nav-search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="ent-search-inp" placeholder="Търси…" onkeydown="if(event.key==='Enter')entSearchGo(this.value)"></div>`;
+  h += `<div class="ent-navgrp">`;
+  h += navItem('home', 'Начало', "entShowHome()");
+  h += navItem('clients', 'Управление на клиенти', "entShowClients()");
+  h += navItem('notif', 'Известия', "entShowNotifications()", `<span class="ent-nav-badge" id="nav-notif-badge"${nu ? '' : ' style="display:none"'}>${nu > 9 ? '9+' : nu}</span>`);
+  h += navItem('credits', 'Кредити', "entShowCredits()", `<span class="ent-nav-tag" id="nav-credit-bal">${bal}</span>`);
+  h += navItem('settings', 'Настройки', "entShowTeam()");
+  h += `</div>`;
+  // ── Текущ ангажимент (само след избор) ──
+  if (entEngOpen && iosCurrentClient && clients[iosCurrentClient]) {
+    const cur = iosCurrentClient, c = clients[cur] || {}, yr = iosCurrentYear;
+    const yrs = (c.years || []).slice().sort((a, b) => b - a);
+    h += `<div class="ent-navsec">Текущ ангажимент<button class="ent-navsec-x" onclick="entCloseEng()" title="Затвори ангажимента">✕</button></div>`;
+    h += `<div class="ent-engcard">` +
+      `<div class="ee-top"><span class="ee-av">${escHtml(c.initials || cur.slice(0, 2).toUpperCase())}</span>` +
+      `<div style="min-width:0"><div class="ee-nm">${escHtml(cur)}</div><div class="ee-meta">${escHtml(c.industry || '')}</div></div></div>` +
+      `<select class="ee-year" onchange="entSetYear(this.value)">${yrs.map(y => `<option value="${y}"${y == yr ? ' selected' : ''}>Одит ${y}</option>`).join('')}</select>` +
+      `</div>`;
+    h += `<div class="ent-navgrp">`;
+    h += navItem('dash', 'Преглед на ангажимента', "entShowDashboard()");
+    h += navItem('setup', 'Стартиране на ангажимента', "entShowSetup('docs')");
+    h += `</div>`;
+    // Постоянно досие — разпъваема група
+    h += `<div class="ent-phase" data-grp="pd">` +
+      `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Постоянно досие</button>` +
+      `<div class="ent-secs">` +
+      permanentFile.map(w => `<button class="ent-wd ent-wd-top" data-code="${w.code}" onclick="entShowWd('${w.code}')"><span class="ent-sdot ${w.status || 'pending'}"></span><span class="code">${w.code}</span>${w.name}</button>`).join('') +
+      `</div></div>`;
+    auditPhases.forEach((ph, i) => {
+      const n = i + 1;
+      h += `<div class="ent-phase${n === 1 ? ' open' : ''}">` +
+        `<button class="ent-phdr" onclick="entTogglePhase(this)"><span class="tw">▶</span>Етап ${n} · ${ph.name}</button>` +
+        `<div class="ent-secs">` + ph.sections.map(s => entSecNode(s)).join('') + `</div></div>`;
+    });
+  }
   document.getElementById('ent-tree').innerHTML = h;
 }
 function entSecNode(s) {
@@ -31090,9 +31162,11 @@ function entSecNode(s) {
     `</div></div>`;
 }
 function entSetActive(sel) {
-  document.querySelectorAll('#ent-tree .ent-item,#ent-tree .ent-shdr,#ent-tree .ent-wd').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ent-sidebar .ent-item,.ent-sidebar .ent-navitem,.ent-sidebar .ent-shdr,.ent-sidebar .ent-wd').forEach(b => b.classList.remove('active'));
+  if (typeof sel === 'string') sel = document.querySelector('.ent-sidebar [data-k="' + sel + '"]');
   if (sel) sel.classList.add('active');
 }
+function entNav(k) { return document.querySelector('.ent-sidebar .ent-navitem[data-k="' + k + '"]'); }
 function entCrumbs(parts) {
   document.getElementById('ent-crumbs').innerHTML = parts.map((p, i) => {
     const last = i === parts.length - 1;
@@ -31277,14 +31351,14 @@ function notifRead() { try { return JSON.parse(localStorage.getItem('auditpro_no
 function notifSetRead(a) { try { localStorage.setItem('auditpro_notif_read', JSON.stringify(a || [])); } catch (e) {} }
 function notifUnread() { const r = notifRead(); return notifList().filter(n => r.indexOf(n.id) < 0); }
 function notifCount() { return notifUnread().length; }
-function notifMarkAll() { notifSetRead(notifList().map(n => n.id)); if (typeof entRenderCtx === 'function') entRenderCtx(); entShowNotifications(); }
+function notifMarkAll() { notifSetRead(notifList().map(n => n.id)); if (typeof entRefreshBadges === 'function') entRefreshBadges(); entShowNotifications(); }
 function notifBellHtml() {
   const n = notifCount();
   return `<button class="ent-bell" onclick="entShowNotifications()" title="Известия"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>${n ? `<span class="ent-bell-dot">${n > 9 ? '9+' : n}</span>` : ''}</button>`;
 }
 function entShowNotifications() {
-  const m = entMainTop(); entSaveNav('notifications'); entSetActive(null);
-  entCrumbs([{ l: iosCurrentClient || 'Клиент', go: 'entShowDashboard()' }, { l: 'Известия' }]);
+  const m = entMainTop(); entSaveNav('notifications'); entSetActive('notif');
+  entCrumbs([{ l: 'Известия' }]);
   const list = notifList(), read = notifRead();
   const rows = list.length ? list.map(n => {
     const unread = read.indexOf(n.id) < 0;
@@ -31479,6 +31553,7 @@ function homeGreet() {
 function homeGoto(name, year, code) {
   if (!clients[name]) return;
   iosCurrentClient = name; iosCurrentYear = +year;
+  entEngOpen = true; entPersistEngOpen();
   persistActive(); reloadEngagement(); entRenderCtx(); entRenderTree();
   if (code) entShowWd(code); else entShowDashboard();
 }
@@ -31489,7 +31564,7 @@ function homeApprove(name, year, code) {
 function entShowHome() {
   const m = entMainTop();
   entSaveNav('home');
-  entSetActive(null);
+  entSetActive('home');
   entCrumbs([{ l: 'Начало' }]);
   const me = currentUser();
   const all = homeEngList();
@@ -31568,8 +31643,9 @@ function entShowHome() {
 
 function entShowDashboard() {
   const m = entMainTop();
+  entOpenEng();
   entSaveNav('dashboard');
-  entSetActive(document.querySelector('#ent-tree .ent-item[data-k="dash"]'));
+  entSetActive('dash');
   entCrumbs([{ l: iosCurrentClient || 'Клиент' }, { l: 'Преглед' }]);
   const client = iosCurrentClient || Object.keys(clients)[0], year = iosCurrentYear || 2025;
   const c = dashTestStats();
@@ -31620,6 +31696,7 @@ function entShowDashboard() {
 
 function entShowSection(code) {
   const m = entMainTop();
+  entOpenEng();
   entSaveNav('section', code);
   let sec = null, phaseN = 0, phaseName = '';
   const pd = (code === 'ПД');
@@ -31659,6 +31736,7 @@ function entShowWd(code) {
   else { for (let i = 0; i < auditPhases.length; i++) { const s = auditPhases[i].sections.find(x => x.wds.some(w => w.code === code)); if (s) { phaseN = i + 1; sectionCode = s.code; sectionName = s.name; wd = s.wds.find(w => w.code === code); break; } } }
   if (!wd) return;   // премахнат/несъществуващ работен документ — не се отваря (напр. изтрит тест)
   entMainTop();
+  entOpenEng();
   entSaveNav('wd', code);
   const name = wd.name;
   const wdBtn = document.querySelector(`#ent-tree .ent-wd[data-code="${code}"]`);
@@ -32549,6 +32627,7 @@ function setEngagement(name, year) {
   iosCurrentYear = +year || (clients[name].years && clients[name].years[0]) || 2025;
   persistActive();
   reloadEngagement();        // зарежда данните на новия ангажимент в глобалните обекти
+  entEngOpen = true; entPersistEngOpen();   // изборът на ангажимент разкрива етапите в левия панел
   entRenderCtx();
   entRenderTree();           // статусите в дървото зависят от данните
   entShowDashboard();
@@ -32558,7 +32637,7 @@ function setEngagement(name, year) {
 function entShowClients() {
   const m = entMainTop();
   entSaveNav('clients');
-  entSetActive(null); // входът е в контекста (ent-ctx), не в дървото
+  entSetActive('clients');
   entCrumbs([{ l: 'Клиенти' }]);
   const canEdit = hasPerm('manage_clients');
   const names = Object.keys(clients);
@@ -32600,7 +32679,7 @@ function profilePreviewHtml() {
 function entShowProfile() {
   const m = entMainTop();
   entSaveNav('profile');
-  entSetActive(null);
+  entSetActive('profile');
   entCrumbs([{ l: 'Моят профил' }]);
   const me = currentUser();
   const f = (id, label, val, ph) => `<div class="pf-row"><label>${label}</label><input id="${id}" value="${escHtml(val || '')}" placeholder="${escHtml(ph || '')}"></div>`;
@@ -32670,7 +32749,7 @@ function saveProfile() {
   const lang = (document.getElementById('pf-lang') || {}).value;
   me.prefs = Object.assign({}, me.prefs, { lang: lang || 'bg', ntfReview: chk('pf-ntf-review'), ntfAssign: chk('pf-ntf-assign'), ntfCredit: chk('pf-ntf-credit') });
   persistUsers();
-  entRenderCtx();                                   // обнови чипа горе вдясно
+  entRenderCtx();                                   // обнови профил-чипа в левия панел (footer)
   const prev = document.getElementById('pf-prev'); if (prev) prev.innerHTML = profilePreviewHtml();
   const sv = document.getElementById('pf-saved');   // кратко потвърждение
   if (sv) { sv.classList.add('on'); setTimeout(() => sv.classList.remove('on'), 1800); }
@@ -32710,7 +32789,7 @@ function settingsCreditsCard() {
 function entShowTeam(focus) {
   const m = entMainTop();
   entSaveNav('team');
-  entSetActive(null); // входът е в горната лента (ent-topright), не в дървото
+  entSetActive('settings');
   entCrumbs([{ l: 'Настройки' }]);
   const canManage = hasPerm('manage_users');
   const used = seatsUsed(), seats = firm.seats || 0;
@@ -32763,8 +32842,8 @@ function entShowTeam(focus) {
   const focusEl = focus === 'credits' ? 'settings-credits' : (focus === 'billing' ? 'settings-billing' : '');
   if (focusEl) { const el = document.getElementById(focusEl); if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} el.style.outline = '2px solid var(--p-accent)'; el.style.outlineOffset = '2px'; setTimeout(() => { try { el.style.outline = ''; el.style.outlineOffset = ''; } catch (e) {} }, 2600); } }
 }
-// „Кредити за AI" вече е част от Настройки — старите точки за вход водят там.
-function entShowCredits() { entShowTeam('credits'); }
+// „Кредити за AI" вече е част от Настройки — но в менюто е отделен вход.
+function entShowCredits() { entShowTeam('credits'); entSaveNav('credits'); entSetActive('credits'); }
 function saveFirm() {
   if (!hasPerm('manage_users')) return;
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
@@ -33261,6 +33340,8 @@ function entInit(restore) {
   engMigrateLegacy();
   persistActive();
   reloadEngagement();
+  // Пресен вход → ангажиментът е затворен (само глобалното меню); рефреш → пази предишното състояние.
+  entEngOpen = restore ? entLoadEngOpen() : false; entPersistEngOpen();
   entRenderCtx();
   entRenderTree();
   // Рефреш (вече вписан) → връща потребителя там, където е бил; пресен вход → „Начало".
